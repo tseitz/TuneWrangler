@@ -1,0 +1,27 @@
+{
+  "name": "TuneWrangler",
+  "version": "0.9.0",
+  "description": "Node application that wrangles up my tunes.",
+  "main": "common.js",
+  "scripts": {
+    "rM": "node renameMusic.js",
+    "rI": "node renameItunes.js",
+    "format": "node formatMusic.js",
+    "checkDupes": "node checkDuplicates.js",
+    "analyze": "node analyzePlaylists.js"
+  },
+  "dependencies": {
+    "colors": "^1.1.2"
+  },
+  "devDependencies": {
+    "musicmetadata": "^2.0.5",
+    "node-id3": "^0.1.0",
+    "prompt": "^1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tseitz/TuneWrangler.git"
+  },
+  "author": "Tegan Seitz",
+  "license": "ISC"
+}
