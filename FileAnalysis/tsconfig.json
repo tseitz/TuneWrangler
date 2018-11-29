@@ -1,10 +1,11 @@
 {
   "compilerOptions": {
-    "module": "system",
+    "target": "es6",
+    "module": "es2015",
     "noImplicitAny": true,
     "removeComments": true,
     "preserveConstEnums": true,
-    "outFile": "output/tsc.js",
+    "outFile": "./output/tsc.js",
     "sourceMap": true
   },
   "include": [
