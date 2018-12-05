@@ -242,14 +242,14 @@ export function removeAnd(song: Song, type: string): Song {
   return song;
 }
 
-// export function removeClip(title: string): string {
-//   title = title.replace(/ \(CLIP\)/ig, '');
-//   title = title.replace(/ \( CLIP \)/ig, '');
-//   title = title.replace(/ \[CLIP\]/ig, '');
-//   title = title.replace(/ CLIP/ig, '');
+export function removeClip(title: string): string {
+  title = title.replace(/ \(CLIP\)/ig, '');
+  title = title.replace(/ \( CLIP \)/ig, '');
+  title = title.replace(/ \[CLIP\]/ig, '');
+  title = title.replace(/ CLIP/ig, '');
 
-//   return title;
-// }
+  return title;
+}
 
 export function checkDuplicate(song: Song, musicArr: Song[]): Song {
   if (song.filename.includes(' (1)')) {
