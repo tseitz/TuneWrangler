@@ -213,13 +213,6 @@ export function checkRemix(song: Song): Song {
   if (origArtist !== song.artist) {
     song.remix = true;
     song.changed = true;
-
-    // if (song.count <= 1) {
-    //   song.album = song.grabFirst();
-    // } else {
-    //   song.album = song.grabSecond();
-    // }
-    // Song = removeAnd(Song, 'album');
   }
 
   return song;
