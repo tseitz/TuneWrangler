@@ -60,7 +60,7 @@
       "check-open-brace",
       "check-whitespace"
     ],
-    "only-arrow-functions": [true],
+    "only-arrow-functions": [true, "allow-declarations", "allow-named-functions"],
     "quotemark": [
       true,
       "single"

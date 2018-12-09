@@ -1,6 +1,6 @@
 // import * as fs from 'fs';
 // import * as path from 'path';
-import { LocalSong, Song } from './models/Song';
+import { LocalSong, Song, DownloadedSong } from './models/Song';
 
 export function checkOS(type: string) {
   switch (type) {
@@ -20,7 +20,7 @@ export function cacheMusic(files: string[], dir: string): LocalSong[] {
 
   // lots of songs, so fast for loop
   for (let i = 0, len = files.length; i < len; i++) {
-    let song = new LocalSong(files[i], dir);
+    const song = new LocalSong(files[i], dir);
     cache.push(song);
   }
 
@@ -32,7 +32,7 @@ export function splitArtist(artist: string): string[] {
 }
 
 export function removeBadCharacters(song: Song): Song {
-  let origFilename = song.filename;
+  const origFilename = song.filename;
 
   // Unicode
   song.filename = song.filename.replace(/\u3010/g, '['); // 【
@@ -170,8 +170,8 @@ export function removeBadCharacters(song: Song): Song {
   song.filename = song.filename.replace(/ \(RADIO EDIT\)/ig, '');
 
   if (origFilename !== song.filename) {
-    song.changed = true
-  };
+    song.changed = true;
+  }
 
   return song;
 }
@@ -182,7 +182,6 @@ export function checkRemix(song: Song): Song {
   if (/\(.+ REMIX\)/ig.test(song.filename)) {
     const regex = /\(.[^\(]+ REMIX\)/ig;
     song.artist = song.filename.slice(regex.exec(song.filename).index + 1, / REMIX\)/ig.exec(song.filename).index).trim().trimLeft();
-
     song.filename = song.filename.slice(0, /\(.[^\(]+ REMIX\)/ig.exec(song.filename).index - 1).concat(song.extension);
   } else if (/\[.+ REMIX\]/ig.test(song.filename)) {
     song.artist = song.filename.slice(/\[.[^\[]+ REMIX\]/ig.exec(song.filename).index + 1, / REMIX\]/ig.exec(song.filename).index).trim().trimLeft();
@@ -218,19 +217,21 @@ export function checkRemix(song: Song): Song {
   return song;
 }
 
-export function removeAnd(song: Song, type: string): Song {
-  let origLabel = song[type];
+export function removeAnd(song: Song, ...types: Array<'artist' | 'album'>): Song {
+  types.forEach((type) => {
+    const origLabel = song[type];
 
-  song[type] = song[type].replace(/ & /g, ' x ');
-  song[type] = song[type].replace(/ %26 /g, ' x ');
-  song[type] = song[type].replace(/, /g, ' x ');
-  song[type] = song[type].replace(/ X /ig, ' x ');
-  song[type] = song[type].replace(/ and /ig, ' x ');
-  song[type] = song[type].replace(/ \+ /ig, ' x ');
+    song[type] = song[type].replace(/ & /g, ' x ');
+    song[type] = song[type].replace(/ %26 /g, ' x ');
+    song[type] = song[type].replace(/, /g, ' x ');
+    song[type] = song[type].replace(/ X /ig, ' x ');
+    song[type] = song[type].replace(/ and /ig, ' x ');
+    song[type] = song[type].replace(/ \+ /ig, ' x ');
 
-  if (origLabel !== song[type]) {
-    song.changed = true;
-  }
+    if (origLabel !== song[type]) {
+      song.changed = true;
+    }
+  });
 
   return song;
 }
@@ -505,7 +506,7 @@ export function lastCheck(song: Song): Song {
     song.album = song.artist;
     song.artist = song.filename.slice(song.filename.lastIndexOf('- ') + 2, song.filename.indexOf('"')).trim().trimLeft();
     song.title = song.filename.slice(song.filename.indexOf('"') + 1, song.filename.lastIndexOf('"')).trim().trimLeft();
-    song.count = 2;
+    song.dashCount = 2;
   }
   if (song.title.indexOf('[') > -1 && song.title.toUpperCase().indexOf('VIP') === -1 && song.title.toUpperCase().indexOf('WIP') === -1 && song.title.toUpperCase().indexOf('CLIP') === -1) {
     console.log(`Title: ${song.title}`);

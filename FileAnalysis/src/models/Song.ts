@@ -1,22 +1,20 @@
 import * as path from 'path';
 
 export class Song {
-  artist = '';
-  album = '';
-  title = '';
-  filename = '';
-  directory = '';
-  fullFilename = '';
-  extension = '';
+  artist: string;
+  album: string;
+  title: string;
+  extension: string;
+  fullFilename: string;
+  finalFilename: string;
   dashCount = 0;
-  remix = false;
-  changed = false;
-  duplicate = false;
   rating = 0;
+  remix: boolean;
+  changed: boolean;
+  duplicate: boolean;
+  tags: Tags;
 
-  constructor(filename: string, directory: string) {
-    this.filename = filename;
-    this.directory = directory;
+  constructor(public filename: string, public directory: string) {
     this.fullFilename = `${directory}${filename}`;
     this.extension = path.extname(filename) || undefined;
     this.dashCount = filename.split(' - ').length - 1;
@@ -69,4 +67,10 @@ export class DownloadedSong extends Song {
     this.album = this.grabFirst();
     this.title = this.grabLast();
   }
+}
+
+class Tags {
+  artist: string;
+  album: string;
+  title: string;
 }
