@@ -1,16 +1,22 @@
 {
   "compilerOptions": {
-    "target": "es6",
-    "module": "es2015",
-    "noImplicitAny": true,
-    "removeComments": true,
-    "preserveConstEnums": true,
-    "outFile": "./output/tsc.js",
-    "sourceMap": true
+    "target": "es2016",
+    "module": "commonjs", // es2015 not supported by ts-node
+    "baseUrl": "src",
+    "outDir": "../output",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "classic",
+    "experimentalDecorators": true,
+    // "noUnusedLocals": true,
+    "typeRoots": [
+      "node_modules/@types"
+    ],
+    "lib": [
+      "dom",
+      "es7"
+    ]
   },
-  "include": [
-    "src/**/*"
-  ],
   "exclude": [
     "node_modules"
   ]

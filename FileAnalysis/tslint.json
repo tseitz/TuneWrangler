@@ -1,0 +1,100 @@
+{
+  "rules": {
+    "adjacent-overload-signatures": true,
+    "align": [true, "parameters", "statements"],
+    "class-name": true,
+    "comment-format": [
+      true,
+      "check-space"
+    ],
+    "curly": true,
+    "cyclomatic-complexity": [true, 10],
+    "eofline": false,
+    "forin": true,
+    "import-spacing": true,
+    "indent": [
+      true,
+      "spaces",
+      2
+    ],
+    "jsdoc-format": true,
+    "label-position": true,
+    "max-file-line-count": [true, 200],
+    "max-line-length": [
+      true,
+      140
+    ],
+    "member-access": false,
+    "member-ordering": [
+      true,
+      {
+        "order": "fields-first"
+      }
+    ],
+    "new-parens": true,
+    "no-angle-bracket-type-assertion": true,
+    "no-arg": true,
+    "no-bitwise": true,
+    "no-consecutive-blank-lines": [true],
+    "no-construct": true,
+    "no-debugger": true,
+    "no-duplicate-variable": true,
+    "no-empty": false,
+    "no-eval": true,
+    "no-inferrable-types": [true, "ignore-params"],
+    "no-invalid-this": true,
+    "no-shadowed-variable": true,
+    "no-string-literal": true,
+    "no-switch-case-fall-through": true,
+    "no-trailing-whitespace": true,
+    "no-unused-expression": true,
+    "no-var-keyword": true,
+    "prefer-const": true,
+    "prefer-for-of": true,
+    "object-literal-sort-keys": false,
+    "one-line": [
+      true,
+      "check-catch",
+      "check-finally",
+      "check-else",
+      "check-open-brace",
+      "check-whitespace"
+    ],
+    "only-arrow-functions": [true],
+    "quotemark": [
+      true,
+      "single"
+    ],
+    "radix": true,
+    "semicolon": true,
+    "triple-equals": [
+      true,
+      "allow-null-check"
+    ],
+    "typedef-whitespace": [
+      true,
+      {
+        "call-signature": "nospace",
+        "index-signature": "nospace",
+        "parameter": "nospace",
+        "property-declaration": "nospace",
+        "variable-declaration": "nospace"
+      }
+    ],
+    "variable-name": [true, "ban-keywords", "check-format"],
+    "whitespace": [
+      true,
+      "check-branch",
+      "check-decl",
+      "check-operator",
+      "check-separator",
+      "check-type"
+    ],
+    "callable-types": true,
+    // "import-blacklist": [true, "rxjs"],
+    "interface-over-type-literal": true,
+    "no-empty-interface": true,
+    "no-string-throw": true,
+    "unified-signatures": true
+  }
+}
