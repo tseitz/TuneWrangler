@@ -6,7 +6,7 @@
     "outDir": "../output",
     "sourceMap": true,
     "declaration": false,
-    "moduleResolution": "classic",
+    "moduleResolution": "node",
     "experimentalDecorators": true,
     // "noUnusedLocals": true,
     "typeRoots": [
@@ -16,8 +16,5 @@
       "dom",
       "es7"
     ]
-  },
-  "exclude": [
-    "node_modules"
-  ]
+  }
 }

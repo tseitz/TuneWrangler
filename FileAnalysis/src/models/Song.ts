@@ -17,7 +17,11 @@ export class Song {
   constructor(public filename: string, public directory: string) {
     this.fullFilename = `${directory}${filename}`;
     this.extension = path.extname(filename) || undefined;
-    this.dashCount = filename.split(' - ').length - 1;
+    this.dashCount = this.getDashCount();
+  }
+
+  getDashCount(): number {
+    return this.filename.split(' - ').length - 1;
   }
 
   grabFirst(): string {

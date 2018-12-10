@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as tw from './common';
+import * as nodeId3 from 'node-id3';
 import { LocalSong, DownloadedSong } from './models/Song';
-const nodeID3 = require('node-id3');
 
 const currDir = tw.checkOS('transfer');
 const moveDir = tw.checkOS('music');
@@ -47,13 +47,11 @@ fs.readdir(moveDir, (eL, localFiles) => {
       song = setFinalName(song);
 
       /* TAG AND BAG */
-      if (song.changed) {
-        song.tags = {
-          title: song.title,
-          artist: song.artist,
-          album: song.album
-        };
-      }
+      song.tags = {
+        title: song.title,
+        artist: song.artist,
+        album: song.album
+      };
 
       song = tw.checkDuplicate(song, musicCache);
       if (song.duplicate) { return; }
@@ -65,9 +63,7 @@ fs.readdir(moveDir, (eL, localFiles) => {
       console.log(`-----------------------
                       `);
 
-      if (!debug) {
-        renameAndMove(song);
-      }
+      if (!debug) { renameAndMove(song); }
     });
   });
 });
@@ -102,7 +98,7 @@ function setFinalName(song: DownloadedSong): DownloadedSong {
 
 function renameAndMove(song: DownloadedSong) {
   if (song.tags) {
-    const success = nodeID3.update(song.tags, song.fullFilename);
+    const success = nodeId3.update(song.tags, song.fullFilename);
     if (!success) { console.log(`Failed to tag ${song.filename}`); }
   }
 

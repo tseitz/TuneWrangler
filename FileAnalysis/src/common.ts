@@ -69,7 +69,14 @@ export function removeBadCharacters(song: Song): Song {
 
   // Channels
   song.filename = song.filename.toUpperCase().includes('[FIRE') ? song.filename.substring(0, song.filename.toUpperCase().indexOf('[FIRE') - 1).concat('.mp3') : song.filename;
-  song.filename = song.filename.toUpperCase().includes('NEVER SAY DIE - BLACK LABEL') ? song.filename.replace('Never Say Die - Black Label', 'Never Say Die Black Label') : song.filename;
+  song.filename = song.filename.includes('NEVER SAY DIE - BLACK LABEL') ? song.filename.replace('Never Say Die - Black Label', 'Never Say Die Black Label') : song.filename;
+  if (song.filename.toUpperCase().includes('INSOMNIAC') && song.filename.toUpperCase().includes('TRACK OF THE DAY')) {
+    song.filename = song.filename.slice(0, song.filename.toUpperCase().indexOf('TRACK OF'))
+                                .concat(song.filename.slice(song.filename.toUpperCase().indexOf('OF THE DAY ') + 11));
+    song.filename = song.filename.replace(/\"/, '- '); // replace first instance of " with -
+    song.filename = song.filename.replace(/\"/, ''); // then remove the second one
+    song.dashCount = song.getDashCount();
+  }
   song.filename = song.filename.replace(/ \(SUBLMNL .+\)/ig, ''); 
   song.filename = song.filename.replace(/ \(CIRCUS .+\)/ig, '');
   song.filename = song.filename.replace(/ \[COOKERZ]/ig, '');
