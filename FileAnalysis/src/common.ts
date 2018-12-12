@@ -43,29 +43,24 @@ export function removeBadCharacters(song: Song): Song {
   song.filename = song.filename.replace(/\u2771/g, ']'); // ❱
   song.filename = song.filename.replace(/\u2716/g, 'x'); // ✖
   song.filename = song.filename.replace(/\u2718/g, 'x');
-  song.filename = song.filename.replace(/\u00DC/g, 'U'); // Ü
-  song.filename = song.filename.replace(/\u00FC/g, 'u'); // ü
-  song.filename = song.filename.replace(/\u016B/g, 'u'); // ū
-  song.filename = song.filename.replace(/\u014d/g, 'o'); // ō
-  song.filename = song.filename.replace(/\u00f3/g, 'o'); // ó
   song.filename = song.filename.replace(/\u00D8/g, 'o'); // Ø
   song.filename = song.filename.replace(/\u00f8/g, 'o'); // ø
-  song.filename = song.filename.replace(/\u0126/g, 'H'); // Ħ
-  song.filename = song.filename.replace(/\u0127/g, 'H'); // ħ
   song.filename = song.filename.replace(/[\u201C-\u201D]/g, '"');
-  // song.filename = song.filename.replace(/[\u1400-\u167F\u1680-\u169F\u16A0-\u16FF\u1700-\u171F\u1720-\u173F\u1740-\u175F\u1760-\u177F\u1780-\u17FF\u1800-\u18AF\u1900-\u194F\u1950-\u197F\u1980-\u19DF\u19E0-\u19FF\u1A00-\u1A1F\u1B00-\u1B7F\u1D00-\u1D7F\u1D80-\u1DBF\u1DC0-\u1DFF\u1E00-\u1EFF\u1F00-\u1FFF\u2000-\u206F\u2070-\u209F\u20A0-\u20CF\u20D0-\u20FF\u2100-\u214F\u2150-\u218F\u2190-\u21FF\u2200-\u22FF\u2300-\u23FF\u2400-\u243F\u2440-\u245F\u2460-\u24FF\u2500-\u257F\u2580-\u259F\u25A0-\u25FF\u2600-\u26FF\u2700-\u27BF\u27C0-\u27EF\u27F0-\u27FF\u2800-\u28FF\u2900-\u297F\u2980-\u29FF\u2A00-\u2AFF\u2B00-\u2BFF\u2C00-\u2C5F\u2C60-\u2C7F\u2C80-\u2CFF\u2D00-\u2D2F\u2D30-\u2D7F\u2D80-\u2DDF\u2E00-\u2E7F\u2E80-\u2EFF\u2F00-\u2FDF\u2FF0-\u2FFF\u3000-\u303F\u3040-\u309F\u30A0-\u30FF\u3100-\u312F\u3130-\u318F\u3190-\u319F\u31A0-\u31BF\u31C0-\u31EF\u31F0-\u31FF\u3200-\u32FF\u3300-\u33FF\u3400-\u4DBF\u4DC0-\u4DFF\u4E00-\u9FFF\uA000-\uA48F\uA490-\uA4CF\uA700-\uA71F\uA720-\uA7FF\uA800-\uA82F\uA840-\uA87F\uAC00-\uD7AF\uD800-\uDB7F\uDB80-\uDBFF\uDC00-\uDFFF\uE000-\uF8FF\uF900-\uFAFF\uFB00-\uFB4F\uFB50-\uFDFF\uFE00-\uFE0F\uFE10-\uFE1F\uFE20-\uFE2F\uFE30-\uFE4F\uFE50-\uFE6F\uFE70-\uFEFF\uFF00-\uFFEF\uFFF0-\uFFFF]/g, '');
+
+  song.filename = song.filename.replace(/\u2014/g, '-'); // —
+  song.dashCount = song.getDashCount();
 
   // song.filename = song.filename.replace('andamp;', '&');
-  song.filename = song.filename.replace('#39;', `'`);
+  // song.filename = song.filename.replace('#39;', `'`);
 
   // Name fixes
   song.filename = song.filename.replace('ʟᴜᴄᴀ ʟᴜsʜ', 'LUCA LUSH');
   song.filename = song.filename.replace('Re-Sauce', 'Remix');
   song.filename = song.filename.replace('Re-Crank', 'Remix');
   song.filename = song.filename.replace('Mixmag - Premiere-', 'Mixmag - ');
-  song.filename = song.filename.replace('djmag - Premiere', 'djmag ');
   song.filename = song.filename.replace('1985  -  Music', '1985 Music');
   song.filename = song.filename.replace('+PRIME+', 'PRIME');
+  song.filename = song.filename.replace('Premiere  ', '');
 
   // Channels
   song.filename = song.filename.toUpperCase().includes('[FIRE') ? song.filename.substring(0, song.filename.toUpperCase().indexOf('[FIRE') - 1).concat('.mp3') : song.filename;
@@ -75,6 +70,12 @@ export function removeBadCharacters(song: Song): Song {
                                 .concat(song.filename.slice(song.filename.toUpperCase().indexOf('OF THE DAY ') + 11));
     song.filename = song.filename.replace(/\"/, '- '); // replace first instance of " with -
     song.filename = song.filename.replace(/\"/, ''); // then remove the second one
+    song.dashCount = song.getDashCount();
+  } else if (song.filename.toUpperCase().includes('DJMAG') && song.filename.toUpperCase().includes('PREMIERE')) {
+    song.filename = song.filename.slice(0, song.filename.toUpperCase().indexOf('PREMIERE'))
+                                .concat(song.filename.slice(song.filename.toUpperCase().indexOf('PREMIERE ') + 9));
+    song.filename = song.filename.replace(/\'/, '- ');
+    song.filename = song.filename.replace(/\'/, '');
     song.dashCount = song.getDashCount();
   }
   song.filename = song.filename.replace(/ \(SUBLMNL .+\)/ig, ''); 
@@ -173,7 +174,7 @@ export function removeBadCharacters(song: Song): Song {
   song.filename = song.filename.replace(/ \[.+ PREMIERE\]/ig, '');
   song.filename = song.filename.replace(/ \(.+ PREMIERE\)/ig, '');
   song.filename = song.filename.replace(/ \[REMASTER\]/ig, '');
-  song.filename = song.filename.replace(/ \READ DESCRIPTION/ig, '');
+  song.filename = song.filename.replace(/ READ DESCRIPTION/ig, '');
   song.filename = song.filename.replace(/ \(RADIO EDIT\)/ig, '');
 
   if (origFilename !== song.filename) {
@@ -515,27 +516,37 @@ export function lastCheck(song: Song): Song {
     song.title = song.filename.slice(song.filename.indexOf('"') + 1, song.filename.lastIndexOf('"')).trim().trimLeft();
     song.dashCount = 2;
   }
-  if (song.title.indexOf('[') > -1 && song.title.toUpperCase().indexOf('VIP') === -1 && song.title.toUpperCase().indexOf('WIP') === -1 && song.title.toUpperCase().indexOf('CLIP') === -1) {
+  if (song.title.includes('[') && 
+    !song.title.toUpperCase().includes('VIP') &&
+    !song.title.toUpperCase().includes('WIP') &&
+    !song.title.toUpperCase().includes('CLIP') &&
+    !song.title.toUpperCase().includes('INSTRUMENTAL')
+  ) {
     console.log(`Title: ${song.title}`);
     song.title = song.title.slice(0, song.title.indexOf('[')).trim().trimLeft();
   }
-  if (song.artist.indexOf('[') > -1) {
+  if (song.artist.includes('[')) {
     console.log(`Artist: ${song.artist}`);
     song.artist = song.artist.slice(0, song.artist.indexOf('[')).trim().trimLeft();
   }
-  if (song.album.indexOf('[') > -1) {
+  if (song.album.includes('[')) {
     console.log(`Album: ${song.album}`);
     song.album = song.album.slice(0, song.album.indexOf('[')).trim().trimLeft();
   }
 
-  if (song.title.indexOf('(') > -1 && song.title.toUpperCase().indexOf('VIP') === -1 && song.title.toUpperCase().indexOf('WIP') === -1 && song.title.toUpperCase().indexOf('CLIP') === -1) {
+  if (song.title.includes('(') && 
+    !song.title.toUpperCase().includes('VIP') && 
+    !song.title.toUpperCase().includes('WIP') && 
+    !song.title.toUpperCase().includes('CLIP') &&
+    !song.title.toUpperCase().includes('REPRISE')
+  ) {
     console.log(`Title: ${song.title}`);
     song.title = song.title.slice(0, song.title.indexOf('(')).trim().trimLeft();
   }
-  if (song.artist.indexOf('(') > -1) {
+  if (song.artist.includes('(')) {
     console.log(`Artist: ${song.artist}`);
   }
-  if (song.album.indexOf('(') > -1) {
+  if (song.album.includes('(')) {
     console.log(`Album: ${song.album}`);
   }
 

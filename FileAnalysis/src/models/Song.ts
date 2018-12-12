@@ -1,12 +1,12 @@
 import * as path from 'path';
 
 export class Song {
-  artist: string;
-  album: string;
-  title: string;
-  extension: string;
-  fullFilename: string;
-  finalFilename: string;
+  artist = '';
+  album = '';
+  title = '';
+  extension = '';
+  fullFilename = '';
+  finalFilename = '';
   dashCount = 0;
   rating = 0;
   remix: boolean;
@@ -67,9 +67,14 @@ export class DownloadedSong extends Song {
   constructor(filename: string, directory: string) {
     super(filename, directory);
 
-    this.artist = this.grabSecond();
-    this.album = this.grabFirst();
-    this.title = this.grabLast();
+    if (this.getDashCount() === 1) {
+      this.artist = this.grabFirst();
+      this.title = this.grabSecond();
+    } else if (this.getDashCount() === 2) {
+      this.artist = this.grabSecond();
+      this.album = this.grabFirst();
+      this.title = this.grabLast();
+    }
   }
 }
 
