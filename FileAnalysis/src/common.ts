@@ -1,6 +1,4 @@
-// import * as fs from 'fs';
-// import * as path from 'path';
-import { LocalSong, Song, DownloadedSong } from './models/Song';
+import { LocalSong, Song } from './models/Song';
 
 export function checkOS(type: string) {
   switch (type) {
@@ -18,7 +16,6 @@ export function checkOS(type: string) {
 export function cacheMusic(files: string[], dir: string): LocalSong[] {
   const cache: LocalSong[] = [];
 
-  // lots of songs, so fast for loop
   for (let i = 0, len = files.length; i < len; i++) {
     const song = new LocalSong(files[i], dir);
     cache.push(song);
@@ -54,17 +51,19 @@ export function removeBadCharacters(song: Song): Song {
   // song.filename = song.filename.replace('#39;', `'`);
 
   // Name fixes
-  song.filename = song.filename.replace('ʟᴜᴄᴀ ʟᴜsʜ', 'LUCA LUSH');
+  song.filename = song.filename.replace(/ʟᴜᴄᴀ ʟᴜsʜ/g, 'LUCA LUSH');
   song.filename = song.filename.replace('Re-Sauce', 'Remix');
   song.filename = song.filename.replace('Re-Crank', 'Remix');
   song.filename = song.filename.replace('Mixmag - Premiere-', 'Mixmag - ');
   song.filename = song.filename.replace('1985  -  Music', '1985 Music');
-  song.filename = song.filename.replace('+PRIME+', 'PRIME');
-  song.filename = song.filename.replace('Premiere  ', '');
 
   // Channels
-  song.filename = song.filename.toUpperCase().includes('[FIRE') ? song.filename.substring(0, song.filename.toUpperCase().indexOf('[FIRE') - 1).concat('.mp3') : song.filename;
-  song.filename = song.filename.includes('NEVER SAY DIE - BLACK LABEL') ? song.filename.replace('Never Say Die - Black Label', 'Never Say Die Black Label') : song.filename;
+  if (song.filename.toUpperCase().includes('[FIRE')) {
+    song.filename = song.filename.substring(0, song.filename.toUpperCase().indexOf('[FIRE') - 1).concat('.mp3');
+  }
+  if (song.filename.includes('NEVER SAY DIE - BLACK LABEL')) {
+    song.filename = song.filename.replace('Never Say Die - Black Label', 'Never Say Die Black Label');
+  }
   if (song.filename.toUpperCase().includes('INSOMNIAC') && song.filename.toUpperCase().includes('TRACK OF THE DAY')) {
     song.filename = song.filename.slice(0, song.filename.toUpperCase().indexOf('TRACK OF'))
                                 .concat(song.filename.slice(song.filename.toUpperCase().indexOf('OF THE DAY ') + 11));
@@ -78,104 +77,104 @@ export function removeBadCharacters(song: Song): Song {
     song.filename = song.filename.replace(/\'/, '');
     song.dashCount = song.getDashCount();
   }
-  song.filename = song.filename.replace(/ \(SUBLMNL .+\)/ig, ''); 
-  song.filename = song.filename.replace(/ \(CIRCUS .+\)/ig, '');
-  song.filename = song.filename.replace(/ \[COOKERZ]/ig, '');
-  song.filename = song.filename.replace(/ \[.+ CROWSNEST\]/ig, '');
-  song.filename = song.filename.replace(/ \[DS FREEBIE\]/ig, '');
-  song.filename = song.filename.replace(/ \[ELECTROSTEP .+]/ig, '');
-  song.filename = song.filename.replace(/ \(EATBRAIN.+\)/ig, '');
-  song.filename = song.filename.replace(/ \[FOOLS GOLD]/ig, '');
-  song.filename = song.filename.replace(/ \[GOOD ENUFF RELEASE\]/ig, '');
-  song.filename = song.filename.replace(/ \(KILL THE COPYRIGHT RELEASE\)/ig, '');
-  song.filename = song.filename.replace(/ \[JD4D .+\]/ig, '');
-  song.filename = song.filename.replace(/ \(METHLAB .+\)/ig, '');
-  song.filename = song.filename.replace(/ \[MONSTERCAT .+\]/ig, '');
-  song.filename = song.filename.replace(/ \[NCS RELEASE\]/ig, '');
-  song.filename = song.filename.replace(/ \[NEST.+\]/ig, '');
-  song.filename = song.filename.replace(/ \(NEST .+\)/ig, '');
-  song.filename = song.filename.replace(/ \{NSD BLACK LABEL\}/ig, '');
-  song.filename = song.filename.replace(/ \[I AM SO HIGH.+\]/ig, '');
-  song.filename = song.filename.replace(/ \[OTODAYO .+\]/ig, '');
-  song.filename = song.filename.replace(/ \[PRIME AUDIO\]/ig, '');
-  song.filename = song.filename.replace(/ \(RIDDIM NETWORK .+\)/ig, '');
-  song.filename = song.filename.replace(/ \[ROTTUN .+\]/ig, '');
-  song.filename = song.filename.replace(/ \(RNE\)/ig, '');
-  song.filename = song.filename.replace(/ \[HT.+\]/ig, '');
-  song.filename = song.filename.replace(/ \[THISSONGISSICK.+\]/ig, '');
-  song.filename = song.filename.replace(/ \(TERMINAL\)/ig, '');
+
+  // song.filename = song.filename.replace(/ \(SUBLMNL .+\)/ig, '');
+  // song.filename = song.filename.replace(/ \(CIRCUS .+\)/ig, '');
+  // song.filename = song.filename.replace(/ \[COOKERZ]/ig, '');
+  // song.filename = song.filename.replace(/ \[.+ CROWSNEST\]/ig, '');
+  // song.filename = song.filename.replace(/ \[DS FREEBIE\]/ig, '');
+  // song.filename = song.filename.replace(/ \[ELECTROSTEP .+]/ig, '');
+  // song.filename = song.filename.replace(/ \(EATBRAIN.+\)/ig, '');
+  // song.filename = song.filename.replace(/ \[FOOLS GOLD]/ig, '');
+  // song.filename = song.filename.replace(/ \[GOOD ENUFF RELEASE\]/ig, '');
+  // song.filename = song.filename.replace(/ \(KILL THE COPYRIGHT RELEASE\)/ig, '');
+  // song.filename = song.filename.replace(/ \(METHLAB .+\)/ig, '');
+  // song.filename = song.filename.replace(/ \[MONSTERCAT .+\]/ig, '');
+  // song.filename = song.filename.replace(/ \[NCS RELEASE\]/ig, '');
+  // song.filename = song.filename.replace(/ \[NEST.+\]/ig, '');
+  // song.filename = song.filename.replace(/ \(NEST .+\)/ig, '');
+  // song.filename = song.filename.replace(/ \{NSD BLACK LABEL\}/ig, '');
+  // song.filename = song.filename.replace(/ \[I AM SO HIGH.+\]/ig, '');
+  // song.filename = song.filename.replace(/ \[OTODAYO .+\]/ig, '');
+  // song.filename = song.filename.replace(/ \[PRIME AUDIO\]/ig, '');
+  // song.filename = song.filename.replace(/ \(RIDDIM NETWORK .+\)/ig, '');
+  // song.filename = song.filename.replace(/ \[ROTTUN .+\]/ig, '');
+  // song.filename = song.filename.replace(/ \(RNE\)/ig, '');
+  // song.filename = song.filename.replace(/ \[HT.+\]/ig, '');
+  // song.filename = song.filename.replace(/ \[THISSONGISSICK.+\]/ig, '');
+  // song.filename = song.filename.replace(/ \(TERMINAL\)/ig, '');
 
   // Genres
-  song.filename = song.filename.replace(/ \[BASS\]/ig, '');
-  song.filename = song.filename.replace(/ \[BASS HOUSE\]/ig, '');
-  song.filename = song.filename.replace(/ \[CHILL TRAP\]/ig, '');
-  song.filename = song.filename.replace(/ \[DNB\]/ig, '');
-  song.filename = song.filename.replace(/ \[DRUM&BASS\]/ig, '');
-  song.filename = song.filename.replace(/ \[DRUM & BASS\]/ig, '');
-  song.filename = song.filename.replace(/ \[DRUM AND BASS\]/ig, '');
-  song.filename = song.filename.replace(/ \[DRUMSTEP\]/ig, '');
-  song.filename = song.filename.replace(/ \[DUBSTEP\]/ig, '');
-  song.filename = song.filename.replace(/ \[EDM\]/ig, '');
-  song.filename = song.filename.replace(/ \[ELECTRO\]/ig, '');
-  song.filename = song.filename.replace(/ \[ELECTRONIC\]/ig, '');
-  song.filename = song.filename.replace(/ \[ELECTRONICA\]/ig, '');
-  song.filename = song.filename.replace(/ \[FREAKSTEP\]/ig, '');
-  song.filename = song.filename.replace(/ \[FUTURE\]/ig, '');
-  song.filename = song.filename.replace(/ \[FUTURE BASS\]/ig, '');
-  song.filename = song.filename.replace(/ \[GLITCH HOP\]/ig, '');
-  song.filename = song.filename.replace(/ \[HARD DANCE\]/ig, '');
-  song.filename = song.filename.replace(/ \[HARDSTYLE TRAP\]/ig, '');
-  song.filename = song.filename.replace(/ \[HIP HOP\]/ig, '');
-  song.filename = song.filename.replace(/ \[HOUSE\]/ig, '');
-  song.filename = song.filename.replace(/ \[HYBRID\]/ig, '');
-  song.filename = song.filename.replace(/ \[JUNGLE TERROR\]/ig, '');
-  song.filename = song.filename.replace(/ \[MELODIC DUBSTEP\]/ig, '');
-  song.filename = song.filename.replace(/ \[NEURO TRAP\]/ig, '');
-  song.filename = song.filename.replace(/ \[TRAP\]/ig, '');
+  // song.filename = song.filename.replace(/ \[BASS\]/ig, '');
+  // song.filename = song.filename.replace(/ \[BASS HOUSE\]/ig, '');
+  // song.filename = song.filename.replace(/ \[CHILL TRAP\]/ig, '');
+  // song.filename = song.filename.replace(/ \[DNB\]/ig, '');
+  // song.filename = song.filename.replace(/ \[DRUM&BASS\]/ig, '');
+  // song.filename = song.filename.replace(/ \[DRUM & BASS\]/ig, '');
+  // song.filename = song.filename.replace(/ \[DRUM AND BASS\]/ig, '');
+  // song.filename = song.filename.replace(/ \[DRUMSTEP\]/ig, '');
+  // song.filename = song.filename.replace(/ \[DUBSTEP\]/ig, '');
+  // song.filename = song.filename.replace(/ \[EDM\]/ig, '');
+  // song.filename = song.filename.replace(/ \[ELECTRO\]/ig, '');
+  // song.filename = song.filename.replace(/ \[ELECTRONIC\]/ig, '');
+  // song.filename = song.filename.replace(/ \[ELECTRONICA\]/ig, '');
+  // song.filename = song.filename.replace(/ \[FREAKSTEP\]/ig, '');
+  // song.filename = song.filename.replace(/ \[FUTURE\]/ig, '');
+  // song.filename = song.filename.replace(/ \[FUTURE BASS\]/ig, '');
+  // song.filename = song.filename.replace(/ \[GLITCH HOP\]/ig, '');
+  // song.filename = song.filename.replace(/ \[HARD DANCE\]/ig, '');
+  // song.filename = song.filename.replace(/ \[HARDSTYLE TRAP\]/ig, '');
+  // song.filename = song.filename.replace(/ \[HIP HOP\]/ig, '');
+  // song.filename = song.filename.replace(/ \[HOUSE\]/ig, '');
+  // song.filename = song.filename.replace(/ \[HYBRID\]/ig, '');
+  // song.filename = song.filename.replace(/ \[JUNGLE TERROR\]/ig, '');
+  // song.filename = song.filename.replace(/ \[MELODIC DUBSTEP\]/ig, '');
+  // song.filename = song.filename.replace(/ \[NEURO TRAP\]/ig, '');
+  // song.filename = song.filename.replace(/ \[TRAP\]/ig, '');
 
   // Tags
-  song.filename = song.filename.replace(/ \[ 360 VISUALIZER \]/ig, '');
-  song.filename = song.filename.replace(/ \[360 VR VIDEO\]/ig, '');
-  song.filename = song.filename.replace(/ \(1440P\)/ig, '');
-  song.filename = song.filename.replace(/ \(AUDIO\)/ig, '');
-  song.filename = song.filename.replace(/ \(AVAILABLE .+\)/ig, '');
-  song.filename = song.filename.replace(/ \(BUY .+\)/ig, '');
-  song.filename = song.filename.replace(/ \[BUY .+\]/ig, '');
-  song.filename = song.filename.replace(/ \(CLICK BUY.+\)/ig, '');
-  song.filename = song.filename.replace(/ \[CLICK BUY.+\]/ig, '');
-  song.filename = song.filename.replace(/ \[DOWNLOAD .+\]/ig, '');
-  song.filename = song.filename.replace(/ \(EXCLUSIVE\)/ig, '');
-  song.filename = song.filename.replace(/ \[EXCLUSIVE\]/ig, '');
-  song.filename = song.filename.replace(/ \[EXCLUSIVE .+\]/ig, '');
-  song.filename = song.filename.replace(/ \[.+ EXCLUSIVE\]/ig, '');
-  song.filename = song.filename.replace(/ \(.+ EXCLUSIVE\)/ig, '');
-  song.filename = song.filename.replace(/ \(EXTENDED MIX\)/ig, '');
-  song.filename = song.filename.replace(/ \(FINAL\)/ig, '');
-  song.filename = song.filename.replace(/ \[FORTHCOMING .+\]/ig, '');
-  song.filename = song.filename.replace(/ \[FREE\]/ig, '');
-  song.filename = song.filename.replace(/ \(FREE\)/ig, '');
-  song.filename = song.filename.replace(/ \(FREE .+\)/ig, '');
-  song.filename = song.filename.replace(/ \[FREE .+\]/ig, '');
-  song.filename = song.filename.replace(/ FREE DOWNLOAD/ig, '');
-  song.filename = song.filename.replace(/ \[OFFICIAL\]/ig, '');
-  song.filename = song.filename.replace(/ \(OFFICIAL\)/ig, '');
-  song.filename = song.filename.replace(/ \(OFFICIAL .+\)/ig, '');
-  song.filename = song.filename.replace(/ \{OFFICIAL .+\}/ig, '');
-  song.filename = song.filename.replace(/ \[OFFICIAL .+\]/ig, '');
-  song.filename = song.filename.replace(/ \(LYRIC VIDEO\)/ig, '');
-  song.filename = song.filename.replace(/ \(MASTER\)/ig, '');
-  song.filename = song.filename.replace(/ \(ORIGINAL MIX\)/ig, '');
-  song.filename = song.filename.replace(/ \( ORIGINAL MIX \)/ig, '');
-  song.filename = song.filename.replace(/ \[ORIGINAL MIX\]/ig, '');
-  song.filename = song.filename.replace(/ \(OUT .+\)/ig, '');
-  song.filename = song.filename.replace(/ \[OUT .+\]/ig, '');
-  song.filename = song.filename.replace(/OUT NO.+/ig, '');
-  song.filename = song.filename.replace(/ \[PREMIERE\]/ig, '');
-  song.filename = song.filename.replace(/ \[.+ PREMIERE\]/ig, '');
-  song.filename = song.filename.replace(/ \(.+ PREMIERE\)/ig, '');
-  song.filename = song.filename.replace(/ \[REMASTER\]/ig, '');
-  song.filename = song.filename.replace(/ READ DESCRIPTION/ig, '');
-  song.filename = song.filename.replace(/ \(RADIO EDIT\)/ig, '');
+  // song.filename = song.filename.replace(/ \[ 360 VISUALIZER \]/ig, '');
+  // song.filename = song.filename.replace(/ \[360 VR VIDEO\]/ig, '');
+  // song.filename = song.filename.replace(/ \(1440P\)/ig, '');
+  // song.filename = song.filename.replace(/ \(AUDIO\)/ig, '');
+  // song.filename = song.filename.replace(/ \(AVAILABLE .+\)/ig, '');
+  // song.filename = song.filename.replace(/ \(BUY .+\)/ig, '');
+  // song.filename = song.filename.replace(/ \[BUY .+\]/ig, '');
+  // song.filename = song.filename.replace(/ \(CLICK BUY.+\)/ig, '');
+  // song.filename = song.filename.replace(/ \[CLICK BUY.+\]/ig, '');
+  // song.filename = song.filename.replace(/ \[DOWNLOAD .+\]/ig, '');
+  // song.filename = song.filename.replace(/ \(EXCLUSIVE\)/ig, '');
+  // song.filename = song.filename.replace(/ \[EXCLUSIVE\]/ig, '');
+  // song.filename = song.filename.replace(/ \[EXCLUSIVE .+\]/ig, '');
+  // song.filename = song.filename.replace(/ \[.+ EXCLUSIVE\]/ig, '');
+  // song.filename = song.filename.replace(/ \(.+ EXCLUSIVE\)/ig, '');
+  // song.filename = song.filename.replace(/ \(EXTENDED MIX\)/ig, '');
+  // song.filename = song.filename.replace(/ \(FINAL\)/ig, '');
+  // song.filename = song.filename.replace(/ \[FORTHCOMING .+\]/ig, '');
+  // song.filename = song.filename.replace(/ \[FREE\]/ig, '');
+  // song.filename = song.filename.replace(/ \(FREE\)/ig, '');
+  // song.filename = song.filename.replace(/ \(FREE .+\)/ig, '');
+  // song.filename = song.filename.replace(/ \[FREE .+\]/ig, '');
+  // song.filename = song.filename.replace(/ FREE DOWNLOAD/ig, '');
+  // song.filename = song.filename.replace(/ \[OFFICIAL\]/ig, '');
+  // song.filename = song.filename.replace(/ \(OFFICIAL\)/ig, '');
+  // song.filename = song.filename.replace(/ \(OFFICIAL .+\)/ig, '');
+  // song.filename = song.filename.replace(/ \{OFFICIAL .+\}/ig, '');
+  // song.filename = song.filename.replace(/ \[OFFICIAL .+\]/ig, '');
+  // song.filename = song.filename.replace(/ \(LYRIC VIDEO\)/ig, '');
+  // song.filename = song.filename.replace(/ \(MASTER\)/ig, '');
+  // song.filename = song.filename.replace(/ \(ORIGINAL MIX\)/ig, '');
+  // song.filename = song.filename.replace(/ \( ORIGINAL MIX \)/ig, '');
+  // song.filename = song.filename.replace(/ \[ORIGINAL MIX\]/ig, '');
+  // song.filename = song.filename.replace(/ \(OUT .+\)/ig, '');
+  // song.filename = song.filename.replace(/ \[OUT .+\]/ig, '');
+  // song.filename = song.filename.replace(/OUT NO.+/ig, '');
+  // song.filename = song.filename.replace(/ \[PREMIERE\]/ig, '');
+  // song.filename = song.filename.replace(/ \[.+ PREMIERE\]/ig, '');
+  // song.filename = song.filename.replace(/ \(.+ PREMIERE\)/ig, '');
+  // song.filename = song.filename.replace(/ \[REMASTER\]/ig, '');
+  // song.filename = song.filename.replace(/ READ DESCRIPTION/ig, '');
+  // song.filename = song.filename.replace(/ \(RADIO EDIT\)/ig, '');
 
   if (origFilename !== song.filename) {
     song.changed = true;
@@ -187,34 +186,30 @@ export function removeBadCharacters(song: Song): Song {
 export function checkRemix(song: Song): Song {
   const origArtist = song.artist;
 
-  if (/\(.+ REMIX\)/ig.test(song.filename)) {
-    const regex = /\(.[^\(]+ REMIX\)/ig;
-    song.artist = song.filename.slice(regex.exec(song.filename).index + 1, / REMIX\)/ig.exec(song.filename).index).trim().trimLeft();
-    song.filename = song.filename.slice(0, /\(.[^\(]+ REMIX\)/ig.exec(song.filename).index - 1).concat(song.extension);
-  } else if (/\[.+ REMIX\]/ig.test(song.filename)) {
-    song.artist = song.filename.slice(/\[.[^\[]+ REMIX\]/ig.exec(song.filename).index + 1, / REMIX\]/ig.exec(song.filename).index).trim().trimLeft();
-    song.filename = song.filename.slice(0, /\[.[^\[]+ REMIX\]/ig.exec(song.filename).index - 1).concat(song.extension);
-  } else if (/\(.+ REFIX\)/ig.test(song.filename)) {
-    song.artist = song.filename.slice(/\(.[^\(]+ REFIX\)/ig.exec(song.filename).index + 1, / REFIX\)/ig.exec(song.filename).index).trim().trimLeft();
-    song.filename = song.filename.slice(0, /\(.[^\(]+ REFIX\)/ig.exec(song.filename).index - 1).concat(song.extension);
-  } else if (/\(.+ FLIP\)/ig.test(song.filename)) {
-    song.artist = song.filename.slice(/\(.[^\(]+ FLIP\)/ig.exec(song.filename).index + 1, / FLIP\)/ig.exec(song.filename).index).trim().trimLeft();
-    song.filename = song.filename.slice(0, /\(.[^\(]+ FLIP\)/ig.exec(song.filename).index - 1).concat(song.extension);
-  } else if (/\[.+ FLIP\]/ig.test(song.filename)) {
-    song.artist = song.filename.slice(/\[.[^\[]+ FLIP\]/ig.exec(song.filename).index + 1, / FLIP\]/ig.exec(song.filename).index).trim().trimLeft();
-    song.filename = song.filename.slice(0, /\[.[^\[]+ FLIP\]/ig.exec(song.filename).index - 1).concat(song.extension);
-  } else if (/\(.+ EDIT\)/ig.test(song.filename)) {
-    song.artist = song.filename.slice(/\(.[^\(]+ EDIT\)/ig.exec(song.filename).index + 1, / EDIT\)/ig.exec(song.filename).index).trim().trimLeft();
-    song.filename = song.filename.slice(0, /\(.[^\(]+ EDIT\)/ig.exec(song.filename).index - 1).concat(song.extension);
-  } else if (/\[.+ EDIT\]/ig.test(song.filename)) {
-    song.artist = song.filename.slice(/\[.[^\[]+ EDIT\]/ig.exec(song.filename).index + 1, / EDIT\]/ig.exec(song.filename).index).trim().trimLeft();
-    song.filename = song.filename.slice(0, /\[.[^\[]+ EDIT\]/ig.exec(song.filename).index - 1).concat(song.extension);
-  } else if (/\(.+ BOOTLEG\)/ig.test(song.filename)) {
-    song.artist = song.filename.slice(/\(.[^\(]+ BOOTLEG\)/ig.exec(song.filename).index + 1, / BOOTLEG\)/ig.exec(song.filename).index).trim().trimLeft();
-    song.filename = song.filename.slice(0, /\(.[^\(]+ BOOTLEG\)/ig.exec(song.filename).index - 1).concat(song.extension);
-  } else if (/\(.+ EDITION\)/ig.test(song.filename)) {
-    song.artist = song.filename.slice(/\(.[^\(]+ EDITION\)/ig.exec(song.filename).index + 1, / EDITION\)/ig.exec(song.filename).index).trim().trimLeft();
-    song.filename = song.filename.slice(0, /\(.[^\(]+ EDITION\)/ig.exec(song.filename).index - 1).concat(song.extension);
+  if (/(\(|\[).+ REMIX/ig.test(song.filename)) {
+    song.artist = song.filename.slice(/(\(|\[).+ REMIX/.exec(song.filename).index + 1, / REMIX/ig.exec(song.filename).index).trim();
+    song.filename = song.filename.slice(0, /(\(|\[).+ REMIX(\)|\])/ig.exec(song.filename).index - 1).concat(song.extension);
+  } else if (/(\(|\[).+ REFIX\)/ig.test(song.filename)) {
+    song.artist = song.filename.slice(/(\(|\[).+ REFIX\)/ig.exec(song.filename).index + 1, / REFIX/ig.exec(song.filename).index).trim();
+    song.filename = song.filename.slice(0, /(\(|\[).+ REFIX\)/ig.exec(song.filename).index - 1).concat(song.extension);
+  } else if (/(\(|\[).+ FLIP\)/ig.test(song.filename)) {
+    song.artist = song.filename.slice(/(\(|\[).+ FLIP\)/ig.exec(song.filename).index + 1, / FLIP/ig.exec(song.filename).index).trim();
+    song.filename = song.filename.slice(0, /(\(|\[).+ FLIP\)/ig.exec(song.filename).index - 1).concat(song.extension);
+  } else if (/(\(|\[).+ FLIP\]/ig.test(song.filename)) {
+    song.artist = song.filename.slice(/(\(|\[).+ FLIP\]/ig.exec(song.filename).index + 1, / FLIP/ig.exec(song.filename).index).trim();
+    song.filename = song.filename.slice(0, /(\(|\[).+ FLIP\]/ig.exec(song.filename).index - 1).concat(song.extension);
+  } else if (/(\(|\[).+ EDIT\)/ig.test(song.filename)) {
+    song.artist = song.filename.slice(/(\(|\[).+ EDIT\)/ig.exec(song.filename).index + 1, / EDIT/ig.exec(song.filename).index).trim();
+    song.filename = song.filename.slice(0, /(\(|\[).+ EDIT\)/ig.exec(song.filename).index - 1).concat(song.extension);
+  } else if (/(\(|\[).+ EDIT\]/ig.test(song.filename)) {
+    song.artist = song.filename.slice(/(\(|\[).+ EDIT\]/ig.exec(song.filename).index + 1, / EDIT/ig.exec(song.filename).index).trim();
+    song.filename = song.filename.slice(0, /(\(|\[).+ EDIT\]/ig.exec(song.filename).index - 1).concat(song.extension);
+  } else if (/(\(|\[).+ BOOTLEG\)/ig.test(song.filename)) {
+    song.artist = song.filename.slice(/(\(|\[).+ BOOTLEG\)/ig.exec(song.filename).index + 1, / BOOTLEG/ig.exec(song.filename).index).trim();
+    song.filename = song.filename.slice(0, /(\(|\[).+ BOOTLEG\)/ig.exec(song.filename).index - 1).concat(song.extension);
+  } else if (/(\(|\[).+ EDITION\)/ig.test(song.filename)) {
+    song.artist = song.filename.slice(/(\(|\[).+ EDITION\)/ig.exec(song.filename).index + 1, / EDITION/ig.exec(song.filename).index).trim();
+    song.filename = song.filename.slice(0, /(\(|\[).+ EDITION\)/ig.exec(song.filename).index - 1).concat(song.extension);
   }
 
   if (origArtist !== song.artist) {
@@ -245,10 +240,7 @@ export function removeAnd(song: Song, ...types: Array<'artist' | 'album'>): Song
 }
 
 export function removeClip(title: string): string {
-  title = title.replace(/ \(CLIP\)/ig, '');
-  title = title.replace(/ \( CLIP \)/ig, '');
-  title = title.replace(/ \[CLIP\]/ig, '');
-  title = title.replace(/ CLIP/ig, '');
+  title = title.replace(/ (\(|\[).?CLIP.?(\)|\])/ig, '');
 
   return title;
 }
@@ -266,7 +258,7 @@ export function checkDuplicate(song: Song, musicArr: Song[]): Song {
       const file = musicArr[i];
       if (file !== song && file.artist === song.artist && file.title === song.title) {
         console.log(`***Duplicate: ${song.artist} - ${song.title}***
-  
+
   ------------------------------
   `);
         // fs.unlink(song.fullFilename);
@@ -284,7 +276,7 @@ export function checkWith(song: Song): Song {
 
   if (song.artist.length > 0) {
     if (song.filename.toUpperCase().includes('(W-')) {
-      song.artist += ` x ${song.filename.slice(song.filename.toUpperCase().indexOf('(W- ') + 4, song.filename.lastIndexOf(song.extension) - 1)}`;
+      song.artist += ` x ${song.filename.slice(song.filename.toUpperCase().indexOf('(W- ') + 4)}${song.extension}`;
       song.filename = song.filename.slice(0, song.filename.toUpperCase().indexOf('(W-')).trim().concat(song.extension);
     } else if (song.filename.toUpperCase().includes('(WITH ')) {
       song.artist += ` x ${song.filename.slice(song.filename.toUpperCase().indexOf('(WITH ') + 6, song.filename.lastIndexOf(song.extension) - 1)}`;
@@ -319,178 +311,178 @@ export function checkFeat(song: Song): Song {
 
   if (song.filename.toUpperCase().includes('(FEAT.')) {
     if (song.artist.toUpperCase().indexOf('(FEAT. ') > -1) {
-      featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('(FEAT. ') + 7, song.artist.toUpperCase().lastIndexOf(')')).trim().trimLeft();
-      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('(FEAT. ')).trim().trimLeft();
+      featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('(FEAT. ') + 7, song.artist.toUpperCase().lastIndexOf(')')).trim();
+      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('(FEAT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.title.toUpperCase().indexOf('(FEAT. ') > -1) {
-      featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('(FEAT. ') + 7, song.title.toUpperCase().lastIndexOf(')')).trim().trimLeft();
-      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('(FEAT. ')).trim().trimLeft();
+      featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('(FEAT. ') + 7, song.title.toUpperCase().lastIndexOf(')')).trim();
+      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('(FEAT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.album.toUpperCase().indexOf('(FEAT. ') > -1) {
-      featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('(FEAT. ') + 7, song.album.toUpperCase().lastIndexOf(')')).trim().trimLeft();
-      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('(FEAT. ')).trim().trimLeft();
+      featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('(FEAT. ') + 7, song.album.toUpperCase().lastIndexOf(')')).trim();
+      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('(FEAT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
   } else if (song.filename.toUpperCase().includes('(FT.')) {
     if (song.artist.toUpperCase().indexOf('(FT. ') > -1) {
-      featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('(FT. ') + 5, song.artist.toUpperCase().lastIndexOf(')')).trim().trimLeft();
-      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('(FT. ')).trim().trimLeft();
+      featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('(FT. ') + 5, song.artist.toUpperCase().lastIndexOf(')')).trim();
+      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('(FT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.title.toUpperCase().indexOf('(FT. ') > -1) {
-      featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('(FT. ') + 5, song.title.toUpperCase().lastIndexOf(')')).trim().trimLeft();
-      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('(FT. ')).trim().trimLeft();
+      featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('(FT. ') + 5, song.title.toUpperCase().lastIndexOf(')')).trim();
+      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('(FT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.album.toUpperCase().indexOf('(FT. ') > -1) {
-      featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('(FT. ') + 5, song.album.toUpperCase().lastIndexOf(')')).trim().trimLeft();
-      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('(FT. ')).trim().trimLeft();
+      featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('(FT. ') + 5, song.album.toUpperCase().lastIndexOf(')')).trim();
+      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('(FT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
   } else if (song.filename.toUpperCase().includes('(FT ')) {
     if (song.artist.toUpperCase().indexOf('(FT ') > -1) {
-      featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('(FT ') + 4, song.artist.toUpperCase().lastIndexOf(')')).trim().trimLeft();
-      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('(FT ')).trim().trimLeft();
+      featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('(FT ') + 4, song.artist.toUpperCase().lastIndexOf(')')).trim();
+      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('(FT ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.title.toUpperCase().indexOf('(FT ') > -1) {
-      featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('(FT ') + 4, song.title.toUpperCase().lastIndexOf(')')).trim().trimLeft();
-      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('(FT ')).trim().trimLeft();
+      featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('(FT ') + 4, song.title.toUpperCase().lastIndexOf(')')).trim();
+      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('(FT ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.album.toUpperCase().indexOf('(FT ') > -1) {
-      featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('(FT ') + 4, song.album.toUpperCase().lastIndexOf(')')).trim().trimLeft();
-      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('(FT ')).trim().trimLeft();
+      featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('(FT ') + 4, song.album.toUpperCase().lastIndexOf(')')).trim();
+      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('(FT ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
   } else if (song.filename.toUpperCase().includes('[FT. ')) {
     if (song.artist.toUpperCase().indexOf('[FT. ') > -1) {
-      featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('[FT. ') + 5, song.artist.toUpperCase().lastIndexOf(']')).trim().trimLeft();
-      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('[FT. ')).trim().trimLeft();
+      featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('[FT. ') + 5, song.artist.toUpperCase().lastIndexOf(']')).trim();
+      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('[FT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.title.toUpperCase().indexOf('[FT. ') > -1) {
-      featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('[FT. ') + 5, song.title.toUpperCase().lastIndexOf(']')).trim().trimLeft();
-      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('[FT. ')).trim().trimLeft();
+      featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('[FT. ') + 5, song.title.toUpperCase().lastIndexOf(']')).trim();
+      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('[FT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.album.toUpperCase().indexOf('[FT. ') > -1) {
-      featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('[FT. ') + 5, song.album.toUpperCase().lastIndexOf(']')).trim().trimLeft();
-      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('[FT. ')).trim().trimLeft();
+      featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('[FT. ') + 5, song.album.toUpperCase().lastIndexOf(']')).trim();
+      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('[FT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
   } else if (song.filename.toUpperCase().includes('[FEAT. ')) {
     if (song.artist.toUpperCase().indexOf('[FEAT. ') > -1) {
-      featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('[FEAT. ') + 7, song.artist.toUpperCase().lastIndexOf(']')).trim().trimLeft();
-      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('[FEAT. ')).trim().trimLeft();
+      featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('[FEAT. ') + 7, song.artist.toUpperCase().lastIndexOf(']')).trim();
+      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('[FEAT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.title.toUpperCase().indexOf('[FEAT. ') > -1) {
-      featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('[FEAT. ') + 7, song.title.toUpperCase().lastIndexOf(']')).trim().trimLeft();
-      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('[FEAT. ')).trim().trimLeft();
+      featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('[FEAT. ') + 7, song.title.toUpperCase().lastIndexOf(']')).trim();
+      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('[FEAT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.album.toUpperCase().indexOf('[FEAT. ') > -1) {
-      featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('[FEAT. ') + 7, song.album.toUpperCase().lastIndexOf(']')).trim().trimLeft();
-      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('[FEAT. ')).trim().trimLeft();
+      featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('[FEAT. ') + 7, song.album.toUpperCase().lastIndexOf(']')).trim();
+      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('[FEAT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
   } else if (song.filename.toUpperCase().includes('(PROD. ')) {
     if (song.artist.toUpperCase().indexOf('(PROD. ') > -1) {
-      featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('(PROD. ') + 7, song.artist.toUpperCase().lastIndexOf(')')).trim().trimLeft();
-      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('(PROD. ')).trim().trimLeft();
+      featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('(PROD. ') + 7, song.artist.toUpperCase().lastIndexOf(')')).trim();
+      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('(PROD. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.title.toUpperCase().indexOf('(PROD. ') > -1) {
-      featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('(PROD. ') + 7, song.title.toUpperCase().lastIndexOf(')')).trim().trimLeft();
-      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('(PROD. ')).trim().trimLeft();
+      featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('(PROD. ') + 7, song.title.toUpperCase().lastIndexOf(')')).trim();
+      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('(PROD. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.album.toUpperCase().indexOf('(PROD. ') > -1) {
-      featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('(PROD. ') + 7, song.album.toUpperCase().lastIndexOf(')')).trim().trimLeft();
-      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('(PROD. ')).trim().trimLeft();
+      featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('(PROD. ') + 7, song.album.toUpperCase().lastIndexOf(')')).trim();
+      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('(PROD. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
   } else if (song.filename.toUpperCase().includes('[PROD. ')) {
     if (song.artist.toUpperCase().indexOf('[PROD. ') > -1) {
-      featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('[PROD. ') + 7, song.artist.toUpperCase().lastIndexOf(']')).trim().trimLeft();
-      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('[PROD. ')).trim().trimLeft();
+      featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('[PROD. ') + 7, song.artist.toUpperCase().lastIndexOf(']')).trim();
+      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('[PROD. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.title.toUpperCase().indexOf('[PROD. ') > -1) {
-      featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('[PROD. ') + 7, song.title.toUpperCase().lastIndexOf(']')).trim().trimLeft();
-      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('[PROD. ')).trim().trimLeft();
+      featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('[PROD. ') + 7, song.title.toUpperCase().lastIndexOf(']')).trim();
+      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('[PROD. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.album.toUpperCase().indexOf('[PROD. ') > -1) {
-      featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('[PROD. ') + 7, song.album.toUpperCase().lastIndexOf(']')).trim().trimLeft();
-      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('[PROD. ')).trim().trimLeft();
+      featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('[PROD. ') + 7, song.album.toUpperCase().lastIndexOf(']')).trim();
+      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('[PROD. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
   } else if (song.filename.toUpperCase().includes('FEAT.')) {
     if (song.artist.toUpperCase().indexOf('FEAT. ') > -1) {
       featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('FEAT. ') + 6);
-      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('FEAT. ')).trim().trimLeft();
+      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('FEAT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.title.toUpperCase().indexOf('FEAT. ') > -1) {
       featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('FEAT. ') + 6);
-      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('FEAT. ')).trim().trimLeft();
+      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('FEAT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.album.toUpperCase().indexOf('FEAT. ') > -1) {
       featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('FEAT. ') + 6);
-      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('FEAT. ')).trim().trimLeft();
+      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('FEAT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
   } else if (song.filename.toUpperCase().includes('FT.') && !song.filename.toUpperCase().includes(`FT${song.extension.toUpperCase()}`)) {
     if (song.artist.toUpperCase().indexOf('FT. ') > -1) {
       featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf('FT. ') + 4);
-      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('FT. ')).trim().trimLeft();
+      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf('FT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.title.toUpperCase().indexOf('FT. ') > -1) {
       featuringArtist = song.title.slice(song.title.toUpperCase().indexOf('FT. ') + 4);
-      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('FT. ')).trim().trimLeft();
+      song.title = song.title.slice(0, song.title.toUpperCase().indexOf('FT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.album.toUpperCase().indexOf('FT. ') > -1) {
       featuringArtist = song.album.slice(song.album.toUpperCase().indexOf('FT. ') + 4);
-      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('FT. ')).trim().trimLeft();
+      song.album = song.album.slice(0, song.album.toUpperCase().indexOf('FT. ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
   } else if (song.filename.toUpperCase().includes(' FT ')) {
     if (song.artist.toUpperCase().indexOf(' FT ') > -1) {
       featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf(' FT ') + 4);
-      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf(' FT ')).trim().trimLeft();
+      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf(' FT ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.title.toUpperCase().indexOf(' FT ') > -1) {
       featuringArtist = song.title.slice(song.title.toUpperCase().indexOf(' FT ') + 4);
-      song.title = song.title.slice(0, song.title.toUpperCase().indexOf(' FT ')).trim().trimLeft();
+      song.title = song.title.slice(0, song.title.toUpperCase().indexOf(' FT ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.album.toUpperCase().indexOf(' FT ') > -1) {
       featuringArtist = song.album.slice(song.album.toUpperCase().indexOf(' FT ') + 4);
-      song.album = song.album.slice(0, song.album.toUpperCase().indexOf(' FT ')).trim().trimLeft();
+      song.album = song.album.slice(0, song.album.toUpperCase().indexOf(' FT ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
   } else if (song.filename.toUpperCase().includes(' FEAT ')) {
     if (song.artist.toUpperCase().indexOf(' FEAT ') > -1) {
       featuringArtist = song.artist.slice(song.artist.toUpperCase().indexOf(' FEAT ') + 6);
-      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf(' FEAT ')).trim().trimLeft();
+      song.artist = song.artist.slice(0, song.artist.toUpperCase().indexOf(' FEAT ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.title.toUpperCase().indexOf(' FEAT ') > -1) {
       featuringArtist = song.title.slice(song.title.toUpperCase().indexOf(' FEAT ') + 6);
-      song.title = song.title.slice(0, song.title.toUpperCase().indexOf(' FEAT ')).trim().trimLeft();
+      song.title = song.title.slice(0, song.title.toUpperCase().indexOf(' FEAT ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
     if (song.album.toUpperCase().indexOf(' FEAT ') > -1) {
       featuringArtist = song.album.slice(song.album.toUpperCase().indexOf(' FEAT ') + 6);
-      song.album = song.album.slice(0, song.album.toUpperCase().indexOf(' FEAT ')).trim().trimLeft();
+      song.album = song.album.slice(0, song.album.toUpperCase().indexOf(' FEAT ')).trim();
       console.log(`Feat: ${featuringArtist}`);
     }
   }
@@ -512,8 +504,8 @@ export function checkFeat(song: Song): Song {
 export function lastCheck(song: Song): Song {
   if (song.filename.includes('Track of the Day- ')) {
     song.album = song.artist;
-    song.artist = song.filename.slice(song.filename.lastIndexOf('- ') + 2, song.filename.indexOf('"')).trim().trimLeft();
-    song.title = song.filename.slice(song.filename.indexOf('"') + 1, song.filename.lastIndexOf('"')).trim().trimLeft();
+    song.artist = song.filename.slice(song.filename.lastIndexOf('- ') + 2, song.filename.indexOf('"')).trim();
+    song.title = song.filename.slice(song.filename.indexOf('"') + 1, song.filename.lastIndexOf('"')).trim();
     song.dashCount = 2;
   }
   if (song.title.includes('[') && 
@@ -523,15 +515,15 @@ export function lastCheck(song: Song): Song {
     !song.title.toUpperCase().includes('INSTRUMENTAL')
   ) {
     console.log(`Title: ${song.title}`);
-    song.title = song.title.slice(0, song.title.indexOf('[')).trim().trimLeft();
+    song.title = song.title.slice(0, song.title.indexOf('[')).trim();
   }
   if (song.artist.includes('[')) {
     console.log(`Artist: ${song.artist}`);
-    song.artist = song.artist.slice(0, song.artist.indexOf('[')).trim().trimLeft();
+    song.artist = song.artist.slice(0, song.artist.indexOf('[')).trim();
   }
   if (song.album.includes('[')) {
     console.log(`Album: ${song.album}`);
-    song.album = song.album.slice(0, song.album.indexOf('[')).trim().trimLeft();
+    song.album = song.album.slice(0, song.album.indexOf('[')).trim();
   }
 
   if (song.title.includes('(') && 
@@ -541,7 +533,7 @@ export function lastCheck(song: Song): Song {
     !song.title.toUpperCase().includes('REPRISE')
   ) {
     console.log(`Title: ${song.title}`);
-    song.title = song.title.slice(0, song.title.indexOf('(')).trim().trimLeft();
+    song.title = song.title.slice(0, song.title.indexOf('(')).trim();
   }
   if (song.artist.includes('(')) {
     console.log(`Artist: ${song.artist}`);
