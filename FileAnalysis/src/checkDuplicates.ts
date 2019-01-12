@@ -8,19 +8,20 @@ fs.readdir(currDir, (e, files) => {
   const compareArr = [...originalArr];
 
   for (let i = 0, len = originalArr.length; i < len; i++) {
-    let song = originalArr[i];
+    const song = originalArr[i];
 
-    // remove clip to see if full version is there
-    song.title = removeClip(song.title);
-    if (song.title && song.title.toUpperCase().includes('CLIP')) {
-      console.log(`${i} After: ${song.title}`);
+    // if it's got a (1) it's probably a duplicate
+    if (song.filename.includes(' (1)')) {
+      console.log(`***Duplicate: Check ${song.filename}***
+                    --------------------------------`);
     }
 
-    // ignore wavs
-    // if (song.rating === undefined && song.extension === '.wav') {
-    //   console.log(song.filename);
-    // }
+    // remove clip to see if full version is there
+    if (song.title && song.title.toUpperCase().includes('CLIP')) {
+      song.title = removeClip(song.title);
+    }
 
-    song = checkDuplicate(song, compareArr);
+    // logging purposes only for now
+    checkDuplicate(song, compareArr);
   }
 });

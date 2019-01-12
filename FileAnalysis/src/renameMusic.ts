@@ -53,7 +53,7 @@ fs.readdir(moveDir, (eL, localFiles) => {
         album: song.album
       };
 
-      song = tw.checkDuplicate(song, musicCache);
+      song.duplicate = tw.checkDuplicate(song, musicCache);
       if (song.duplicate) { return; }
 
       musicCache.push(song);

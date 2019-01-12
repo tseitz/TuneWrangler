@@ -7,7 +7,7 @@
     "rM": "ts-node src/renameMusic.ts",
     "rI": "node src/renameItunes.js",
     "format": "node src/formatMusic.js",
-    "checkDupes": "node src/checkDuplicates.js",
+    "checkDupes": "ts-node src/checkDuplicates.ts",
     "analyze": "node src/analyzePlaylists.js"
   },
   "dependencies": {
