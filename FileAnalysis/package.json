@@ -5,10 +5,9 @@
   "main": "common.js",
   "scripts": {
     "rM": "ts-node src/renameMusic.ts",
-    "rI": "node src/renameItunes.js",
-    "format": "node src/formatMusic.js",
+    "rI": "ts-node src/renameItunes.ts",
     "checkDupes": "ts-node src/checkDuplicates.ts",
-    "analyze": "node src/analyzePlaylists.js"
+    "analyze": "ts-node src/analyzePlaylists.ts"
   },
   "dependencies": {
     "colors": "^1.1.2"

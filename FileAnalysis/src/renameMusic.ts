@@ -46,13 +46,6 @@ fs.readdir(moveDir, (eL, localFiles) => {
       /* ALL TOGETHER NOW */
       song = setFinalName(song);
 
-      /* TAG AND BAG */
-      song.tags = {
-        title: song.title,
-        artist: song.artist,
-        album: song.album
-      };
-
       song.duplicate = tw.checkDuplicate(song, musicCache);
       if (song.duplicate) { return; }
 
@@ -97,6 +90,12 @@ function setFinalName(song: DownloadedSong): DownloadedSong {
 }
 
 function renameAndMove(song: DownloadedSong) {
+  song.tags = {
+    title: song.title,
+    artist: song.artist,
+    album: song.album
+  };
+
   if (song.tags) {
     const success = nodeId3.update(song.tags, song.fullFilename);
     if (!success) { console.log(`Failed to tag ${song.filename}`); }

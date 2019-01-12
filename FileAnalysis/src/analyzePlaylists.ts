@@ -1,41 +1,39 @@
-'use strict';
+import * as fs from 'fs';
+import * as tw from './common';
+import * as nodeId3 from 'node-id3';
+import { LocalSong, DownloadedSong } from './models/Song';
+// var readline = require('readline');
+// const EventEmitter = require('events');
 
-var fs = require('fs');
-var readline = require('readline');
-var tw = require('./common');
-const EventEmitter = require('events');
-
-let musicDir = tw.checkOS('music');
+const musicDir = tw.checkOS('music');
 let currentCountObj = {};
 let bangerCountObj = {};
 let starCountObj = {};
 let emitter = new EventEmitter();
 
 function init() {
-  let currDir = tw.checkOS('playlists');
+  const currDir = tw.checkOS('playlists');
 
-  process.argv.forEach((val, index, array) => {
-    if (index === 2) {
-      if (val == 'current-count') {
-        getCurrentCount(currDir);
-      } else if (val == 'bangers') {
-        getBangerCount(currDir);
-      } else if (val == 'five-star') {
-        getFiveStarCount(currDir);
-      } else if (val == 'stars') {
-        getStarCount(currDir);
-      } else if (val == 'all') {
-        getCurrentCount(currDir, true);
-      }
+  process.argv.forEach((val) => {
+    if (val === 'current-count') {
+      getCurrentCount(currDir);
+    } else if (val === 'bangers') {
+      getBangerCount(currDir);
+    } else if (val === 'five-star') {
+      getFiveStarCount(currDir);
+    } else if (val === 'stars') {
+      getStarCount(currDir);
+    } else if (val === 'all') {
+      getCurrentCount(currDir, true);
     }
-  });
+});
 }
 init();
 
 function getCurrentCount(currDir, processAll) {
   console.log(`
     Current Count
-    `.red);
+    `);
 
   fs.readdir(currDir, (e, files) => {
     emitter.once('count-analysis-done', (currentCount) => {
@@ -44,14 +42,14 @@ function getCurrentCount(currDir, processAll) {
       if (processAll) {
         getBangerCount(currDir, true);
       } else {
-        let keyArr = Object.keys(currentCount);
+        const keyArr = Object.keys(currentCount);
         keyArr.sort((a, b) => {
           return parseInt(a, 10) - parseInt(b, 10);
         });
-        keyArr.forEach((key, index) => {
+        keyArr.forEach((key) => {
           console.log(`
-                    ${key}`.green + `: ${currentCount[key].count}`);
-          console.log(`____________________________________________________________`.green);
+                    ${key}: ${currentCount[key].count}`);
+          console.log(`____________________________________________________________`);
         });
       }
     });
