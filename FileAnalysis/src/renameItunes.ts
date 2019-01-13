@@ -48,11 +48,7 @@ function renameAndMove(song: DownloadedSong) {
     if (!success) { console.log(`Failed to tag ${song.filename}`); }
   }
 
-  if (moveDir.length) {
-    fs.rename(song.fullFilename, `${moveDir}${song.finalFilename}`, (e) => {
-      if (e) { console.log(e); }
-    });
-  } else {
-    console.log('Error: No active move directory.');
-  }
+  fs.rename(song.fullFilename, `${moveDir}${song.finalFilename}`, (e) => {
+    if (e) { console.log(e); }
+  });
 }

@@ -1,5 +1,5 @@
 {
-  "name": "TuneWrangler",
+  "name": "tunewrangler",
   "version": "0.9.0",
   "description": "Node application that wrangles my tunes.",
   "main": "common.js",

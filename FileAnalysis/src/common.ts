@@ -1,6 +1,6 @@
 import { LocalSong, Song } from './models/Song';
 
-export function checkOS(type: string) {
+export function checkOS(type: string): string {
   switch (type) {
     case 'transfer':
       return process.env.OS === 'Windows_NT' ? 'F:\\Dropbox\\TransferMusic\\' : '/Users/tseitz10/Dropbox/TransferMusic/';
@@ -10,6 +10,8 @@ export function checkOS(type: string) {
       return process.env.OS === 'Windows_NT' ? 'C:\\Users\\Scooter\\Downloads\\' : '/Users/tseitz10/Downloads/';
     case 'playlists':
       return process.env.OS === 'Windows_NT' ? 'F:\\Dropbox\\MediaMonkeyPlaylists\\' : '/Users/tseitz10/Dropbox/MediaMonkeyPlaylists/';
+    default:
+      return '';
   }
 }
 
@@ -88,30 +90,25 @@ export function checkRemix(song: Song): Song {
 
   // regex: ( or [ not followed by another ) or ] followed by REMIX etc.   So: Title (... Remix)   NOT: Title (Feat. ...) (... Remix)
   if (/(\(|\[)[^\)]+ REMIX/ig.test(filename)) {
-    song.artist = filename.slice(/(\(|\[)[^\)]+ REMIX/ig.exec(filename).index + 1, / REMIX/ig.exec(filename).index).trim();
-    song.filename = filename.slice(0, /(\(|\[)[^\)]+ REMIX(\)|\])/ig.exec(filename).index - 1).concat(song.extension);
+    song.artist = filename.slice(/(\(|\[)[^\)]+ REMIX/ig.exec(filename)!.index + 1, / REMIX/ig.exec(filename)!.index).trim();
+    song.filename = filename.slice(0, /(\(|\[)[^\)]+ REMIX(\)|\])/ig.exec(filename)!.index - 1).concat(song.extension);
   } else if (/(\(|\[)[^\)]+ REFIX\)/ig.test(filename)) {
-    song.artist = filename.slice(/(\(|\[)[^\)]+ REFIX\)/ig.exec(filename).index + 1, / REFIX/ig.exec(filename).index).trim();
-    song.filename = filename.slice(0, /(\(|\[)[^\)]+ REFIX\)/ig.exec(filename).index - 1).concat(song.extension);
-  } else if (/(\(|\[)[^\)]+ FLIP\)/ig.test(filename)) {
-    song.artist = filename.slice(/(\(|\[)[^\)]+ FLIP\)/ig.exec(filename).index + 1, / FLIP/ig.exec(filename).index).trim();
-    song.filename = filename.slice(0, /(\(|\[)[^\)]+ FLIP\)/ig.exec(filename).index - 1).concat(song.extension);
-  } else if (/(\(|\[)[^\)]+ FLIP\]/ig.test(filename)) {
-    song.artist = filename.slice(/(\(|\[)[^\)]+ FLIP\]/ig.exec(filename).index + 1, / FLIP/ig.exec(filename).index).trim();
-    song.filename = filename.slice(0, /(\(|\[)[^\)]+ FLIP\]/ig.exec(filename).index - 1).concat(song.extension);
-  } else if (/(\(|\[)[^\)]+ EDIT\)/ig.test(filename)) {
-    song.artist = filename.slice(/(\(|\[)[^\)]+ EDIT\)/ig.exec(filename).index + 1, / EDIT/ig.exec(filename).index).trim();
-    song.filename = filename.slice(0, /(\(|\[)[^\)]+ EDIT\)/ig.exec(filename).index - 1).concat(song.extension);
-  } else if (/(\(|\[)[^\)]+ EDIT\]/ig.test(filename)) {
-    song.artist = filename.slice(/(\(|\[)[^\)]+ EDIT\]/ig.exec(filename).index + 1, / EDIT/ig.exec(filename).index).trim();
-    song.filename = filename.slice(0, /(\(|\[)[^\)]+ EDIT\]/ig.exec(filename).index - 1).concat(song.extension);
+    song.artist = filename.slice(/(\(|\[)[^\)]+ REFIX\)/ig.exec(filename)!.index + 1, / REFIX/ig.exec(filename)!.index).trim();
+    song.filename = filename.slice(0, /(\(|\[)[^\)]+ REFIX\)/ig.exec(filename)!.index - 1).concat(song.extension);
+  } else if (/(\(|\[)[^\)]+ FLIP(\)|\])/ig.test(filename)) {
+    song.artist = filename.slice(/(\(|\[)[^\)]+ FLIP(\)|\])/ig.exec(filename)!.index + 1, / FLIP/ig.exec(filename)!.index).trim();
+    song.filename = filename.slice(0, /(\(|\[)[^\)]+ FLIP(\)|\])/ig.exec(filename)!.index - 1).concat(song.extension);
+  } else if (/(\(|\[)[^\)]+ EDIT(\)|\])/ig.test(filename)) {
+    song.artist = filename.slice(/(\(|\[)[^\)]+ EDIT(\)|\])/ig.exec(filename)!.index + 1, / EDIT/ig.exec(filename)!.index).trim();
+    song.filename = filename.slice(0, /(\(|\[)[^\)]+ EDIT(\)|\])/ig.exec(filename)!.index - 1).concat(song.extension);
   } else if (/(\(|\[)[^\)]+ BOOTLEG\)/ig.test(filename)) {
-    song.artist = filename.slice(/(\(|\[)[^\)]+ BOOTLEG\)/ig.exec(filename).index + 1, / BOOTLEG/ig.exec(filename).index).trim();
-    song.filename = filename.slice(0, /(\(|\[)[^\)]+ BOOTLEG\)/ig.exec(filename).index - 1).concat(song.extension);
-  } else if (/(\(|\[)[^\)]+ EDITION\)/ig.test(filename)) {
-    song.artist = filename.slice(/(\(|\[)[^\)]+ EDITION\)/ig.exec(filename).index + 1, / EDITION/ig.exec(filename).index).trim();
-    song.filename = filename.slice(0, /(\(|\[)[^\)]+ EDITION\)/ig.exec(filename).index - 1).concat(song.extension);
+    song.artist = filename.slice(/(\(|\[)[^\)]+ BOOTLEG\)/ig.exec(filename)!.index + 1, / BOOTLEG/ig.exec(filename)!.index).trim();
+    song.filename = filename.slice(0, /(\(|\[)[^\)]+ BOOTLEG\)/ig.exec(filename)!.index - 1).concat(song.extension);
   }
+  // else if (/(\(|\[)[^\)]+ EDITION\)/ig.test(filename)) {
+  //   song.artist = filename.slice(/(\(|\[)[^\)]+ EDITION\)/ig.exec(filename).index + 1, / EDITION/ig.exec(filename).index).trim();
+  //   song.filename = filename.slice(0, /(\(|\[)[^\)]+ EDITION\)/ig.exec(filename).index - 1).concat(song.extension);
+  // }
 
   if (origArtist !== song.artist) {
     song.remix = true;
@@ -168,6 +165,7 @@ export function checkDuplicate(song: Song, musicArr: Song[] = []): boolean {
       return true;
     }
   }
+  return false;
   console.time('end');
 }
 
@@ -208,26 +206,26 @@ export function checkWith(song: Song): Song {
 export function checkFeat(song: Song): Song {
   const origArtist = song.artist;
   const origTitle = song.title;
-  let featuringArtist: string;
+  let featuringArtist: string | undefined;
 
   // (FEAT.  (FT.  [FEAT.  [FT.  FEAT.  FT.  FEAT  FT
   if (/((\(|\[)|\s)(FEAT|FT)\.?\s/ig.test(origArtist)) {
-    featuringArtist = origArtist.slice(/((\(|\[)|\s)(FEAT|FT)\.?\s/ig.exec(origArtist).index + 7, origArtist.lastIndexOf(')')).trim();
-    song.artist = origArtist.slice(0, /((\(|\[)|\s)(FEAT|FT)\.?\s/ig.exec(origArtist).index).trim();
+    featuringArtist = origArtist.slice(/((\(|\[)|\s)(FEAT|FT)\.?\s/ig.exec(origArtist)!.index + 7, origArtist.lastIndexOf(')')).trim();
+    song.artist = origArtist.slice(0, /((\(|\[)|\s)(FEAT|FT)\.?\s/ig.exec(origArtist)!.index).trim();
   }
   if (/((\(|\[)|\s)(FEAT|FT)\.?\s/ig.test(origTitle)) {
-    featuringArtist = origTitle.slice(/((\(|\[)|\s)(FEAT|FT)\.?\s/ig.exec(origTitle).index + 7, origTitle.lastIndexOf(')')).trim();
-    song.title = origTitle.slice(0, /((\(|\[)|\s)(FEAT|FT)\.?\s/ig.exec(origTitle).index).trim();
+    featuringArtist = origTitle.slice(/((\(|\[)|\s)(FEAT|FT)\.?\s/ig.exec(origTitle)!.index + 7, origTitle.lastIndexOf(')')).trim();
+    song.title = origTitle.slice(0, /((\(|\[)|\s)(FEAT|FT)\.?\s/ig.exec(origTitle)!.index).trim();
   }
 
   // (PROD. and [PROD
   if (/(\(|\[)PROD\.?\s/ig.test(origArtist)) {
-    featuringArtist = origArtist.slice(/(\(|\[)PROD\.?\s/ig.exec(origArtist).index + 7, origArtist.lastIndexOf(')')).trim();
-    song.artist = origArtist.slice(0, /(\(|\[)PROD\.?\s/ig.exec(origArtist).index).trim();
+    featuringArtist = origArtist.slice(/(\(|\[)PROD\.?\s/ig.exec(origArtist)!.index + 7, origArtist.lastIndexOf(')')).trim();
+    song.artist = origArtist.slice(0, /(\(|\[)PROD\.?\s/ig.exec(origArtist)!.index).trim();
   }
   if (/(\(|\[)PROD\.?\s/ig.test(origTitle)) {
-    featuringArtist = origTitle.slice(/(\(|\[)PROD\.?\s/ig.exec(origTitle).index + 7, origTitle.lastIndexOf(')')).trim();
-    song.title = origTitle.slice(0, /(\(|\[)PROD\.?\s/ig.exec(origTitle).index).trim();
+    featuringArtist = origTitle.slice(/(\(|\[)PROD\.?\s/ig.exec(origTitle)!.index + 7, origTitle.lastIndexOf(')')).trim();
+    song.title = origTitle.slice(0, /(\(|\[)PROD\.?\s/ig.exec(origTitle)!.index).trim();
   }
 
   if (song.artist !== origArtist || song.title !== origTitle) {
@@ -269,12 +267,12 @@ export function lastCheck(song: Song): Song {
 
   if (/(\(|\[)/g.test(artist)) {
     console.log(`Artist: ${artist}`);
-    song.artist = artist.slice(0, /(\(|\[)/g.exec(artist).index).trim();
+    song.artist = artist.slice(0, /(\(|\[)/g.exec(artist)!.index).trim();
   }
 
   if (/(\(|\[)/g.test(album)) {
     console.log(`Album: ${album}`);
-    song.album = album.slice(0, /(\(|\[)/g.exec(album).index).trim();
+    song.album = album.slice(0, /(\(|\[)/g.exec(album)!.index).trim();
   }
 
   return song;

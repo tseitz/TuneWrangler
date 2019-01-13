@@ -4,7 +4,7 @@ export class Song {
   artist = '';
   album = '';
   title = '';
-  extension = '';
+  extension: string;
   fullFilename = '';
   finalFilename = '';
   dashCount = 0;
@@ -16,7 +16,7 @@ export class Song {
 
   constructor(public filename: string, public directory: string) {
     this.fullFilename = `${directory}${filename}`;
-    this.extension = path.extname(filename) || undefined;
+    this.extension = path.extname(filename);
     this.dashCount = this.getDashCount();
   }
 
