@@ -90,20 +90,21 @@ export function checkRemix(song: Song): Song {
 
   // regex: ( or [ not followed by another ) or ] followed by REMIX etc.   So: Title (... Remix)   NOT: Title (Feat. ...) (... Remix)
   if (/(\(|\[)[^\)]+ REMIX/ig.test(filename)) {
+    const filenameRegex = /(\(|\[)[^\)]+ REMIX(\)|\])/ig.exec(filename);
     song.artist = filename.slice(/(\(|\[)[^\)]+ REMIX/ig.exec(filename)!.index + 1, / REMIX/ig.exec(filename)!.index).trim();
-    song.filename = filename.slice(0, /(\(|\[)[^\)]+ REMIX(\)|\])/ig.exec(filename)!.index - 1).concat(song.extension);
+    song.filename = filename.slice(0, filenameRegex!.index).trim().concat(song.extension);
   } else if (/(\(|\[)[^\)]+ REFIX\)/ig.test(filename)) {
     song.artist = filename.slice(/(\(|\[)[^\)]+ REFIX\)/ig.exec(filename)!.index + 1, / REFIX/ig.exec(filename)!.index).trim();
-    song.filename = filename.slice(0, /(\(|\[)[^\)]+ REFIX\)/ig.exec(filename)!.index - 1).concat(song.extension);
+    song.filename = filename.slice(0, /(\(|\[)[^\)]+ REFIX\)/ig.exec(filename)!.index).trim().concat(song.extension);
   } else if (/(\(|\[)[^\)]+ FLIP(\)|\])/ig.test(filename)) {
     song.artist = filename.slice(/(\(|\[)[^\)]+ FLIP(\)|\])/ig.exec(filename)!.index + 1, / FLIP/ig.exec(filename)!.index).trim();
-    song.filename = filename.slice(0, /(\(|\[)[^\)]+ FLIP(\)|\])/ig.exec(filename)!.index - 1).concat(song.extension);
+    song.filename = filename.slice(0, /(\(|\[)[^\)]+ FLIP(\)|\])/ig.exec(filename)!.index).trim().concat(song.extension);
   } else if (/(\(|\[)[^\)]+ EDIT(\)|\])/ig.test(filename)) {
     song.artist = filename.slice(/(\(|\[)[^\)]+ EDIT(\)|\])/ig.exec(filename)!.index + 1, / EDIT/ig.exec(filename)!.index).trim();
-    song.filename = filename.slice(0, /(\(|\[)[^\)]+ EDIT(\)|\])/ig.exec(filename)!.index - 1).concat(song.extension);
+    song.filename = filename.slice(0, /(\(|\[)[^\)]+ EDIT(\)|\])/ig.exec(filename)!.index).trim().concat(song.extension);
   } else if (/(\(|\[)[^\)]+ BOOTLEG\)/ig.test(filename)) {
     song.artist = filename.slice(/(\(|\[)[^\)]+ BOOTLEG\)/ig.exec(filename)!.index + 1, / BOOTLEG/ig.exec(filename)!.index).trim();
-    song.filename = filename.slice(0, /(\(|\[)[^\)]+ BOOTLEG\)/ig.exec(filename)!.index - 1).concat(song.extension);
+    song.filename = filename.slice(0, /(\(|\[)[^\)]+ BOOTLEG\)/ig.exec(filename)!.index).trim().concat(song.extension);
   }
   // else if (/(\(|\[)[^\)]+ EDITION\)/ig.test(filename)) {
   //   song.artist = filename.slice(/(\(|\[)[^\)]+ EDITION\)/ig.exec(filename).index + 1, / EDITION/ig.exec(filename).index).trim();
@@ -176,7 +177,7 @@ export function checkWith(song: Song): Song {
 
   if (song.artist.length > 0) {
     if (filename.toUpperCase().includes('(W-')) {
-      song.artist += ` x ${filename.slice(filename.toUpperCase().indexOf('(W- ') + 4)}${song.extension}`;
+      song.artist += ` x ${filename.slice(filename.toUpperCase().indexOf('(W- ') + 4, filename.lastIndexOf(song.extension) - 1)}`;
       song.filename = filename.slice(0, filename.toUpperCase().indexOf('(W-')).trim().concat(song.extension);
     } else if (filename.toUpperCase().includes('(WITH ')) {
       song.artist += ` x ${filename.slice(filename.toUpperCase().indexOf('(WITH ') + 6, filename.lastIndexOf(song.extension) - 1)}`;
@@ -203,19 +204,29 @@ export function checkWith(song: Song): Song {
   return song;
 }
 
+// tslint:disable-next-line:cyclomatic-complexity
 export function checkFeat(song: Song): Song {
   const origArtist = song.artist;
   const origTitle = song.title;
+  const origAlbum = song.album || '';
   let featuringArtist: string | undefined;
 
+  // slice the find index, plus the length of the first capturing group and the second capturing group
   // (FEAT.  (FT.  [FEAT.  [FT.  FEAT.  FT.  FEAT  FT
-  if (/((\(|\[)|\s)(FEAT|FT)\.?\s/ig.test(origArtist)) {
-    featuringArtist = origArtist.slice(/((\(|\[)|\s)(FEAT|FT)\.?\s/ig.exec(origArtist)!.index + 7, origArtist.lastIndexOf(')')).trim();
-    song.artist = origArtist.slice(0, /((\(|\[)|\s)(FEAT|FT)\.?\s/ig.exec(origArtist)!.index).trim();
+  if (/(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/ig.test(origArtist)) {
+    const exec = /(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/ig.exec(origArtist);
+    featuringArtist = origArtist.slice(exec!.index + exec![1].length + exec![2].length + exec![3].length, /(\)|\]|$)/ig.exec(origArtist)!.index).trim();
+    song.artist = origArtist.slice(0, exec!.index).trim();
   }
-  if (/((\(|\[)|\s)(FEAT|FT)\.?\s/ig.test(origTitle)) {
-    featuringArtist = origTitle.slice(/((\(|\[)|\s)(FEAT|FT)\.?\s/ig.exec(origTitle)!.index + 7, origTitle.lastIndexOf(')')).trim();
-    song.title = origTitle.slice(0, /((\(|\[)|\s)(FEAT|FT)\.?\s/ig.exec(origTitle)!.index).trim();
+  if (/(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/ig.test(origTitle)) {
+    const exec = /(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/ig.exec(origTitle);
+    featuringArtist = origTitle.slice(exec!.index + exec![1].length + exec![2].length + exec![3].length, /(\)|\]|$)/ig.exec(origTitle)!.index).trim();
+    song.title = origTitle.slice(0, exec!.index).trim();
+  }
+  if (/(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/ig.test(origAlbum)) {
+    const exec = /(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/ig.exec(origAlbum);
+    featuringArtist = origAlbum.slice(exec!.index + exec![1].length + exec![2].length + exec![3].length, /(\)|\]|$)/ig.exec(origAlbum)!.index).trim();
+    song.album = origAlbum.slice(0, exec!.index).trim();
   }
 
   // (PROD. and [PROD
@@ -228,15 +239,19 @@ export function checkFeat(song: Song): Song {
     song.title = origTitle.slice(0, /(\(|\[)PROD\.?\s/ig.exec(origTitle)!.index).trim();
   }
 
-  if (song.artist !== origArtist || song.title !== origTitle) {
+  if (song.artist !== origArtist || song.title !== origTitle || song.album !== origAlbum) {
     song.changed = true;
     console.log(`Feat: ${featuringArtist}`);
 
     // if it's a remix, the featuring artist belongs to the original artist (which we label as album)
     if (featuringArtist && song.remix) {
       song.album += ` x ${featuringArtist}`;
-    } else if (featuringArtist) { // otherwise add the feature to the artist
+    } else if (song.artist !== origArtist) {
       song.artist += ` x ${featuringArtist}`;
+    } else if (song.title !== origTitle) {
+      song.artist += ` x ${featuringArtist}`;
+    } else if (song.album !== origAlbum) {
+      song.album += ` x ${featuringArtist}`;
     }
   }
 
@@ -262,7 +277,7 @@ export function lastCheck(song: Song): Song {
     !title.toUpperCase().includes('INSTRUMENTAL')
   ) {
     console.log(`Title: ${title}`);
-    song.title = title.slice(0, title.indexOf('[')).trim();
+    song.title = title.slice(0, /(\(|\[)/g.exec(title)!.index).trim();
   }
 
   if (/(\(|\[)/g.test(artist)) {
