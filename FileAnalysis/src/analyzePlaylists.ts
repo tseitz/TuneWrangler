@@ -88,26 +88,34 @@ function getBangerCount(playlists: string, processAll?: boolean) {
           const sortedArr = artistArr.sort();
           const artistSet = new Set(sortedArr);
           const bangerArtists = Array.from(artistSet).reduce((a, key) => Object.assign(a, { [key]: 0 }));
-
+          console.log(bangerArtists);
+          
           bangerSongs.forEach((song) => {
             const artists = tw.splitArtist(song.artist);
             artists.forEach((artist) => {
               bangerArtists[artist.toLowerCase()]++;
             });
           });
-          console.log(bangerSongs);
+          // console.log(bangerArtists);
 
-          // const finalArr: any[] = [];
-          // Object.keys(bangerArtists).forEach((key) => {
-          //   finalArr.push({ key: bangerArtists[key] });
-          // });
-          // const finalSorted = finalArr.sort((a, b) => {
-          //   return a.count - b.count;
-          // });
+          const finalArr: ArtistCount[] = [];
+          Object.keys(bangerArtists).forEach((key) => {
+            finalArr.push({ artist: key, count: bangerArtists[key] });
+          });
+          // console.log(finalArr);
+          finalArr.sort((a: ArtistCount, b: ArtistCount) => {
+            return +a.count - +b.count;
+          });
+          // console.log(finalArr);
         });
       }
     });
   });
+}
+
+class ArtistCount {
+  artist: string;
+  count: number;
 }
 
 // function getBangerCount(playlists: string, processAll?: boolean) {

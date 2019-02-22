@@ -3,13 +3,13 @@ import { LocalSong, Song } from './models/Song';
 export function checkOS(type: string): string {
   switch (type) {
     case 'transfer':
-      return process.env.OS === 'Windows_NT' ? 'F:\\Dropbox\\TransferMusic\\' : '/Users/tseitz10/Dropbox/TransferMusic/';
+      return 'D:\\Dropbox\\TransferMusic\\'; // process.env.OS === 'Windows_NT' ? 'D:\\Dropbox\\TransferMusic\\';
     case 'music':
-      return process.env.OS === 'Windows_NT' ? 'F:\\Dropbox\\Music\\' : '/Users/tseitz10/Dropbox/Music/';
+      return 'D:\\Dropbox\\Music\\'; // process.env.OS === 'Windows_NT' ? 'D:\\Dropbox\\Music\\';
     case 'downloads':
-      return process.env.OS === 'Windows_NT' ? 'C:\\Users\\Scooter\\Downloads\\' : '/Users/tseitz10/Downloads/';
+      return 'C:\\Users\\tdsei\\Downloads\\'; // process.env.OS === 'Windows_NT' ? 'C:\\Users\\Scooter\\Downloads\\';
     case 'playlists':
-      return process.env.OS === 'Windows_NT' ? 'F:\\Dropbox\\MediaMonkeyPlaylists\\' : '/Users/tseitz10/Dropbox/MediaMonkeyPlaylists/';
+      return 'D:\\Dropbox\\MediaMonkeyPlaylists\\'; // process.env.OS === 'Windows_NT' ? 'D:\\Dropbox\\MediaMonkeyPlaylists\\';
     default:
       return '';
   }
