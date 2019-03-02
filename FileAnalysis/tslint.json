@@ -10,7 +10,7 @@
     "curly": true,
     "cyclomatic-complexity": [true, 10],
     "eofline": false,
-    "forin": true,
+    "forin": false,
     "import-spacing": true,
     "indent": [
       true,

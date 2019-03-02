@@ -1,71 +1,29 @@
 import * as fs from 'fs';
 import * as tw from './common';
-import * as nodeId3 from 'node-id3';
-import { LocalSong, DownloadedSong } from './models/Song';
-import { EventEmitter } from 'events';
+import { LocalSong } from './models/Song';
+import { ArtistAnalysis } from './models/ArtistAnalysis';
 import * as readline from 'readline';
-// var readline = require('readline');
-// const EventEmitter = require('events');
+
+/*
+  TODO:
+    - Implement analyzeAll
+    - Implement analysis all per week to get analysis of weekly intake
+*/
 
 const musicDir = tw.checkOS('music');
 const playlistDir = tw.checkOS('playlists');
-// let currentCountObj = {};
-// let bangerCountObj = {};
-// let starCountObj = {};
-// const emitter = new EventEmitter();
 
-process.argv.forEach((val) => {
-  if (val === 'bangers') {
-    getBangerCount(playlistDir);
-  }
-  // if (val === 'current-count') {
-  //   getCurrentCount(currDir);
-  // } else if (val === 'bangers') {
-  //   getBangerCount(currDir);
-  // } else if (val === 'five-star') {
-  //   getFiveStarCount(currDir);
-  // } else if (val === 'stars') {
-  //   getStarCount(currDir);
-  // } else if (val === 'all') {
-  //   getCurrentCount(currDir, true);
-  // }
-});
+const args = process.argv.slice(2); // grab the array of args
+if (args[0] !== 'all') {
+  analyze(playlistDir, args[0], !!args[1]);
+} else {
+  // analyzeAll(playlistDir, args[0], !!args[1]);
+}
 
-// function getCurrentCount(currDir, processAll) {
-//   console.log(`
-//     Current Count
-//     `);
-
-//   fs.readdir(currDir, (e, files) => {
-//     emitter.once('count-analysis-done', (currentCount) => {
-//       currentCountObj = currentCount;
-
-//       if (processAll) {
-//         getBangerCount(currDir, true);
-//       } else {
-//         const keyArr = Object.keys(currentCount);
-//         keyArr.sort((a, b) => {
-//           return parseInt(a, 10) - parseInt(b, 10);
-//         });
-//         keyArr.forEach((key) => {
-//           console.log(`
-//                     ${key}: ${currentCount[key].count}`);
-//           console.log(`____________________________________________________________`);
-//         });
-//       }
-//     });
-
-//     getCountAnalysis(currDir, files);
-//   });
-// }
-function getBangerCount(playlists: string, processAll?: boolean) {
-  console.log(`
-      Banger Count
-      `);
-
-  fs.readdir(playlists, (e, files) => {
-    files.forEach((filename, index) => {
-      if (filename.includes('_Bangerzzzzzzz.m3u')) {
+function analyze(dir: string, playlist: string, write = false) {
+  fs.readdir(dir, (e, files) => {
+    files.forEach((filename) => {
+      if (filename.toLowerCase().includes(playlist)) {
         const bangerSongs: LocalSong[] = [];
         const rl = readline.createInterface({
           input: fs.createReadStream(`${playlistDir}${filename}`)
@@ -87,115 +45,55 @@ function getBangerCount(playlists: string, processAll?: boolean) {
           });
           const sortedArr = artistArr.sort();
           const artistSet = new Set(sortedArr);
-          const bangerArtists = Array.from(artistSet).reduce((a, key) => Object.assign(a, { [key]: 0 }));
-          console.log(bangerArtists);
-          
+          const bangerArtists = Array.from(artistSet).reduce((a, key) => Object.assign(a, { [key]: 0 }), {});
+
           bangerSongs.forEach((song) => {
             const artists = tw.splitArtist(song.artist);
             artists.forEach((artist) => {
               bangerArtists[artist.toLowerCase()]++;
             });
           });
-          // console.log(bangerArtists);
 
-          const finalArr: ArtistCount[] = [];
-          Object.keys(bangerArtists).forEach((key) => {
-            finalArr.push({ artist: key, count: bangerArtists[key] });
+          const finalArr: ArtistAnalysis[] = [];
+          for (const prop in bangerArtists) {
+            finalArr.push({ artist: prop, count: bangerArtists[prop] });
+          }
+
+          finalArr.sort((a: ArtistAnalysis, b: ArtistAnalysis) => {
+            return b.count - a.count;
           });
-          // console.log(finalArr);
-          finalArr.sort((a: ArtistCount, b: ArtistCount) => {
-            return +a.count - +b.count;
-          });
-          // console.log(finalArr);
+
+          if (write) {
+            writeToFile(playlist, finalArr);
+          } else {
+            console.log(finalArr);
+          }
         });
       }
     });
   });
 }
 
-class ArtistCount {
-  artist: string;
-  count: number;
+function writeToFile(playlist: string, artistArr: ArtistAnalysis[]) {
+  let finalString = '';
+
+  artistArr.forEach((analysis, index) => {
+    if (index === 0) {
+      finalString += 'Artist, Count\n';
+    }
+
+    finalString += `${analysis.artist}, ${analysis.count}\n`;
+
+    if (index === artistArr.length - 1) {
+      fs.writeFile(`output/${playlist}.csv`, finalString, (e) => {
+        if (e) {
+          console.log(e);
+        }
+        console.log('Done writing');
+      });
+    }
+  });
 }
-
-// function getBangerCount(playlists: string, processAll?: boolean) {
-//   console.log(`
-//     Banger Count
-//     `);
-
-//   fs.readdir(playlists, (e, files) => {
-//     emitter.once('analysis-done', (allPlaylists) => {
-//       if (processAll) {
-//         Object.keys(allPlaylists).forEach((key) => {
-//           let analysisArr = allPlaylists[key].songArray;
-//           bangerCountObj[key] = {
-//             count: 0
-//           };
-
-//           analysisArr.forEach((SongA) => {
-//             bangerObj.songArray.forEach((SongB) => {
-//               if (SongA.title == SongB.title && SongA.artist == SongB.artist) {
-//                 bangerCountObj[key].count++;
-//               }
-//             });
-//           });
-//         });
-
-//         getStarCount(currDir, true);
-//       } else {
-//         let countArr = [];
-
-//         Object.keys(allPlaylists).forEach((key) => {
-//           let count = 0;
-//           let analysisArr = allPlaylists[key].songArray;
-
-//           analysisArr.forEach((SongA) => {
-//             bangerObj.songArray.forEach((SongB) => {
-//               if (SongA.title == SongB.title && SongA.artist == SongB.artist) {
-//                 count++;
-//               }
-//             });
-//           });
-//           countArr.push({
-//             filename: key,
-//             count: count
-//           });
-//         });
-
-//         countArr.sort((first, second) => {
-//           return parseInt(first.filename, 10) - parseInt(second.filename, 10);
-//         });
-//         countArr.forEach((playlist) => {
-//           console.log(`
-//                         ${playlist.filename}`.green + `: ${playlist.count}`);
-//           console.log(`____________________________________________________________`.green);
-//         });
-//       }
-//     });
-
-//     let bangerObj = {
-//       songArray: []
-//     };
-//     files.forEach((filename, index) => {
-//       if (filename.includes('_Bangerzzzzzzz.m3u')) {
-//         const rl = readline.createInterface({
-//           input: fs.createReadStream(`${currDir}${filename}`)
-//         });
-
-//         rl.on('line', (line) => {
-//           if (line.includes(musicDir) > 0) {
-//             line = line.slice(musicDir.length);
-//             var Song = tw.formatLocalSong(line, musicDir);
-
-//             bangerObj.songArray.push(Song);
-//           }
-//         });
-//       }
-//     });
-
-//     getAnalysis(currDir, files);
-//   });
-// }
 
 // function getStarCount(currDir, processAll) {
 //   console.log(`
@@ -282,102 +180,6 @@ class ArtistCount {
 //   });
 // }
 
-// function outputAll() {
-//   let finalString = '';
-
-//   let keyArr = Object.keys(bangerCountObj);
-//   keyArr.sort((a, b) => {
-//     return parseInt(a, 10) - parseInt(b, 10);
-//   });
-//   keyArr.forEach((key, index) => {
-//     let currentCount = currentCountObj[key].count;
-
-//     let bangerCount = bangerCountObj[key].count;
-
-//     let fiveCount = starCountObj[key].fiveCount;
-//     let fourHalfCount = starCountObj[key].fourHalfCount;
-//     let fourCount = starCountObj[key].fourCount;
-//     let notRatedCount = starCountObj[key].notRatedCount;
-
-//     if (index === 0) {
-//       finalString += 'Key, Current Count, Banger Count, Five Star Count, Four Half Star Count, Four Star Count, Not Rated Count\n';
-//     }
-
-//     finalString += `${key}, ${currentCount}, ${bangerCount}, ${fiveCount}, ${fourHalfCount}, ${fourCount}, ${notRatedCount}
-// `;
-
-//     if (index === keyArr.length - 1) {
-//       fs.writeFile('analysis.csv', finalString, (e) => {
-//         if (e) {
-//           console.log(e);
-//         }
-//         console.log('Done writing');
-//       });
-//     }
-//   });
-// }
-
-// function getAnalysis(currDir, files) {
-//   let allPlaylists = {};
-//   files = files.filter((filename) => {
-//     return filename.includes('Analysis');
-//   });
-//   files.forEach((filename, index) => {
-//     const rl = readline.createInterface({
-//       input: fs.createReadStream(`${currDir}${filename}`)
-//     });
-//     let trimmedFilename = filename.substring(filename.indexOf('-') + 2, filename.indexOf('.'));
-//     allPlaylists[trimmedFilename] = {
-//       songArray: []
-//     };
-//     let curPlaylist = allPlaylists[trimmedFilename];
-
-//     rl.on('line', (line) => {
-//       if (line.includes(musicDir) > 0) {
-//         line = line.slice(musicDir.length);
-//         var Song = tw.formatLocalSong(line, musicDir);
-
-//         curPlaylist.songArray.push(Song);
-//       }
-//     });
-
-//     rl.on('close', () => {
-//       if (index === files.length - 1) {
-//         emitter.emit('analysis-done', allPlaylists);
-//       }
-//     });
-//   });
-// }
-
-// function getCountAnalysis(currDir, files) {
-//   let allPlaylists = {};
-//   files = files.filter((filename) => {
-//     return filename.includes('Analysis');
-//   });
-//   files.forEach((filename, index) => {
-//     const rl = readline.createInterface({
-//       input: fs.createReadStream(`${currDir}${filename}`)
-//     });
-//     let trimmedFilename = filename.substring(filename.indexOf('-') + 2, filename.indexOf('.'));
-//     allPlaylists[trimmedFilename] = {
-//       count: 0
-//     };
-//     let curPlaylist = allPlaylists[trimmedFilename];
-
-//     rl.on('line', (line) => {
-//       if (line.includes(musicDir) > 0) {
-//         curPlaylist.count++;
-//       }
-//     });
-
-//     rl.on('close', () => {
-//       if (index === files.length - 1) {
-//         emitter.emit('count-analysis-done', allPlaylists);
-//       }
-//     });
-//   });
-// }
-
 // function artistRatio(files) {
 //   let artistCountArr = [];
 //   let cacheArtistCountArr = tw.cacheMusic(files);
@@ -409,29 +211,4 @@ class ArtistCount {
 
 //   console.log(totalCount);
 //   console.log(artistCountArr.length);
-// }
-
-// function countArtists(arr, artist) {
-//   let found = false;
-//   let foundIndex = -1;
-
-//   arr.forEach((artistObj, index) => {
-//     if (artistObj.artist.toUpperCase() === artist.toUpperCase()) {
-//       foundIndex = index;
-//     }
-//   });
-
-//   // if it exists increment count, if not set up initial object
-//   if (foundIndex > -1) {
-//     let artistObj = arr[foundIndex];
-
-//     artistObj.count++;
-//   } else {
-//     let artistObj = {
-//       artist: artist,
-//       count: 1
-//     };
-
-//     arr.push(artistObj);
-//   }
 // }
