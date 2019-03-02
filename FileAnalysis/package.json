@@ -1,23 +1,22 @@
 {
-  "name": "TuneWrangler",
+  "name": "tunewrangler",
   "version": "0.9.0",
-  "description": "Node application that wrangles up my tunes.",
+  "description": "Node application that wrangles my tunes.",
   "main": "common.js",
   "scripts": {
-    "rM": "node src/renameMusic.js",
-    "rI": "node src/renameItunes.js",
-    "format": "node src/formatMusic.js",
-    "checkDupes": "node src/checkDuplicates.js",
-    "analyze": "node src/analyzePlaylists.js"
+    "rM": "ts-node src/renameMusic.ts",
+    "rI": "ts-node src/renameItunes.ts",
+    "checkDupes": "ts-node src/checkDuplicates.ts",
+    "analyze": "ts-node src/analyzePlaylists.ts"
   },
   "dependencies": {
     "colors": "^1.1.2"
   },
   "devDependencies": {
     "@types/node": "^10.12.10",
-    "musicmetadata": "^2.0.5",
-    "node-id3": "^0.1.0",
+    "node-id3": "^0.1.7",
     "prompt": "^1.0.0",
+    "tslint": "^5.11.0",
     "typescript": "^3.1.6"
   },
   "repository": {
