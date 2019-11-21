@@ -3,12 +3,20 @@ import * as tw from './common';
 import * as nodeId3 from 'node-id3';
 import { LocalSong, DownloadedSong } from './models/Song';
 
+let debug = true;
+let wsl = true;
+let musicCache: LocalSong[] = [];
+
+// pass arg "-- move" to write tags and move file
+process.argv.forEach((value) => {
+  if (value === 'move') { debug = false; }
+  if (value === 'nowsl') { wsl = false; }
+});
+
 // Incoming: track # title
 // Outgoing: title
-const currDir = tw.checkOS('transfer');
-const moveDir = tw.checkOS('music');
-let musicCache: LocalSong[] = [];
-let debug = true;
+const currDir = tw.checkOS('transfer', wsl);
+const moveDir = tw.checkOS('music', wsl);
 
 // pass arg "-- move" to write tags and move file
 process.argv.forEach((value) => {

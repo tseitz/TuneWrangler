@@ -3,15 +3,20 @@ import * as tw from './common';
 import * as nodeId3 from 'node-id3';
 import { LocalSong, DownloadedSong } from './models/Song';
 
-const currDir = tw.checkOS('transfer');
-const moveDir = tw.checkOS('music');
+// scdl -l https://soundcloud.com/life-is-duality/sets/balloons -c --addtofile --onlymp3 -o [offset]
+
 let musicCache: LocalSong[] = [];
 let debug = true;
+let wsl = true;
 
 // pass arg "-- move" to write tags and move file
 process.argv.forEach((value) => {
   if (value === 'move') { debug = false; }
+  if (value === 'nowsl') { wsl = false; }
 });
+
+const currDir = tw.checkOS('transfer', wsl);
+const moveDir = tw.checkOS('music', wsl);
 
 /* Incoming: album - artist - title */
 /* Outgoing: artist - album - title */
@@ -20,6 +25,7 @@ fs.readdir(moveDir, (eL, localFiles) => {
   musicCache = tw.cacheMusic(localFiles, moveDir);
 
   fs.readdir(currDir, (eD, downloadedFiles) => {
+    let count = 0;
     downloadedFiles.forEach((filename) => {
       let song = new DownloadedSong(filename, currDir);
 
@@ -56,8 +62,12 @@ fs.readdir(moveDir, (eL, localFiles) => {
       console.log(`-----------------------
                       `);
 
-      if (!debug) { renameAndMove(song); }
+      count++;
+      if (!debug) {
+        renameAndMove(song);
+      }
     });
+    console.log(`Total Count: ${count}`);
   });
 });
 

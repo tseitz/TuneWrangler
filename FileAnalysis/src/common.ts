@@ -1,17 +1,32 @@
 import { LocalSong, Song } from './models/Song';
 
-export function checkOS(type: string): string {
-  switch (type) {
-    case 'transfer':
-      return 'D:\\Dropbox\\TransferMusic\\'; // process.env.OS === 'Windows_NT' ? 'D:\\Dropbox\\TransferMusic\\';
-    case 'music':
-      return 'D:\\Dropbox\\Music\\'; // process.env.OS === 'Windows_NT' ? 'D:\\Dropbox\\Music\\';
-    case 'downloads':
-      return 'C:\\Users\\tdsei\\Downloads\\'; // process.env.OS === 'Windows_NT' ? 'C:\\Users\\Scooter\\Downloads\\';
-    case 'playlists':
-      return 'D:\\Dropbox\\MediaMonkeyPlaylists\\'; // process.env.OS === 'Windows_NT' ? 'D:\\Dropbox\\MediaMonkeyPlaylists\\';
-    default:
-      return '';
+export function checkOS(type: string, wsl: boolean): string {
+  if (wsl) {
+    switch (type) {
+      case 'transfer':
+        return '/mnt/d/Dropbox/TransferMusic/';
+      case 'music':
+        return '/mnt/d/Dropbox/Music/';
+      case 'downloads':
+        return '/mnt/c/Users/tdsei/Downloads/';
+      case 'playlists':
+        return '/mnt/d/Dropbox/MediaMonkeyPlaylists/';
+      default:
+        return '';
+    }
+  } else {
+    switch (type) {
+      case 'transfer':
+        return 'D:\\Dropbox\\TransferMusic\\'; // process.env.OS === 'Windows_NT' ? 'D:\\Dropbox\\TransferMusic\\';
+      case 'music':
+        return 'D:\\Dropbox\\Music\\'; // process.env.OS === 'Windows_NT' ? 'D:\\Dropbox\\Music\\';
+      case 'downloads':
+        return 'C:\\Users\\tdsei\\Downloads\\'; // process.env.OS === 'Windows_NT' ? 'C:\\Users\\Scooter\\Downloads\\';
+      case 'playlists':
+        return 'D:\\Dropbox\\MediaMonkeyPlaylists\\'; // process.env.OS === 'Windows_NT' ? 'D:\\Dropbox\\MediaMonkeyPlaylists\\';
+      default:
+        return '';
+    }
   }
 }
 
@@ -90,7 +105,7 @@ export function checkRemix(song: Song): Song {
 
   // regex: ( or [ not followed by another ) or ] followed by REMIX etc.   So: Title (... Remix)   NOT: Title (Feat. ...) (... Remix)
   if (/(\(|\[)[^\)]+ REMIX/ig.test(filename)) {
-    const filenameRegex = /(\(|\[)[^\)]+ REMIX(\)|\])/ig.exec(filename);
+    const filenameRegex = /(\(|\[)[^\)]+ REMIX/ig.exec(filename); // /(\(|\[)[^\)]+ REMIX(\)|\])/ig.exec(filename);
     song.artist = filename.slice(/(\(|\[)[^\)]+ REMIX/ig.exec(filename)!.index + 1, / REMIX/ig.exec(filename)!.index).trim();
     song.filename = filename.slice(0, filenameRegex!.index).trim().concat(song.extension);
   } else if (/(\(|\[)[^\)]+ REFIX\)/ig.test(filename)) {
@@ -105,11 +120,10 @@ export function checkRemix(song: Song): Song {
   } else if (/(\(|\[)[^\)]+ BOOTLEG\)/ig.test(filename)) {
     song.artist = filename.slice(/(\(|\[)[^\)]+ BOOTLEG\)/ig.exec(filename)!.index + 1, / BOOTLEG/ig.exec(filename)!.index).trim();
     song.filename = filename.slice(0, /(\(|\[)[^\)]+ BOOTLEG\)/ig.exec(filename)!.index).trim().concat(song.extension);
+  } else if (/(\(|\[)[^\)]+ REBOOT\)/ig.test(filename)) {
+    song.artist = filename.slice(/(\(|\[)[^\)]+ REBOOT\)/ig.exec(filename)!.index + 1, / REBOOT/ig.exec(filename)!.index).trim();
+    song.filename = filename.slice(0, /(\(|\[)[^\)]+ REBOOT\)/ig.exec(filename)!.index - 1).concat(song.extension);
   }
-  // else if (/(\(|\[)[^\)]+ EDITION\)/ig.test(filename)) {
-  //   song.artist = filename.slice(/(\(|\[)[^\)]+ EDITION\)/ig.exec(filename).index + 1, / EDITION/ig.exec(filename).index).trim();
-  //   song.filename = filename.slice(0, /(\(|\[)[^\)]+ EDITION\)/ig.exec(filename).index - 1).concat(song.extension);
-  // }
 
   if (origArtist !== song.artist) {
     song.remix = true;
