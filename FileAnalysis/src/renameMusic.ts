@@ -3,7 +3,7 @@ import * as tw from './common';
 import * as nodeId3 from 'node-id3';
 import { LocalSong, DownloadedSong } from './models/Song';
 
-// scdl -l https://soundcloud.com/life-is-duality/sets/balloons -c --addtofile --onlymp3 -o [offset]
+// scdl -l https://soundcloud.com/we-are-gentle-giants/sets/mesij -c --addtofile --onlymp3 -o [offset]
 
 let musicCache: LocalSong[] = [];
 let debug = true;

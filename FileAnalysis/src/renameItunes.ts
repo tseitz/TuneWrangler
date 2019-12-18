@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as tw from './common';
-import * as nodeId3 from 'node-id3';
 import { LocalSong, DownloadedSong } from './models/Song';
 
 let debug = true;
@@ -30,6 +29,8 @@ fs.readdir(moveDir, (eL, localFiles) => {
     downloadedFiles.forEach((filename, index) => {
       const song = new DownloadedSong(filename, currDir);
 
+      if (!song.extension || song.extension === '.m3u') { return; }
+
       // remove track number
       song.filename = song.filename.slice(3).trim();
 
@@ -45,18 +46,7 @@ fs.readdir(moveDir, (eL, localFiles) => {
 });
 
 function renameAndMove(song: DownloadedSong) {
-  song.tags = {
-    title: song.title,
-    artist: song.artist,
-    album: song.album
-  };
-
-  if (song.tags) {
-    const success = nodeId3.update(song.tags, song.fullFilename);
-    if (!success) { console.log(`Failed to tag ${song.filename}`); }
-  }
-
-  fs.rename(song.fullFilename, `${moveDir}${song.finalFilename}`, (e) => {
+  fs.rename(song.fullFilename, `${moveDir}${song.filename}`, (e) => {
     if (e) { console.log(e); }
   });
 }
