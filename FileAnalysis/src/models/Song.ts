@@ -1,12 +1,12 @@
-import * as path from 'path';
+import * as path from "path";
 
 export class Song {
-  artist = '';
-  album = '';
-  title = '';
+  artist = "";
+  album = "";
+  title = "";
   extension: string;
-  fullFilename = '';
-  finalFilename = '';
+  fullFilename = "";
+  finalFilename = "";
   dashCount = 0;
   rating = 0;
   remix: boolean;
@@ -21,22 +21,31 @@ export class Song {
   }
 
   getDashCount(): number {
-    return this.filename.split(' - ').length - 1;
+    return this.filename.split(" - ").length - 1;
   }
 
   grabFirst(): string {
-    return this.filename.split(' - ')[0].trim().trimLeft();
+    return this.filename
+      .split(" - ")[0]
+      .trim()
+      .trimLeft();
   }
 
   grabSecond(): string {
-    let second = '';
+    let second = "";
 
-    if (this.filename.split(' - ')[1]) {
-      second = this.filename.split(' - ')[1].trim().trimLeft();
+    if (this.filename.split(" - ")[1]) {
+      second = this.filename
+        .split(" - ")[1]
+        .trim()
+        .trimLeft();
     }
 
     // YouTube naming Artist - Topic
-    if (second.trim().trimLeft() === 'Topic' && !this.filename.includes('Various Artists')) {
+    if (
+      second.trim().trimLeft() === "Topic" &&
+      !this.filename.includes("Various Artists")
+    ) {
       second = this.grabFirst();
     }
 
@@ -44,11 +53,17 @@ export class Song {
   }
 
   grabThird(): string {
-    return this.filename.split(' - ')[2];
+    return this.filename.split(" - ")[2];
   }
 
   grabLast(): string {
-    return this.filename.slice(this.filename.lastIndexOf(' - ') + 3, this.filename.lastIndexOf('.')).trim().trimLeft();
+    return this.filename
+      .slice(
+        this.filename.lastIndexOf(" - ") + 3,
+        this.filename.lastIndexOf(".")
+      )
+      .trim()
+      .trimLeft();
   }
 }
 
