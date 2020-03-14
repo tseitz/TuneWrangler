@@ -268,8 +268,8 @@ export function checkDuplicate(song: Song, musicArr: Song[] = []): boolean {
       return true;
     }
   }
-  return false;
   console.time("end");
+  return false;
 }
 
 export function checkWith(song: Song): Song {
