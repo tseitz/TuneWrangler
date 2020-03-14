@@ -70,6 +70,7 @@ export function removeBadCharacters(song: Song): Song {
   song.filename = song.filename.replace("Re-Crank", "Remix");
   song.filename = song.filename.replace("Mixmag - Premiere-", "Mixmag - ");
   song.filename = song.filename.replace("1985  -  Music", "1985 Music");
+  song.filename = song.filename.replace(/QGRT-d+/gi, "");
   song.filename = song.filename.replace(/free download/gi, "");
   song.filename = song.filename.replace(/featuring/gi, "feat.");
 

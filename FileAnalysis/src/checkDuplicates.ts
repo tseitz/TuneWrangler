@@ -1,7 +1,15 @@
-import * as fs from 'fs';
-import { checkOS, cacheMusic, removeClip, checkDuplicate } from './common';
+import * as fs from "fs";
+import { checkOS, cacheMusic, removeClip, checkDuplicate } from "./common";
 
-const currDir = checkOS('music');
+let wsl = true;
+
+process.argv.forEach(value => {
+  if (value === "nowsl") {
+    wsl = false;
+  }
+});
+
+const currDir = checkOS("music", wsl);
 
 fs.readdir(currDir, (e, files) => {
   const originalArr = cacheMusic(files, currDir);
@@ -11,13 +19,13 @@ fs.readdir(currDir, (e, files) => {
     const song = originalArr[i];
 
     // if it's got a (1) it's probably a duplicate
-    if (song.filename.includes(' (1)')) {
+    if (song.filename.includes(" (1)")) {
       console.log(`***Duplicate: Check ${song.filename}***
                     --------------------------------`);
     }
 
     // remove clip to see if full version is there
-    if (song.title && song.title.toUpperCase().includes('CLIP')) {
+    if (song.title && song.title.toUpperCase().includes("CLIP")) {
       song.title = removeClip(song.title);
     }
 
