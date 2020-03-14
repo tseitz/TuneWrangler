@@ -1,22 +1,26 @@
-import * as fs from 'fs';
-import * as tw from './common';
-import * as nodeId3 from 'node-id3';
-import { LocalSong, DownloadedSong } from './models/Song';
+import * as fs from "fs";
+import * as tw from "./common";
+import * as nodeId3 from "node-id3";
+import { LocalSong, DownloadedSong } from "./models/Song";
 
 // scdl -l https://soundcloud.com/we-are-gentle-giants/sets/goodhouse -c --addtofile --onlymp3 -o [offset]
 
 let musicCache: LocalSong[] = [];
 let debug = true;
-let wsl = false;
+let wsl = true;
 
 // pass arg "-- move" to write tags and move file
-process.argv.forEach((value) => {
-  if (value === 'move') { debug = false; }
-  if (value === 'nowsl') { wsl = false; }
+process.argv.forEach(value => {
+  if (value === "move") {
+    debug = false;
+  }
+  if (value === "nowsl") {
+    wsl = false;
+  }
 });
 
-const currDir = tw.checkOS('transfer', wsl);
-const moveDir = tw.checkOS('music', wsl);
+const currDir = tw.checkOS("transfer", wsl);
+const moveDir = tw.checkOS("music", wsl);
 
 /* Incoming: album - artist - title */
 /* Outgoing: artist - album - title */
@@ -26,10 +30,12 @@ fs.readdir(moveDir, (eL, localFiles) => {
 
   fs.readdir(currDir, (eD, downloadedFiles) => {
     let count = 0;
-    downloadedFiles.forEach((filename) => {
+    downloadedFiles.forEach(filename => {
       let song = new DownloadedSong(filename, currDir);
 
-      if (song.dashCount < 1 || !song.extension || song.extension === '.m3u') { return; }
+      if (song.dashCount < 1 || !song.extension || song.extension === ".m3u") {
+        return;
+      }
 
       song = tw.removeBadCharacters(song);
 
@@ -46,14 +52,16 @@ fs.readdir(moveDir, (eL, localFiles) => {
 
       /* FINAL CHECK */
       song = tw.checkFeat(song);
-      song = tw.removeAnd(song, 'artist', 'album');
+      song = tw.removeAnd(song, "artist", "album");
       song = tw.lastCheck(song);
 
       /* ALL TOGETHER NOW */
       song = setFinalName(song);
 
       song.duplicate = tw.checkDuplicate(song, musicCache);
-      if (song.duplicate) { return; }
+      if (song.duplicate) {
+        return;
+      }
 
       musicCache.push(song);
 
@@ -77,7 +85,7 @@ function grabArtist(song: DownloadedSong): DownloadedSong {
   if (song.remix) {
     /* if it's a remix, the original artist is assigned to album, remove &'s from it */
     song.album = song.dashCount === 1 ? song.grabFirst() : song.grabSecond();
-    song = tw.removeAnd(song, 'album');
+    song = tw.removeAnd(song, "album");
   } else {
     /* otherwise the artist is straightforward */
     song.artist = song.dashCount === 1 ? song.grabFirst() : song.grabSecond();
@@ -90,9 +98,9 @@ function grabArtist(song: DownloadedSong): DownloadedSong {
 
 function setFinalName(song: DownloadedSong): DownloadedSong {
   if (song.dashCount === 1) {
-    song.finalFilename = song.album ?
-      `${song.artist} - ${song.album} - ${song.title}${song.extension}` :
-      `${song.artist} - ${song.title}${song.extension}`;
+    song.finalFilename = song.album
+      ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`
+      : `${song.artist} - ${song.title}${song.extension}`;
   } else {
     song.finalFilename = `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
   }
@@ -108,10 +116,14 @@ function renameAndMove(song: DownloadedSong) {
 
   if (song.tags) {
     const success = nodeId3.update(song.tags, song.fullFilename);
-    if (!success) { console.log(`Failed to tag ${song.filename}`); }
+    if (!success) {
+      console.log(`Failed to tag ${song.filename}`);
+    }
   }
 
-  fs.rename(song.fullFilename, `${moveDir}${song.finalFilename}`, (e) => {
-    if (e) { console.log(e); }
+  fs.rename(song.fullFilename, `${moveDir}${song.finalFilename}`, e => {
+    if (e) {
+      console.log(e);
+    }
   });
 }
