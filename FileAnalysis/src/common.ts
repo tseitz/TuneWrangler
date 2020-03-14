@@ -1,10 +1,10 @@
 import { LocalSong, Song } from "./models/Song";
 
 const dupeExceptions = [
-  "Bassnectar - Dorfex Bos",
-  "Bassnectar - Intro",
-  "Jarvis - Wait For Me",
-  "ODESZA - Intro",
+  "BASSNECTAR - DORFEX BOS",
+  "BASSNECTAR - INTRO",
+  "Jarvis - WAIT FOR ME",
+  "ODESZA - INTO",
   "STUCA - SHIT"
 ];
 
@@ -258,7 +258,9 @@ export function checkDuplicate(song: Song, musicArr: Song[] = []): boolean {
       compare !== song && // when comparing local to itself, make sure the files don't exactly match
       songArtist.toUpperCase() === compareArtist.toUpperCase() &&
       songTitle.toUpperCase() === compareTitle.toUpperCase() &&
-      !dupeExceptions.includes(`${song.artist} - ${song.title}`)
+      !dupeExceptions.includes(
+        `${song.artist.toUpperCase()} - ${song.title.toUpperCase()}`
+      )
     ) {
       console.log(song);
       console.log(`***Duplicate: ${song.artist} - ${song.title}***
