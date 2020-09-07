@@ -8,17 +8,23 @@ const dupeExceptions = [
   'STUCA - SHIT',
 ]
 
-export function checkOS(type: string, wsl: boolean): string {
-  if (wsl) {
+export function checkOS(type: string, linux: boolean): string {
+  if (linux) {
     switch (type) {
       case 'transfer':
-        return '/mnt/g/Dropbox/TransferMusic/'
+        return '/home/tseitz/Music/Downloads/'
       case 'music':
-        return '/mnt/g/Dropbox/Music/'
+        return '/media/tseitz/Storage SSD/Dropbox/Music/'
       case 'downloads':
-        return '/mnt/c/Users/tdsei/Downloads/'
+        return '/home/tseitz/Downloads/'
       case 'playlists':
-        return '/mnt/g/Dropbox/MediaMonkeyPlaylists/'
+        return '/home/tseitz/Documents/playlists/'
+      case 'formatted':
+        return '/home/tseitz/Documents/formatted_playlists/'
+      case 'broken':
+        return '/home/tseitz/Documents/broken_songs/'
+      case 'linuxMusic':
+        return '/home/tseitz/Music/'
       default:
         return ''
     }
@@ -234,6 +240,14 @@ export function removeAnd(
   return song
 }
 
+export function removeX(string: string) {
+  return string.replace(/\sx\s/g, ', ')
+}
+
+export function addX(string: string) {
+  return string.replace(/\,\s/g, ' x ')
+}
+
 export function removeClip(title: string): string {
   title = title.replace(/(\(|\[).?CLIP.?(\)|\])/gi, '').trim()
 
@@ -241,7 +255,7 @@ export function removeClip(title: string): string {
 }
 
 export function checkDuplicate(song: Song, musicArr: Song[] = []): boolean {
-  console.time('start')
+  // console.time('start')
   for (let i = 0, len = musicArr.length; i < len; i++) {
     const compare = musicArr[i]
     const songArtist = song.artist || ''
@@ -267,7 +281,7 @@ export function checkDuplicate(song: Song, musicArr: Song[] = []): boolean {
       return true
     }
   }
-  console.time('end')
+  // console.time('end')
   return false
 }
 

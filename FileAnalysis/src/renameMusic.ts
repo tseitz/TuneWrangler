@@ -4,24 +4,24 @@ import * as nodeId3 from 'node-id3'
 import { LocalSong, DownloadedSong } from './models/Song'
 
 // uninstall/reinstall if necessary
-// scdl -l https://soundcloud.com/we-are-gentle-giants/sets/goodhouse -c --addtofile --onlymp3 -o [offset]
+// scdl -l https://soundcloud.com/we-are-gentle-giants/sets/ur-gonna-love-me -c --addtofile --onlymp3 -o [offset]
 
 let musicCache: LocalSong[] = []
 let debug = true
-let wsl = true
+let linux = true
 
 // pass arg "-- move" to write tags and move file
 process.argv.forEach((value) => {
   if (value === 'move') {
     debug = false
   }
-  if (value === 'nowsl') {
-    wsl = false
+  if (value === 'nolinux') {
+    linux = false
   }
 })
 
-const currDir = tw.checkOS('transfer', wsl)
-const moveDir = tw.checkOS('music', wsl)
+const currDir = tw.checkOS('transfer', linux)
+const moveDir = tw.checkOS('linuxMusic', linux)
 
 /* Incoming: album - artist - title */
 /* Outgoing: artist - album - title */

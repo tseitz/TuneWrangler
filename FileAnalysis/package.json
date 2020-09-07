@@ -6,6 +6,7 @@
   "scripts": {
     "rM": "ts-node src/renameMusic.ts",
     "rI": "ts-node src/renameItunes.ts",
+    "rP": "ts-node src/renamePlaylists.ts",
     "checkDupes": "ts-node src/checkDuplicates.ts",
     "analyze": "ts-node src/analyzePlaylists.ts",
     "checkCorrupted": "ts-node src/checkCorruptedPlaylists.ts"
