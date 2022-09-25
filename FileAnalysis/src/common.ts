@@ -1,4 +1,7 @@
-import { LocalSong, Song } from './models/Song'
+import {
+  LocalSong,
+  Song,
+} from './models/Song';
 
 const dupeExceptions = [
   'BASSNECTAR - DORFEX BOS',
@@ -11,8 +14,10 @@ const dupeExceptions = [
 export function checkOS(type: string, linux: boolean): string {
   if (linux) {
     switch (type) {
+      case 'youtube':
+        return '/Users/tseitz/Dropbox/TransferMusic/Youtube/'
       case 'transfer':
-        return '/home/tseitz/Music/Downloads/'
+        return '/Users/tseitz/Dropbox/TransferMusic/Downloaded/'
       case 'music':
         return '/media/tseitz/Storage SSD/Dropbox/Music/'
       case 'downloads':
@@ -25,6 +30,10 @@ export function checkOS(type: string, linux: boolean): string {
         return '/home/tseitz/Documents/broken_songs/'
       case 'linuxMusic':
         return '/home/tseitz/Music/'
+      case 'djMusic':
+        return '/Users/tseitz/Dropbox/DJ/SlimChance DJ Music/Collection/'
+      case 'rename':
+        return '/Users/tseitz/Dropbox/TransferMusic/Renamed/'
       default:
         return ''
     }
@@ -47,7 +56,7 @@ export function checkOS(type: string, linux: boolean): string {
 export function cacheMusic(files: string[], dir: string): LocalSong[] {
   const cache: LocalSong[] = []
 
-  for (let i = 0, len = files.length; i < len; i++) {
+  for (let i = 0, len = files?.length; i < len; i++) {
     const song = new LocalSong(files[i], dir)
     cache.push(song)
   }
