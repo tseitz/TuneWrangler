@@ -21,7 +21,7 @@
       "processId": "${command:PickProcess}"
     },
     {
-      "name": "Deno",
+      "name": "Deno Current File",
       "type": "pwa-node",
       "request": "launch",
       "cwd": "${workspaceFolder}",
