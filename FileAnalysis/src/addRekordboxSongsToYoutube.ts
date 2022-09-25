@@ -16,7 +16,7 @@ import {
 // console.log(auth_url)
 
 const yt = new YouTube(
-  'AIzaSyBCkBmfhg93lUjJ_9_PhkQtEkaNMbBuLTc',
+  Deno.env.get('YOUTUBE_API_KEY') || '',
   'ya29.a0Aa4xrXOoopVfGAnyJWTiLUrTOk1TRwKYpHkmO_nX2Y77Ee8aR9MSTugXNITq8c1XjAzbx_U2xVfVtt1R8b4KrdEBptopTDthMFpLXiLAwAakFcdKmiCRDni1O9blmUelq0NrNMLLrnEQXEPwoD22xsu_aLs3aCgYKATASARESFQEjDvL9NSTKq5J1C32AdUDyMvdD5g0163'
 )
 
