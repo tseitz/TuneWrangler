@@ -6,8 +6,9 @@ import {
 const auth = new authenticator();
 const creds: authParams = {
   client_id:
-    "412629290078-rkmhif1ve1kntgtru5g46sfhcoeqb84n.apps.googleusercontent.com",
-  redirect_uri: "https://localhost:8080",
+    // "412629290078-rkmhif1ve1kntgtru5g46sfhcoeqb84n.apps.googleusercontent.com",
+    "629368326955-ag26ghcq8ctmp0hcaahdmqardjn63c7a.apps.googleusercontent.com",
+  redirect_uri: "https://localhost:8081",
   scope: "https://www.googleapis.com/auth/youtube",
 };
 

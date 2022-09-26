@@ -9,7 +9,10 @@ import { LocalSong } from "./models/Song.ts";
 // const require = createRequire(import.meta.url);
 // const musicMetadata = require("music-metadata");
 
-const yt = new YouTube(Deno.env.get("YOUTUBE_API_KEY") || "", "");
+const yt = new YouTube(
+  Deno.env.get("YOUTUBE_API_KEY") || "",
+  "ya29.a0Aa4xrXOCbr3XJ7Tj2caRpHt-WPnu6pl_hcOQ-AXieMGXfcYJX1jFquXm8-qpOs7cn7sY8rDP97k6_rRbXOueELVYuC4riPivxKYQXagyvq63xM6CCSAPgXjnHHLPAopjkpOSGpFYS_JhMNiIFOWP5AULsDi8aCgYKATASARISFQEjDvL9zlFLpZ0itldRrjAM86hUmQ0163"
+);
 
 // const playlists = await yt.playlists_list({ part: "id", mine: true });
 // console.log(playlists);
@@ -19,7 +22,7 @@ const djDir = getFolder("djMusic");
 
 const fileNames: LocalSong[] = [];
 const f = await Deno.open(
-  "/Users/tseitz/code/projects/TuneWrangler/FileAnalysis/log.txt"
+  "/Users/tseitz/code/projects/TuneWrangler/FileAnalysis/fix-list.txt"
 );
 
 const badMatches: string[] = [];
@@ -42,77 +45,46 @@ for await (const l of readLines(f)) {
     badMatches.push(l);
     continue;
   }
+
+  let videoId = "";
   if (results.items.length > 0) {
     const firstItem = results.items[0];
-    const videoTitle: string = firstItem.snippet.title;
+    const videoTitle: string = firstItem.snippet.title.toLowerCase();
     // console.log(firstItem);
     console.log("Title: ", firstItem.snippet.title);
-    const artistInTitle = artists.some((artist) => videoTitle.includes(artist));
-    if (!artistInTitle || !videoTitle.includes(song.title)) {
+    const artistInTitle = artists.some((artist) =>
+      videoTitle.includes(artist.toLowerCase())
+    );
+    if (!artistInTitle && !videoTitle.includes(song.title.toLowerCase())) {
       console.log("**Bad Match**");
       badMatches.push(l);
+      continue;
     }
+    videoId = firstItem.id.videoId;
   } else {
     badMatches.push(l);
     console.log("No results");
+    continue;
   }
-  // console.log("Video ID: ", firstItem.id.videoId);
+  console.log("Video ID: ", videoId);
 
-  // const posted = await yt.playlistItems_insert(
-  //   { part: "snippet" },
-  //   JSON.stringify({
-  //     snippet: {
-  //       playlistId: "PLvQhc3ic51Lul-yFeQPK2ULQldvk-AwWa",
-  //       position: 0,
-  //       resourceId: { kind: "youtube#video", videoId: "ePTQ3So22P8" },
-  //     },
-  //   })
-  // );
+  // if (videoId !== "") {
+  //   const posted = await yt.playlistItems_insert(
+  //     { part: "snippet" },
+  //     JSON.stringify({
+  //       snippet: {
+  //         playlistId: "PLvQhc3ic51Lul-yFeQPK2ULQldvk-AwWa",
+  //         position: 0,
+  //         resourceId: { kind: "youtube#video", videoId },
+  //       },
+  //     })
+  //   );
+  //   console.log(posted);
+  // }
 }
 
 await Deno.writeTextFile(
   "/Users/tseitz/code/projects/TuneWrangler/FileAnalysis/bad-matches.txt",
   badMatches.join("\n")
 );
-console.log("File written to bad-matches.txt");
-// for await (const entry of Deno.readDir(djDir)) {
-//   if (entry.isFile && !entry.name.includes(".DS_Store")) {
-//     // const fileMetadata = await parseFile(`${djDir}/${entry.name}`);
-//     const file = await Deno.readFile(`${djDir}/${entry.name}`);
-//     // const r = readableStreamFromReader(file);
-//     const fileMetadata = await parseBuffer(new Buffer(file));
-//     console.log(Math.round(fileMetadata.format.bitrate), entry.name);
-//     // const song = new LocalSong(entry.name, djDir);
-//     // fileNames.push(song);
-//   }
-// }
-
-// Deno.readDir(djDir, (eL, localFiles) => {
-//   localFiles.forEach(async (filename) => {
-//     if (filename.includes(".DS_Store")) return;
-//     try {
-//       const fileMetadata = await parseFile(`${djDir}/${filename}`);
-//       // console.log(fileMetadata.format.bitrate)
-//       // if (fileMetadata.format.bitrate < 200000) {
-//       console.log(Math.round(fileMetadata.format.bitrate), filename);
-//       // }
-//     } catch (e) {
-//       console.log(e);
-//     }
-//   });
-// });
-
-// const posted = await yt.playlistItems_insert(
-//   { part: "snippet" },
-//   JSON.stringify({
-//     snippet: {
-//       playlistId: "PLvQhc3ic51Lul-yFeQPK2ULQldvk-AwWa",
-//       position: 0,
-//       resourceId: { kind: "youtube#video", videoId: "ePTQ3So22P8" },
-//     },
-//   })
-// );
-
-// console.log(posted);
-
-// {"snippet":{"playlistId":"PLvQhc3ic51Lul-yFeQPK2ULQldvk-AwWa","position":0,"resourceId":{"kind":"youtube#video","videoId":"ePTQ3So22P8"}}}
+console.log(badMatches);
