@@ -1,26 +1,22 @@
+/*
+Redownloads low bitrate files from YouTube using youtube-dl
+
+Requires:
+- checkBitrate to be ran first which outputs fix-list.txt
+- youtube-dl to be installed
+- getYoutubeAuth to be ran first to get token
+*/
 import { YouTube } from "https:/deno.land/x/youtube@v0.3.0/mod.ts";
-import { readLines } from "https://deno.land/std/io/bufio.ts";
-// import { createRequire } from "https://deno.land/std/node/module.ts";
+import { readLines } from "https://deno.land/std/io/buffer.ts";
 
 import { getFolder, splitArtist } from "./common.ts";
 
 import { LocalSong } from "./models/Song.ts";
 
-// const require = createRequire(import.meta.url);
-// const musicMetadata = require("music-metadata");
+const yt = new YouTube(Deno.env.get("YOUTUBE_API_KEY") || "", "");
 
-const yt = new YouTube(
-  Deno.env.get("YOUTUBE_API_KEY") || "",
-  "ya29.a0Aa4xrXOCbr3XJ7Tj2caRpHt-WPnu6pl_hcOQ-AXieMGXfcYJX1jFquXm8-qpOs7cn7sY8rDP97k6_rRbXOueELVYuC4riPivxKYQXagyvq63xM6CCSAPgXjnHHLPAopjkpOSGpFYS_JhMNiIFOWP5AULsDi8aCgYKATASARISFQEjDvL9zlFLpZ0itldRrjAM86hUmQ0163"
-);
-
-// const playlists = await yt.playlists_list({ part: "id", mine: true });
-// console.log(playlists);
-
-// const djDir = "/Users/tseitz/Dropbox/TransferMusic/Youtube";
 const djDir = getFolder("djMusic");
 
-const fileNames: LocalSong[] = [];
 const f = await Deno.open(
   "/Users/tseitz/code/projects/TuneWrangler/FileAnalysis/fix-list.txt"
 );
@@ -34,10 +30,11 @@ for await (const l of readLines(f)) {
   // console.log(song);
 
   const artists = splitArtist(song.artist);
-  console.log(`Search: ${artists.join(" ")} ${song.title}`);
+  const q = `${artists.join(" ")} ${song.title}`;
+  console.log(`Search: ${q}`);
   const results = await yt.search_list({
     part: "snippet",
-    q: `${song.artist} ${song.title}`,
+    q,
     maxResults: 1,
   });
   if (results.error) {
@@ -52,6 +49,7 @@ for await (const l of readLines(f)) {
     const videoTitle: string = firstItem.snippet.title.toLowerCase();
     // console.log(firstItem);
     console.log("Title: ", firstItem.snippet.title);
+    // TODO: this should probably be more restrictive
     const artistInTitle = artists.some((artist) =>
       videoTitle.includes(artist.toLowerCase())
     );
@@ -62,25 +60,39 @@ for await (const l of readLines(f)) {
     }
     videoId = firstItem.id.videoId;
   } else {
-    badMatches.push(l);
     console.log("No results");
+    badMatches.push(l);
     continue;
   }
   console.log("Video ID: ", videoId);
 
-  // if (videoId !== "") {
-  //   const posted = await yt.playlistItems_insert(
-  //     { part: "snippet" },
-  //     JSON.stringify({
-  //       snippet: {
-  //         playlistId: "PLvQhc3ic51Lul-yFeQPK2ULQldvk-AwWa",
-  //         position: 0,
-  //         resourceId: { kind: "youtube#video", videoId },
-  //       },
-  //     })
-  //   );
-  //   console.log(posted);
-  // }
+  if (videoId && videoId !== "") {
+    try {
+      const p = Deno.run({
+        cmd: [
+          "youtube-dl",
+          `https://www.youtube.com/watch?v=${videoId}`,
+          "--abort-on-error", // TODO: doesn't trigger catch
+        ],
+        stderr: "piped",
+      });
+      // TODO: fix this, not throwing error properly
+      const [status, err] = await Promise.all([p.status(), p.stderrOutput()]);
+      // await p.status();
+      console.log(err);
+      p.close();
+    } catch (e) {
+      console.log("caught error", e);
+      badMatches.push(l);
+    }
+  } else {
+    console.log("Bad Video ID");
+    badMatches.push(l);
+    continue;
+  }
+
+  // const p = Deno.run({ cmd: ["youtube-dl", "hWNAo_G2iAs"] });
+  // console.log(p);
 }
 
 await Deno.writeTextFile(

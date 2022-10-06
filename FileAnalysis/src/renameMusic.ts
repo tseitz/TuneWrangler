@@ -1,118 +1,134 @@
-import * as fs from "fs";
-import * as nodeId3 from "node-id3";
+/*
+Renames downloaded music to the format that I like. Also converts to flac if wav
 
-import * as tw from "./common";
-import { DownloadedSong, LocalSong } from "./models/Song";
+Incoming (generally): album - artist - title
+Outgoing:             artist - album - title
+*/
+import { ffmpeg } from "https://deno.land/x/dffmpeg@v1.0.0-alpha.2/mod.ts";
 
-// uninstall/reinstall if necessary
-// scdl -l https://soundcloud.com/we-are-gentle-giants/sets/ur-gonna-love-me -c --addtofile --onlymp3 -o [offset]
+import {
+  getFolder,
+  cacheMusic,
+  removeBadCharacters,
+  checkFeat,
+  removeAnd,
+  lastCheck,
+  checkIfDuplicate,
+  checkRemix,
+  checkWith,
+} from "./common.ts";
+import { DownloadedSong } from "./models/Song.ts";
 
-let musicCache: LocalSong[] = [];
+const unix = true;
 let debug = true;
-let unix = true;
-let trimRating = true;
+// let trimRating = true;
 
-// pass arg "-- move" to write tags and move file
-process.argv.forEach((value) => {
-  if (value === "move") {
+// pass arg "--move" to write tags and move file
+Deno.args.forEach((value) => {
+  console.log(value);
+  if (value === "--move") {
     debug = false;
   }
 });
 
-const currDir = tw.checkOS("youtube", unix);
-const moveDir = tw.checkOS("djMusic", unix);
-const renameDir = tw.checkOS("rename", unix);
+const startDir = getFolder("youtube", unix);
+const cacheDir = getFolder("djMusic", unix);
+const moveDir = getFolder("rename", unix);
 
-/* Incoming: album - artist - title */
-/* Outgoing: artist - album - title */
-fs.readdir(moveDir, (eL, localFiles) => {
-  /* cache local to check for dupes later */
-  musicCache = tw.cacheMusic(localFiles, moveDir);
+const cacheNames = [];
+for await (const cacheEntry of Deno.readDir(cacheDir)) {
+  if (cacheEntry.isFile) {
+    cacheNames.push(cacheEntry.name);
+  }
+}
+const musicCache = cacheMusic(cacheNames, cacheDir);
 
-  fs.readdir(currDir, (eD, downloadedFiles) => {
-    let count = 0;
-    downloadedFiles.forEach((filename) => {
-      let song = new DownloadedSong(filename, currDir);
+let count = 0;
+for await (const currEntry of Deno.readDir(startDir)) {
+  if (currEntry.isFile) {
+    console.log("Processing: ", currEntry.name);
 
-      if (song.dashCount < 1 || !song.extension || song.extension === ".m3u") {
-        return;
-      }
+    let song = new DownloadedSong(currEntry.name, startDir);
 
-      // used for my local songs that have ratings at the end
-      // if (song.filename.match(/ \- [0-9]{1,3}/)) {
-      //   const trimmedName = song.filename.replace(/ \- [0-9]{1,3}/, '')
-      //   if (!debug) {
-      //     console.log(trimmedName)
-      //     renameFile(`${currDir}${song.filename}`, `${moveDir}${trimmedName}`)
-      //   }
-      //   return
-      // }
-
-      song = tw.removeBadCharacters(song);
-
-      /* GRAB ARTIST */
-      song = grabArtist(song);
-
-      /* GRAB ALBUM */
-      if (!song.album && song.dashCount > 1) {
-        song.album = song.grabFirst();
-      }
-
-      /* GRAB TITLE */
-      song.title = song.grabLast();
-
-      /* FINAL CHECK */
-      song = tw.checkFeat(song);
-      song = tw.removeAnd(song, "artist", "album");
-      song = tw.lastCheck(song);
-
-      /* ALL TOGETHER NOW */
-      song = setFinalName(song);
-
-      song.duplicate = tw.checkDuplicate(song, musicCache);
-      if (song.duplicate) {
-        return;
-      }
-
-      musicCache.push(song);
-
-      console.log(`${song.finalFilename}
-                      `);
+    if (song.dashCount < 1 || !song.extension || song.extension === ".m3u") {
+      console.log("Skipping: ", song.filename);
       console.log(`-----------------------
                       `);
+      continue;
+    }
 
-      count++;
-      if (!debug) {
-        renameAndMove(song);
-      }
-    });
-    console.log(`Total Count: ${count}`);
-  });
-});
+    // used for my local songs with ratings at the end
+    // if (song.filename.match(/ \- [0-9]{1,3}/)) {
+    //   const trimmedName = song.filename.replace(/ \- [0-9]{1,3}/, '')
+    //   if (!debug) {
+    //     console.log(trimmedName)
+    //     renameFile(`${startDir}${song.filename}`, `${cacheDir}${trimmedName}`)
+    //   }
+    //   continue
+    // }
 
-function grabArtist(song: DownloadedSong): DownloadedSong {
-  song = tw.checkRemix(song);
+    song = removeBadCharacters(song);
+
+    /* GRAB ARTIST */
+    song = grabDownloadedArtist(song);
+
+    /* GRAB ALBUM */
+    if (!song.album && song.dashCount > 1) {
+      song.album = song.grabFirst();
+    }
+
+    /* GRAB TITLE */
+    song.title = song.grabLast();
+
+    /* FINAL CHECK */
+    song = checkFeat(song);
+    song = removeAnd(song, "artist", "album");
+    song = lastCheck(song);
+
+    /* ALL TOGETHER NOW */
+    song = setFinalName(song);
+
+    song.duplicate = checkIfDuplicate(song, musicCache);
+    if (song.duplicate) {
+      console.log("Duplicate Song: ", song.filename);
+      console.log(`-----------------------
+                      `);
+      continue;
+    }
+
+    musicCache.push(song);
+
+    console.log(`${song.finalFilename}
+                      `);
+    console.log(`-----------------------
+                      `);
+
+    count++;
+    if (!debug) {
+      renameAndMove(song);
+    }
+  }
+}
+console.log(`Total Count: ${count}`);
+
+function grabDownloadedArtist(song: DownloadedSong): DownloadedSong {
+  song = checkRemix(song);
 
   if (song.remix) {
     /* if it's a remix, the original artist is assigned to album, remove &'s from it */
     song.album = song.dashCount === 1 ? song.grabFirst() : song.grabSecond();
-    song = tw.removeAnd(song, "album");
+    song = removeAnd(song, "album");
   } else {
     /* otherwise the artist is straightforward */
     song.artist = song.dashCount === 1 ? song.grabFirst() : song.grabSecond();
   }
 
-  song = tw.checkWith(song);
+  song = checkWith(song);
 
   return song;
 }
 
 function setFinalName(song: DownloadedSong): DownloadedSong {
-  // if (song.remix) {
-  //   song.finalFilename = `${song.artist} - ${song.album} - ${song.title}${song.extension}`
-  // } else {
-  //   song.finalFilename = `${song.artist} - ${song.title}${song.extension}`
-  // }
   if (song.dashCount === 1) {
     song.finalFilename = song.album
       ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`
@@ -123,7 +139,7 @@ function setFinalName(song: DownloadedSong): DownloadedSong {
   return song;
 }
 
-function renameAndMove(song: DownloadedSong) {
+async function renameAndMove(song: DownloadedSong) {
   song.tags = {
     title: song.title,
     artist: song.artist,
@@ -131,20 +147,44 @@ function renameAndMove(song: DownloadedSong) {
   };
 
   if (song.tags) {
-    console.log("setting tags");
-    const success = nodeId3.update(song.tags, song.fullFilename);
-    if (!success) {
-      console.log(`Failed to tag ${song.filename}`);
+    console.log("Setting Tags");
+    // could potentially put comments, description, year etc
+    // https://wiki.multimedia.cx/index.php/FFmpeg_Metadata
+
+    const process = ffmpeg();
+    // RekordBox doesn't like wav's. convert to flac
+    if (song.extension === ".wav") {
+      process
+        .input(song.fullFilename)
+        .metadata({ artist: song.artist, title: song.title, album: song.album })
+        .audioCodec("flac")
+        .overwrite()
+        .output(`${moveDir}${song.finalFilename.slice(0, -4)}.flac`);
+      // .output(`${song.directory}${song.artist} - ${song.title}.flac`);
+    } else {
+      process
+        .input(song.fullFilename)
+        .metadata({ artist: song.artist, title: song.title, album: song.album })
+        .overwrite() // overwrite any existing output files
+        .output(`${moveDir}${song.finalFilename}`);
+      // .output(
+      //   `${song.directory}${song.artist} - ${song.title}${song.extension}`
+      // );
     }
+
+    try {
+      await process.run();
+      await Deno.remove(song.fullFilename);
+    } catch (e) {
+      console.log(e, song.filename);
+    }
+  } else {
+    console.log("No tags for, leaving in place: ", song.filename);
+    // renameFile(song.fullFilename, `${moveDir}${song.finalFilename}`);
   }
-
-  renameFile(song.fullFilename, `${renameDir}${song.finalFilename}`);
 }
 
-function renameFile(fullFilename: string, moveName: string) {
-  fs.rename(fullFilename, moveName, (e) => {
-    if (e) {
-      console.log(e);
-    }
-  });
-}
+// async function renameFile(fullFilename: string, moveName: string) {
+//   const renamed = await Deno.rename(fullFilename, moveName);
+//   console.log(renamed);
+// }

@@ -12,7 +12,7 @@ export class Song {
   remix = false;
   changed = false;
   duplicate = false;
-  tags: Tags;
+  tags: Tags | undefined;
 
   constructor(public filename: string, public directory: string) {
     this.fullFilename = `${directory}${filename}`;
@@ -51,12 +51,27 @@ export class Song {
   }
 
   grabLast(): string {
-    return this.filename
-      .slice(
-        this.filename.lastIndexOf(" - ") + 3,
-        this.filename.lastIndexOf(".")
-      )
-      .trim();
+    if (this.filename.lastIndexOf(".") === -1) {
+      return this.filename.slice(this.filename.lastIndexOf(" - ") + 3).trim();
+    } else {
+      return this.filename
+        .slice(
+          this.filename.lastIndexOf(" - ") + 3,
+          this.filename.lastIndexOf(".")
+        )
+        .trim();
+    }
+  }
+}
+
+export class FormattedSong extends Song {
+  constructor(filename: string, directory: string) {
+    super(filename, directory);
+
+    this.artist = this.grabFirst();
+    this.album = this.grabSecond();
+    this.title = this.grabThird();
+    this.rating = parseInt(this.grabLast(), 10) || 0;
   }
 }
 
@@ -64,17 +79,12 @@ export class LocalSong extends Song {
   constructor(filename: string, directory: string) {
     super(filename, directory);
 
-    // this.artist = this.grabFirst();
-    // this.album = this.grabSecond();
-    // this.title = this.grabThird();
-    // this.rating = parseInt(this.grabLast(), 10) || 0;
-
     if (this.getDashCount() === 1) {
       this.artist = this.grabFirst();
       this.title = this.grabSecond();
     } else if (this.getDashCount() > 1) {
-      this.artist = this.grabSecond();
-      this.album = this.grabFirst();
+      this.artist = this.grabFirst();
+      this.album = this.grabSecond();
       this.title = this.grabLast();
     }
   }

@@ -1,8 +1,9 @@
-import * as fs from 'fs'
-import * as tw from './common'
-import { LocalSong } from './models/Song'
-import { ArtistAnalysis } from './models/ArtistAnalysis'
-import * as readline from 'readline'
+// TODO: needs to be fixed
+import * as fs from "fs";
+import * as tw from "./common";
+import { LocalSong } from "./models/Song";
+import { ArtistAnalysis } from "./models/ArtistAnalysis";
+import * as readline from "readline";
 
 /*
   TODO:
@@ -10,25 +11,25 @@ import * as readline from 'readline'
     - Implement analysis all per week to get analysis of weekly intake
 */
 
-let debug = true
-let wsl = true
+let debug = true;
+let wsl = true;
 
 // pass arg "-- move" to write tags and move file
 process.argv.forEach((value) => {
-  if (value === 'move') {
-    debug = false
+  if (value === "move") {
+    debug = false;
   }
-  if (value === 'nowsl') {
-    wsl = false
+  if (value === "nowsl") {
+    wsl = false;
   }
-})
+});
 
-const musicDir = tw.checkOS('music', wsl)
-const playlistDir = tw.checkOS('playlists', wsl)
+const musicDir = tw.checkOS("music", wsl);
+const playlistDir = tw.checkOS("playlists", wsl);
 
-const args = process.argv.slice(2) // grab the array of args
-if (args[0] !== 'all') {
-  analyze(playlistDir, args[0], !!args[1])
+const args = process.argv.slice(2); // grab the array of args
+if (args[0] !== "all") {
+  analyze(playlistDir, args[0], !!args[1]);
 } else {
   // analyzeAll(playlistDir, args[0], !!args[1]);
 }
@@ -37,78 +38,78 @@ function analyze(dir: string, playlist: string, write = false) {
   fs.readdir(dir, (e, files) => {
     files.forEach((filename) => {
       if (filename.toLowerCase().includes(playlist)) {
-        const bangerSongs: LocalSong[] = []
+        const bangerSongs: LocalSong[] = [];
         const rl = readline.createInterface({
           input: fs.createReadStream(`${playlistDir}${filename}`),
-        })
+        });
 
-        rl.on('line', (line) => {
+        rl.on("line", (line) => {
           if (line.includes(musicDir)) {
-            line = line.slice(musicDir.length)
-            const song = new LocalSong(line, musicDir)
+            line = line.slice(musicDir.length);
+            const song = new LocalSong(line, musicDir);
 
-            bangerSongs.push(song)
+            bangerSongs.push(song);
           }
-        })
+        });
 
-        rl.on('close', () => {
-          const artistArr: string[] = []
+        rl.on("close", () => {
+          const artistArr: string[] = [];
           bangerSongs.forEach((song) => {
-            artistArr.push(...tw.splitArtist(song.artist.toLowerCase()))
-          })
-          const sortedArr = artistArr.sort()
-          const artistSet = new Set(sortedArr)
+            artistArr.push(...tw.splitArtist(song.artist.toLowerCase()));
+          });
+          const sortedArr = artistArr.sort();
+          const artistSet = new Set(sortedArr);
           const bangerArtists = Array.from(artistSet).reduce(
             (a, key) => Object.assign(a, { [key]: 0 }),
             {}
-          )
+          );
 
           bangerSongs.forEach((song) => {
-            const artists = tw.splitArtist(song.artist)
+            const artists = tw.splitArtist(song.artist);
             artists.forEach((artist) => {
-              bangerArtists[artist.toLowerCase()]++
-            })
-          })
+              bangerArtists[artist.toLowerCase()]++;
+            });
+          });
 
-          const finalArr: ArtistAnalysis[] = []
+          const finalArr: ArtistAnalysis[] = [];
           for (const prop in bangerArtists) {
-            finalArr.push({ artist: prop, count: bangerArtists[prop] })
+            finalArr.push({ artist: prop, count: bangerArtists[prop] });
           }
 
           finalArr.sort((a: ArtistAnalysis, b: ArtistAnalysis) => {
-            return b.count - a.count
-          })
+            return b.count - a.count;
+          });
 
           if (write) {
-            writeToFile(playlist, finalArr)
+            writeToFile(playlist, finalArr);
           } else {
-            console.log(finalArr)
+            console.log(finalArr);
           }
-        })
+        });
       }
-    })
-  })
+    });
+  });
 }
 
 function writeToFile(playlist: string, artistArr: ArtistAnalysis[]) {
-  let finalString = ''
+  let finalString = "";
 
   artistArr.forEach((analysis, index) => {
     if (index === 0) {
-      finalString += 'Artist, Count\n'
+      finalString += "Artist, Count\n";
     }
 
-    finalString += `${analysis.artist}, ${analysis.count}\n`
+    finalString += `${analysis.artist}, ${analysis.count}\n`;
 
     if (index === artistArr.length - 1) {
       fs.writeFile(`output/${playlist}.csv`, finalString, (e) => {
         if (e) {
-          console.log(e)
+          console.log(e);
         }
-        console.log('Done writing')
-      })
+        console.log("Done writing");
+      });
     }
-  })
+  });
 }
 
 // function getStarCount(currDir, processAll) {

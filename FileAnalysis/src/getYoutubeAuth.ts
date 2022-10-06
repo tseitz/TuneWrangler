@@ -1,3 +1,6 @@
+/*
+Run before downloadBadBitrates.ts to get token
+*/
 import {
   authenticator,
   authParams,

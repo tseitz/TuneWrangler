@@ -91,3 +91,5 @@ jspm_packages
 .node_repl_history
 
 .env
+fix-list.txt
+bad-matches.txt

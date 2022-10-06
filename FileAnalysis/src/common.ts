@@ -1,4 +1,4 @@
-import { LocalSong, Song } from "./models/Song.ts";
+import { FormattedSong, Song } from "./models/Song.ts";
 
 const dupeExceptions = [
   "BASSNECTAR - DORFEX BOS",
@@ -50,11 +50,11 @@ export function getFolder(type: string, linux = true): string {
   }
 }
 
-export function cacheMusic(files: string[], dir: string): LocalSong[] {
-  const cache: LocalSong[] = [];
+export function cacheMusic(files: string[], dir: string): FormattedSong[] {
+  const cache: FormattedSong[] = [];
 
   for (let i = 0, len = files?.length; i < len; i++) {
-    const song = new LocalSong(files[i], dir);
+    const song = new FormattedSong(files[i], dir);
     cache.push(song);
   }
 
@@ -260,7 +260,7 @@ export function removeClip(title: string): string {
   return title;
 }
 
-export function checkDuplicate(song: Song, musicArr: Song[] = []): boolean {
+export function checkIfDuplicate(song: Song, musicArr: Song[] = []): boolean {
   // console.time('start')
   for (let i = 0, len = musicArr.length; i < len; i++) {
     const compare = musicArr[i];
