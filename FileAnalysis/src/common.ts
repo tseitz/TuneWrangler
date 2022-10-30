@@ -1,19 +1,20 @@
 import { FormattedSong, Song } from "./models/Song.ts";
+import { FolderLocation } from "./models/types.ts";
 
-const dupeExceptions = [
-  "BASSNECTAR - DORFEX BOS",
-  "BASSNECTAR - INTRO",
-  "Jarvis - WAIT FOR ME",
-  "ODESZA - INTO",
-  "STUCA - SHIT",
-];
+// const dupeExceptions = [
+//   "BASSNECTAR - DORFEX BOS",
+//   "BASSNECTAR - INTRO",
+//   "Jarvis - WAIT FOR ME",
+//   "ODESZA - INTO",
+//   "STUCA - SHIT",
+// ];
 
-export function getFolder(type: string, linux = true): string {
+export function getFolder(type: FolderLocation, linux = true): string {
   if (linux) {
     switch (type) {
       case "youtube":
         return "/Users/tseitz/Dropbox/TransferMusic/Youtube/";
-      case "transfer":
+      case "downloaded":
         return "/Users/tseitz/Dropbox/TransferMusic/Downloaded/";
       case "music":
         return "/media/tseitz/Storage SSD/Dropbox/Music/";
@@ -25,8 +26,6 @@ export function getFolder(type: string, linux = true): string {
         return "/home/tseitz/Documents/formatted_playlists/";
       case "broken":
         return "/home/tseitz/Documents/broken_songs/";
-      case "linuxMusic":
-        return "/home/tseitz/Music/";
       case "djMusic":
         return "/Users/tseitz/Dropbox/DJ/SlimChance DJ Music/Collection/";
       case "rename":
@@ -48,6 +47,13 @@ export function getFolder(type: string, linux = true): string {
         return "";
     }
   }
+}
+
+export function logWithBreak(message: string): void {
+  console.log(message);
+  console.log(`
+----------------------------------
+`);
 }
 
 export function cacheMusic(files: string[], dir: string): FormattedSong[] {
@@ -148,12 +154,13 @@ export function checkRemix(song: Song): Song {
   const filename = song.filename;
 
   // regex: ( or [ not followed by another ) or ] followed by REMIX etc.   So: Title (... Remix)   NOT: Title (Feat. ...) (... Remix)
-  if (/(\(|\[)[^\)]+ REMIX/gi.test(filename)) {
-    const filenameRegex = /(\(|\[)[^\)]+ REMIX/gi.exec(filename); // /(\(|\[)[^\)]+ REMIX(\)|\])/ig.exec(filename);
+  // also checks there isn't an album called REMIXES. So we expect non word character after REMIX (\W)
+  if (/(\(|\[)[^\)]+ REMIX\W/gi.test(filename)) {
+    const filenameRegex = /(\(|\[)[^\)]+ REMIX\W/gi.exec(filename); // /(\(|\[)[^\)]+ REMIX(\)|\])/ig.exec(filename);
     song.artist = filename
       .slice(
-        /(\(|\[)[^\)]+ REMIX/gi.exec(filename)!.index + 1,
-        / REMIX/gi.exec(filename)!.index
+        /(\(|\[)[^\)]+ REMIX\W/gi.exec(filename)!.index + 1,
+        / REMIX\W/gi.exec(filename)!.index
       )
       .trim();
     song.filename = filename

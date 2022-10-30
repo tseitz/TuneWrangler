@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "rM": "deno run --allow-read --allow-run --allow-write src/renameMusic.ts",
+    "retag": "deno run --allow-read --allow-run --allow-write src/retagSongs.ts",
     "rI": "ts-node src/renameItunes.ts",
     "rP": "ts-node src/renamePlaylists.ts",
     "cB": "node src/checkBitrate.js",

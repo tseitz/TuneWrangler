@@ -1,8 +1,5 @@
 /*
-Renames downloaded music to the format that I like. Also converts to flac if wav
-
-Incoming (generally): album - artist - title
-Outgoing:             artist - album - title
+Tags local songs. Converts to flac if necessary
 */
 import { ffmpeg } from "https://deno.land/x/dffmpeg@v1.0.0-alpha.2/mod.ts";
 
@@ -18,7 +15,7 @@ import {
   checkWith,
   logWithBreak,
 } from "./common.ts";
-import { DownloadedSong } from "./models/Song.ts";
+import { DownloadedSong, LocalSong } from "./models/Song.ts";
 
 const unix = true;
 let debug = true;
@@ -32,7 +29,7 @@ Deno.args.forEach((value) => {
   }
 });
 
-const startDir = getFolder("youtube", unix);
+const startDir = getFolder("downloaded", unix);
 const cacheDir = getFolder("djMusic", unix);
 const moveDir = getFolder("rename", unix);
 
@@ -49,7 +46,7 @@ for await (const currEntry of Deno.readDir(startDir)) {
   if (currEntry.isFile) {
     console.log("Processing: ", currEntry.name);
 
-    let song = new DownloadedSong(currEntry.name, startDir);
+    let song = new LocalSong(currEntry.name, startDir);
 
     if (song.dashCount < 1 || !song.extension || song.extension === ".m3u") {
       logWithBreak(`Skipping: ${song.filename}`);
@@ -69,15 +66,21 @@ for await (const currEntry of Deno.readDir(startDir)) {
     song = removeBadCharacters(song);
 
     /* GRAB ARTIST */
-    song = grabDownloadedArtist(song);
+    song = grabLocalArtist(song);
+    // console.log(song.artist);
 
     /* GRAB ALBUM */
     if (!song.album && song.dashCount > 1) {
-      song.album = song.grabFirst();
+      song.album = song.grabSecond();
     }
 
     /* GRAB TITLE */
     song.title = song.grabLast();
+
+    /* Bandcamp labels the track # in the title */
+    if (song.title.match(/^\d{2}/)) {
+      song.title = song.title.slice(3);
+    }
 
     /* FINAL CHECK */
     song = checkFeat(song);
@@ -101,13 +104,11 @@ for await (const currEntry of Deno.readDir(startDir)) {
     if (!debug) {
       renameAndMove(song);
     }
-  } else {
-    logWithBreak(`Skipping (not a file): ${currEntry.name}`);
   }
 }
 console.log(`Total Count: ${count}`);
 
-function grabDownloadedArtist(song: DownloadedSong): DownloadedSong {
+function grabLocalArtist(song: DownloadedSong): DownloadedSong {
   song = checkRemix(song);
 
   if (song.remix) {
@@ -116,7 +117,7 @@ function grabDownloadedArtist(song: DownloadedSong): DownloadedSong {
     song = removeAnd(song, "album");
   } else {
     /* otherwise the artist is straightforward */
-    song.artist = song.dashCount === 1 ? song.grabFirst() : song.grabSecond();
+    song.artist = song.grabFirst();
   }
 
   song = checkWith(song);
@@ -142,8 +143,8 @@ async function renameAndMove(song: DownloadedSong) {
     album: song.album,
   };
 
+  console.log(song.tags);
   if (song.tags) {
-    console.log("Setting Tags");
     // could potentially put comments, description, year etc
     // https://wiki.multimedia.cx/index.php/FFmpeg_Metadata
 
@@ -157,16 +158,23 @@ async function renameAndMove(song: DownloadedSong) {
         .overwrite()
         .output(`${moveDir}${song.finalFilename.slice(0, -4)}.flac`);
       // .output(`${song.directory}${song.artist} - ${song.title}.flac`);
-    } else if (song.extension !== "aiff") {
+    } else {
       process
         .input(song.fullFilename)
         .metadata({ artist: song.artist, title: song.title, album: song.album })
-        .overwrite() // overwrite any existing output files
         .output(`${moveDir}${song.finalFilename}`);
-      // .output(
-      //   `${song.directory}${song.artist} - ${song.title}${song.extension}`
-      // );
+      // renameFile(song.fullFilename, `${moveDir}${song.finalFilename}`);
     }
+    // else if (song.extension !== ".aiff") {
+    //   process
+    //     .input(song.fullFilename)
+    //     .metadata({ artist: song.artist, title: song.title, album: song.album })
+    //     .overwrite() // overwrite any existing output files
+    //     .output(`${moveDir}${song.finalFilename}`);
+    //   // .output(
+    //   //   `${song.directory}${song.artist} - ${song.title}${song.extension}`
+    //   // );
+    // }
 
     try {
       await process.run();
