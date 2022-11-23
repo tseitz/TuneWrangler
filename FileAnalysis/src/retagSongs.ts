@@ -2,6 +2,7 @@
 Tags local songs. Converts to flac if necessary
 */
 import { ffmpeg } from "https://deno.land/x/dffmpeg@v1.0.0-alpha.2/mod.ts";
+import * as fs from "https://deno.land/std/fs/mod.ts";
 
 import {
   getFolder,
@@ -32,6 +33,7 @@ Deno.args.forEach((value) => {
 const startDir = getFolder("downloaded", unix);
 const cacheDir = getFolder("djMusic", unix);
 const moveDir = getFolder("rename", unix);
+const backupFolder = getFolder("backup", unix);
 
 const cacheNames = [];
 for await (const cacheEntry of Deno.readDir(cacheDir)) {
@@ -41,9 +43,16 @@ for await (const cacheEntry of Deno.readDir(cacheDir)) {
 }
 const musicCache = cacheMusic(cacheNames, cacheDir);
 
+await fs.emptyDir(backupFolder);
+
 let count = 0;
 for await (const currEntry of Deno.readDir(startDir)) {
   if (currEntry.isFile) {
+    await Deno.copyFile(
+      `${startDir}/${currEntry.name}`,
+      `${backupFolder}/${currEntry.name}`
+    );
+
     console.log("Processing: ", currEntry.name);
 
     let song = new LocalSong(currEntry.name, startDir);
@@ -78,7 +87,7 @@ for await (const currEntry of Deno.readDir(startDir)) {
     song.title = song.grabLast();
 
     /* Bandcamp labels the track # in the title */
-    if (song.title.match(/^\d{2}/)) {
+    if (song.title.match(/^\d{2}\s/)) {
       song.title = song.title.slice(3);
     }
 
@@ -143,44 +152,47 @@ async function renameAndMove(song: DownloadedSong) {
     album: song.album,
   };
 
-  console.log(song.tags);
   if (song.tags) {
     // could potentially put comments, description, year etc
     // https://wiki.multimedia.cx/index.php/FFmpeg_Metadata
 
-    const process = ffmpeg();
-    // RekordBox doesn't like wav's. convert to flac
-    if (song.extension === ".wav") {
-      process
-        .input(song.fullFilename)
-        .metadata({ artist: song.artist, title: song.title, album: song.album })
-        .audioCodec("flac")
-        .overwrite()
-        .output(`${moveDir}${song.finalFilename.slice(0, -4)}.flac`);
-      // .output(`${song.directory}${song.artist} - ${song.title}.flac`);
-    } else {
-      process
-        .input(song.fullFilename)
-        .metadata({ artist: song.artist, title: song.title, album: song.album })
-        .output(`${moveDir}${song.finalFilename}`);
-      // renameFile(song.fullFilename, `${moveDir}${song.finalFilename}`);
-    }
-    // else if (song.extension !== ".aiff") {
-    //   process
-    //     .input(song.fullFilename)
-    //     .metadata({ artist: song.artist, title: song.title, album: song.album })
-    //     .overwrite() // overwrite any existing output files
-    //     .output(`${moveDir}${song.finalFilename}`);
-    //   // .output(
-    //   //   `${song.directory}${song.artist} - ${song.title}${song.extension}`
-    //   // );
-    // }
+    // ignore aiff since it overwrites the cover photo as well
+    // rekordbox does not like when I fix the tags, doesn't import well so keeping stock
+    if (song.extension !== ".aiff") {
+      const process = ffmpeg();
+      // RekordBox doesn't like wav's. convert to flac
+      if (song.extension === ".wav") {
+        process
+          .input(song.fullFilename)
+          .metadata({
+            artist: song.artist,
+            title: song.title,
+            album: song.album,
+          })
+          .audioCodec("flac")
+          .overwrite()
+          .output(`${moveDir}${song.finalFilename.slice(0, -4)}.flac`);
+        // .output(`${song.directory}${song.artist} - ${song.title}.flac`);
+      } else {
+        process
+          .input(song.fullFilename)
+          .metadata({
+            artist: song.artist,
+            title: song.title,
+            album: song.album,
+          })
+          .copy()
+          .output(`${moveDir}${song.finalFilename}`);
+      }
 
-    try {
-      await process.run();
-      await Deno.remove(song.fullFilename);
-    } catch (e) {
-      console.log(e, song.filename);
+      try {
+        await process.run();
+        await Deno.remove(song.fullFilename);
+      } catch (e) {
+        console.log(e, song.filename);
+      }
+    } else {
+      await renameFile(song.fullFilename, `${moveDir}${song.finalFilename}`);
     }
   } else {
     console.log("No tags for, leaving in place: ", song.filename);
@@ -188,7 +200,6 @@ async function renameAndMove(song: DownloadedSong) {
   }
 }
 
-// async function renameFile(fullFilename: string, moveName: string) {
-//   const renamed = await Deno.rename(fullFilename, moveName);
-//   console.log(renamed);
-// }
+async function renameFile(fullFilename: string, moveName: string) {
+  await Deno.rename(fullFilename, moveName);
+}

@@ -30,6 +30,8 @@ export function getFolder(type: FolderLocation, linux = true): string {
         return "/Users/tseitz/Dropbox/DJ/SlimChance DJ Music/Collection/";
       case "rename":
         return "/Users/tseitz/Dropbox/TransferMusic/Renamed/";
+      case "backup":
+        return "/Users/tseitz/Dropbox/TransferMusic/bak/";
       default:
         return "";
     }

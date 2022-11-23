@@ -8,4 +8,5 @@ export type FolderLocation =
   | "broken"
   | "djMusic"
   | "rename"
-  | "transfer";
+  | "transfer"
+  | "backup";
