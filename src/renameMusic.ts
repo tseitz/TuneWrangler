@@ -43,11 +43,13 @@ Deno.args.forEach((value) => {
   }
 });
 
+// cache music
 const musicCache = await cacheMusic(cacheDir);
 
-// empty out the backup directory
+// empty out the backup directory if necessary
 if (clear) await fs.emptyDir(backupDir);
 
+// run the program
 await main();
 
 async function main() {

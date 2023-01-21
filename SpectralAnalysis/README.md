@@ -1,1 +1,0 @@
-# Soon to be spectral analyzer :)
