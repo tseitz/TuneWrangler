@@ -7,7 +7,7 @@ Requires:
 - getYoutubeAuth to be ran first to get token
 */
 import { YouTube } from "https:/deno.land/x/youtube@v0.3.0/mod.ts";
-import { readLines } from "https://deno.land/std/io/buffer.ts";
+import { readLines } from "https://deno.land/std@0.167.0/io/buffer.ts";
 
 import { getFolder, splitArtist } from "./common.ts";
 

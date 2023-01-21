@@ -79,6 +79,8 @@ export class LocalSong extends Song {
   constructor(filename: string, directory: string) {
     super(filename, directory);
 
+    this.extension = path.extname(filename);
+
     if (this.getDashCount() === 1) {
       this.artist = this.grabFirst();
       this.title = this.grabSecond();
@@ -86,6 +88,10 @@ export class LocalSong extends Song {
       this.artist = this.grabFirst();
       this.album = this.grabSecond();
       this.title = this.grabLast();
+    }
+
+    if (this.title.includes(this.extension)) {
+      this.title = this.title.slice(0, this.title.lastIndexOf(this.extension));
     }
   }
 }

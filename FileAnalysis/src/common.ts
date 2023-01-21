@@ -1,5 +1,11 @@
-import { FormattedSong, Song } from "./models/Song.ts";
+import {
+  DownloadedSong,
+  FormattedSong,
+  LocalSong,
+  Song,
+} from "./models/Song.ts";
 import { FolderLocation } from "./models/types.ts";
+import { ffmpeg } from "https://deno.land/x/dffmpeg@v1.0.0-alpha.2/mod.ts";
 
 // const dupeExceptions = [
 //   "BASSNECTAR - DORFEX BOS",
@@ -58,12 +64,14 @@ export function logWithBreak(message: string): void {
 `);
 }
 
-export function cacheMusic(files: string[], dir: string): FormattedSong[] {
-  const cache: FormattedSong[] = [];
+export async function cacheMusic(cacheDir: string): Promise<LocalSong[]> {
+  const cache: LocalSong[] = [];
 
-  for (let i = 0, len = files?.length; i < len; i++) {
-    const song = new FormattedSong(files[i], dir);
-    cache.push(song);
+  for await (const cacheEntry of Deno.readDir(cacheDir)) {
+    if (cacheEntry.isFile) {
+      const song = new LocalSong(cacheEntry.name, cacheDir);
+      cache.push(song);
+    }
   }
 
   return cache;
@@ -286,10 +294,10 @@ export function checkIfDuplicate(song: Song, musicArr: Song[] = []): boolean {
     if (
       compare !== song && // when comparing local to itself, make sure the files don't exactly match
       songArtist.toUpperCase() === compareArtist.toUpperCase() &&
-      songTitle.toUpperCase() === compareTitle.toUpperCase() &&
-      !dupeExceptions.includes(
-        `${song.artist.toUpperCase()} - ${song.title.toUpperCase()}`
-      )
+      songTitle.toUpperCase() === compareTitle.toUpperCase()
+      // && !dupeExceptions.includes(
+      //   `${song.artist.toUpperCase()} - ${song.title.toUpperCase()}`
+      // )
     ) {
       console.log(`***Duplicate: ${song.artist} - ${song.title}***
         ------------------------------`);
@@ -495,4 +503,57 @@ export function lastCheck(song: Song): Song {
   }
 
   return song;
+}
+
+export async function renameAndMove(moveDir: string, song: DownloadedSong) {
+  song.tags = {
+    title: song.title,
+    artist: song.artist,
+    album: song.album,
+  };
+
+  if (song.tags) {
+    console.log("Setting Tags");
+    // could potentially put comments, description, year etc
+    // https://wiki.multimedia.cx/index.php/FFmpeg_Metadata
+
+    const process = ffmpeg();
+    // RekordBox doesn't like wav's. convert to flac
+    if (song.extension === ".wav") {
+      process
+        .input(song.fullFilename)
+        .metadata({ artist: song.artist, title: song.title, album: song.album })
+        .audioCodec("flac")
+        .overwrite()
+        .output(`${moveDir}${song.finalFilename.slice(0, -4)}.flac`);
+      // .output(`${song.directory}${song.artist} - ${song.title}.flac`);
+    } else if (song.extension !== "aiff") {
+      process
+        .input(song.fullFilename)
+        .metadata({ artist: song.artist, title: song.title, album: song.album })
+        .overwrite() // overwrite any existing output files
+        .output(`${moveDir}${song.finalFilename}`);
+      // .output(
+      //   `${song.directory}${song.artist} - ${song.title}${song.extension}`
+      // );
+    }
+
+    try {
+      await process.run();
+      await Deno.remove(song.fullFilename);
+    } catch (e) {
+      console.log(e, song.filename);
+    }
+  } else {
+    console.log("No tags for, leaving in place: ", song.filename);
+    // renameFile(song.fullFilename, `${moveDir}${song.finalFilename}`);
+  }
+}
+
+export async function backupFile(
+  startDir: string,
+  backupDir: string,
+  name: string
+) {
+  return await Deno.copyFile(`${startDir}/${name}`, `${backupDir}/${name}`);
 }

@@ -11,6 +11,7 @@ import {
   removeAnd,
   lastCheck,
   checkIfDuplicate,
+  logWithBreak,
 } from "./common.ts";
 import { DownloadedSong } from "./models/Song.ts";
 
@@ -30,13 +31,7 @@ const startDir = getFolder("transfer", unix);
 const cacheDir = getFolder("djMusic", unix);
 const moveDir = getFolder("rename", unix);
 
-const cacheNames = [];
-for await (const cacheEntry of Deno.readDir(cacheDir)) {
-  if (cacheEntry.isFile) {
-    cacheNames.push(cacheEntry.name);
-  }
-}
-const musicCache = cacheMusic(cacheNames, cacheDir);
+const musicCache = await cacheMusic(cacheDir);
 
 let count = 0;
 for await (const currEntry of Deno.readDir(startDir)) {
@@ -46,9 +41,7 @@ for await (const currEntry of Deno.readDir(startDir)) {
     let song = new DownloadedSong(currEntry.name, startDir);
 
     if (!song.extension || song.extension === ".m3u") {
-      console.log("Skipping: ", song.filename);
-      console.log(`-----------------------
-                      `);
+      logWithBreak(`Skipping: ${song.filename}`);
       continue;
     }
 
@@ -64,18 +57,13 @@ for await (const currEntry of Deno.readDir(startDir)) {
 
     song.duplicate = checkIfDuplicate(song, musicCache);
     if (song.duplicate) {
-      console.log("Duplicate Song: ", song.filename);
-      console.log(`-----------------------
-                      `);
+      logWithBreak(`Duplicate Song: ${song.filename}`);
       continue;
     }
 
     musicCache.push(song);
 
-    console.log(`${song.finalFilename}
-                      `);
-    console.log(`-----------------------
-                      `);
+    logWithBreak(song.finalFilename);
 
     count++;
     if (!debug) {
