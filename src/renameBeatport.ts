@@ -44,63 +44,66 @@ if (clear) await fs.emptyDir(backupDir);
 
 const musicCache = await cacheMusic(cacheDir);
 
-let count = 0;
-for await (const currEntry of Deno.readDir(startDir)) {
-  if (currEntry.isDirectory && currEntry.name.includes("beatport")) {
-    console.log("Processing: ", currEntry);
-    for await (const beatportItem of Deno.readDir(
-      `${startDir}/${currEntry.name}`
-    )) {
-      await backupFile(
-        `${startDir}/${currEntry.name}`,
-        backupDir,
-        beatportItem.name
-      );
+await main();
 
-      let song = new Song(beatportItem.name, `${startDir}${currEntry.name}/`);
+async function main() {
+  let count = 0;
+  for await (const currEntry of Deno.readDir(startDir)) {
+    if (currEntry.isDirectory && currEntry.name.includes("beatport")) {
+      console.log("Processing: ", currEntry);
 
-      const mTags = nodeId3.read(
-        `${startDir}/${currEntry.name}/${beatportItem.name}`
-      );
+      for await (const beatportItem of Deno.readDir(
+        `${startDir}/${currEntry.name}`
+      )) {
+        await backupFile(
+          `${startDir}/${currEntry.name}`,
+          backupDir,
+          beatportItem.name
+        );
 
-      song.title = mTags.title || "";
-      song.artist = mTags.artist || "";
-      song.album = mTags.album || "";
+        let song = new Song(beatportItem.name, `${startDir}${currEntry.name}/`);
 
-      if (!song.extension || song.extension === ".m3u") {
-        logWithBreak(`Skipping: ${song.filename}`);
-        continue;
-      }
+        const mTags = nodeId3.read(
+          `${startDir}/${currEntry.name}/${beatportItem.name}`
+        );
 
-      song = removeBadCharacters(song);
+        song.title = mTags.title || "";
+        song.artist = mTags.artist || "";
+        song.album = mTags.album || "";
 
-      // /* FINAL CHECK */
-      song = checkFeat(song);
-      song = removeAnd(song, "artist", "album");
-      song = lastCheck(song);
+        if (!song.extension || song.extension === ".m3u") {
+          logWithBreak(`Skipping: ${song.filename}`);
+          continue;
+        }
 
-      // /* ALL TOGETHER NOW */
-      song = setFinalName(song);
+        song = removeBadCharacters(song);
 
-      song.duplicate = checkIfDuplicate(song, musicCache);
-      if (song.duplicate) {
-        logWithBreak(`Duplicate Song: ${song.filename}`);
-        continue;
-      }
+        song = checkFeat(song);
+        song = removeAnd(song, "artist", "album");
+        song = lastCheck(song);
 
-      musicCache.push(song);
+        song = setFinalName(song);
 
-      logWithBreak(song.finalFilename);
+        song.duplicate = checkIfDuplicate(song, musicCache);
+        if (song.duplicate) {
+          logWithBreak(`Duplicate Song: ${song.filename}`);
+          continue;
+        }
 
-      count++;
+        musicCache.push(song);
 
-      if (!debug) {
-        renameAndMove(song);
+        logWithBreak(song.finalFilename);
+
+        count++;
+
+        if (!debug) {
+          renameAndMove(song);
+        }
       }
     }
   }
+  console.log(`Total Count: ${count}`);
 }
-console.log(`Total Count: ${count}`);
 
 function setFinalName(song: Song): DownloadedSong {
   if (song.dashCount === 1) {
@@ -130,15 +133,10 @@ async function renameAndMove(song: DownloadedSong) {
     if (song.extension === ".wav") {
       process
         .input(song.fullFilename)
-        // .metadata({ artist: song.artist, title: song.title, album: song.album })
-        // .audioCodec("flac")
-        // .overwrite()
         .output(`${moveDir}${song.finalFilename.slice(0, -4)}.flac`);
     } else {
       process
         .input(song.fullFilename)
-        // .metadata({ artist: song.artist, title: song.title, album: song.album })
-        // .overwrite() // overwrite any existing output files
         .output(`${moveDir}${song.finalFilename}`);
     }
 
