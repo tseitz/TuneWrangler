@@ -27,7 +27,7 @@ let debug = true;
 let clear = true;
 // let trimRating = true;
 
-const startDir = getFolder("youtube", unix);
+const startDir = getFolder("downloaded", unix);
 const cacheDir = getFolder("djMusic", unix);
 const moveDir = getFolder("rename", unix);
 const backupDir = getFolder("backup", unix);
@@ -70,7 +70,7 @@ async function main() {
       try {
         song = processDownloadedMusic(song);
       } catch {
-        logWithBreak(`Duplicate Song: ${song.filename}`);
+        logWithBreak(`***Duplicate Song: ${song.filename}***`);
         continue;
       }
 

@@ -22,99 +22,109 @@ import { DownloadedSong, LocalSong } from "./models/Song.ts";
 const unix = true;
 let debug = true;
 let ignoreDupes = false;
+let clear = true;
 // let trimRating = true;
-
-// pass arg "--move" to write tags and move file
-Deno.args.forEach((value) => {
-  console.log(value);
-  if (value === "--move") {
-    debug = false;
-  }
-  if (value === "--ignore-dupes") {
-    ignoreDupes = true;
-  }
-});
 
 const startDir = getFolder("downloaded", unix);
 const cacheDir = getFolder("djMusic", unix);
 const moveDir = getFolder("rename", unix);
 const backupDir = getFolder("backup", unix);
 
+// pass arg "--move" to write tags and move file
+// --no-clear does not clear out the backup directory
+Deno.args.forEach((value) => {
+  if (value === "--move") {
+    debug = false;
+  }
+  if (value === "--no-clear") {
+    clear = false;
+  }
+  if (value === "--ignore-dupes") {
+    ignoreDupes = true;
+  }
+});
+
+// cache music
 const musicCache = await cacheMusic(cacheDir);
 
-// empty out the backup directory
-await fs.emptyDir(backupDir);
+// empty out the backup directory if necessary
+if (clear) await fs.emptyDir(backupDir);
 
-let count = 0;
-for await (const currEntry of Deno.readDir(startDir)) {
-  if (currEntry.isFile) {
-    await backupFile(startDir, backupDir, currEntry.name);
+// run the program
+await main();
 
-    console.log("Processing: ", currEntry.name);
+async function main() {
+  let count = 0;
+  for await (const currEntry of Deno.readDir(startDir)) {
+    if (currEntry.isFile) {
+      await backupFile(startDir, backupDir, currEntry.name);
 
-    let song = new LocalSong(currEntry.name, startDir);
+      let song = new LocalSong(currEntry.name, startDir);
 
-    if (song.dashCount < 1 || !song.extension || song.extension === ".m3u") {
-      logWithBreak(`Skipping: ${song.filename}`);
-      continue;
-    }
-
-    // used for my local songs with ratings at the end
-    // if (song.filename.match(/ \- [0-9]{1,3}/)) {
-    //   const trimmedName = song.filename.replace(/ \- [0-9]{1,3}/, '')
-    //   if (!debug) {
-    //     console.log(trimmedName)
-    //     renameFile(`${startDir}${song.filename}`, `${cacheDir}${trimmedName}`)
-    //   }
-    //   continue
-    // }
-
-    song = removeBadCharacters(song);
-
-    /* GRAB ARTIST */
-    song = grabLocalArtist(song);
-    // console.log(song.artist);
-
-    /* GRAB ALBUM */
-    if (!song.album && song.dashCount > 1) {
-      song.album = song.grabSecond();
-    }
-
-    /* GRAB TITLE */
-    song.title = song.grabLast();
-
-    /* Bandcamp labels the track # in the title */
-    if (song.title.match(/^\d{2}\s/)) {
-      song.title = song.title.slice(3);
-    }
-
-    /* FINAL CHECK */
-    song = checkFeat(song);
-    song = removeAnd(song, "artist", "album");
-    song = lastCheck(song);
-
-    /* ALL TOGETHER NOW */
-    song = setFinalName(song);
-
-    if (!ignoreDupes) {
-      song.duplicate = checkIfDuplicate(song, musicCache);
-      if (song.duplicate) {
-        logWithBreak(`Duplicate Song: ${song.filename}`);
+      if (song.dashCount < 1 || !song.extension || song.extension === ".m3u") {
+        logWithBreak(`Skipping: ${song.filename}`);
         continue;
       }
-    }
 
-    musicCache.push(song);
+      console.log("Processing: ", currEntry.name);
 
-    logWithBreak(song.finalFilename);
+      try {
+        song = processSongs(song);
+      } catch {
+        logWithBreak(`***Duplicate Song: ${song.filename}***`);
+        continue;
+      }
 
-    count++;
-    if (!debug) {
-      renameAndMove(moveDir, song);
+      musicCache.push(song);
+
+      logWithBreak(song.finalFilename);
+
+      count++;
+      if (!debug) {
+        renameAndMove(moveDir, song);
+      }
     }
   }
+  console.log(`Total Count: ${count}`);
 }
-console.log(`Total Count: ${count}`);
+
+function processSongs(song: DownloadedSong) {
+  song = removeBadCharacters(song);
+
+  /* GRAB ARTIST */
+  song = grabLocalArtist(song);
+  // console.log(song.artist);
+
+  /* GRAB ALBUM */
+  if (!song.album && song.dashCount > 1) {
+    song.album = song.grabSecond();
+  }
+
+  /* GRAB TITLE */
+  song.title = song.grabLast();
+
+  /* Bandcamp labels the track # in the title */
+  if (song.title.match(/^\d{2}\s/)) {
+    song.title = song.title.slice(3);
+  }
+
+  /* FINAL CHECK */
+  song = checkFeat(song);
+  song = removeAnd(song, "artist", "album");
+  song = lastCheck(song);
+
+  /* ALL TOGETHER NOW */
+  song = setFinalName(song);
+
+  if (!ignoreDupes) {
+    song.duplicate = checkIfDuplicate(song, musicCache);
+    if (song.duplicate) {
+      throw "Duplicate Song";
+    }
+  }
+
+  return song;
+}
 
 function grabLocalArtist(song: DownloadedSong): DownloadedSong {
   song = checkRemix(song);

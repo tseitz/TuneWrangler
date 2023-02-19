@@ -299,8 +299,6 @@ export function checkIfDuplicate(song: Song, musicArr: Song[] = []): boolean {
       //   `${song.artist.toUpperCase()} - ${song.title.toUpperCase()}`
       // )
     ) {
-      console.log(`***Duplicate: ${song.artist} - ${song.title}***
-        ------------------------------`);
       return true;
     }
   }
