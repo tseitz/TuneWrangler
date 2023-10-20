@@ -1,0 +1,21 @@
+{
+  "name": "tunewrangler",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "rM": "bun src/renameMusic.ts",
+    "rBc": "bun src/renameBandcamp.ts",
+    "rBp": "bun src/renameBeatport.ts",
+    "ytRb": "bun src/addRekordboxSongsToYoutube.ts",
+    "ytRbNoCheck": "bun src/addRekordboxSongsToYoutube.ts",
+    "playlistImport": "bun src/betterM3uSearch.ts",
+    "cF": "bun src/convertFlacs.ts"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
+

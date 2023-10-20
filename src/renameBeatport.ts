@@ -2,19 +2,19 @@
 Renames downloaded music from Beatport to format I like
 */
 import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
-import { ffmpeg } from "https://deno.land/x/dffmpeg@v1.0.0-alpha.2/mod.ts";
 import nodeId3 from "https://esm.sh/node-id3@0.2.5";
 
 import {
-  getFolder,
-  cacheMusic,
-  removeBadCharacters,
-  checkFeat,
-  removeAnd,
-  lastCheck,
-  checkIfDuplicate,
   backupFile,
+  cacheMusic,
+  checkFeat,
+  checkIfDuplicate,
+  getFolder,
+  lastCheck,
   logWithBreak,
+  removeAnd,
+  removeBadCharacters,
+  renameAndMove,
 } from "./common.ts";
 import { DownloadedSong, Song } from "./models/Song.ts";
 
@@ -50,21 +50,23 @@ async function main() {
   let count = 0;
   for await (const currEntry of Deno.readDir(startDir)) {
     if (currEntry.isDirectory && currEntry.name.includes("beatport")) {
-      console.log("Processing: ", currEntry);
+      console.log("Processing: ", currEntry.name);
 
-      for await (const beatportItem of Deno.readDir(
-        `${startDir}/${currEntry.name}`
-      )) {
-        await backupFile(
+      for await (
+        const beatportItem of Deno.readDir(
           `${startDir}/${currEntry.name}`,
+        )
+      ) {
+        await backupFile(
+          `${startDir}/${currEntry.name}/`,
           backupDir,
-          beatportItem.name
+          beatportItem.name,
         );
 
         let song = new Song(beatportItem.name, `${startDir}${currEntry.name}/`);
 
         const mTags = nodeId3.read(
-          `${startDir}/${currEntry.name}/${beatportItem.name}`
+          `${startDir}/${currEntry.name}/${beatportItem.name}`,
         );
 
         song.title = mTags.title || "";
@@ -96,8 +98,9 @@ async function main() {
 
         count++;
 
+        console.log(song.fullFilename);
         if (!debug) {
-          renameAndMove(song);
+          renameAndMove(moveDir, song);
         }
       }
     }
@@ -111,43 +114,8 @@ function setFinalName(song: Song): DownloadedSong {
       ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`
       : `${song.artist} - ${song.title}${song.extension}`;
   } else {
-    song.finalFilename = `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
+    song.finalFilename =
+      `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
   }
   return song;
-}
-
-async function renameAndMove(song: DownloadedSong) {
-  song.tags = {
-    title: song.title,
-    artist: song.artist,
-    album: song.album,
-  };
-
-  if (song.tags) {
-    console.log("Setting Tags");
-    // could potentially put comments, description, year etc
-    // https://wiki.multimedia.cx/index.php/FFmpeg_Metadata
-
-    const process = ffmpeg();
-    // RekordBox doesn't like wav's. convert to flac
-    if (song.extension === ".wav") {
-      process
-        .input(song.fullFilename)
-        .output(`${moveDir}${song.finalFilename.slice(0, -4)}.flac`);
-    } else {
-      process
-        .input(song.fullFilename)
-        .output(`${moveDir}${song.finalFilename}`);
-    }
-
-    try {
-      await process.run();
-      await Deno.remove(song.fullFilename);
-    } catch (e) {
-      console.log(e, song.filename);
-    }
-  } else {
-    console.log("No tags for, leaving in place: ", song.filename);
-    // renameFile(song.fullFilename, `${moveDir}${song.finalFilename}`);
-  }
 }

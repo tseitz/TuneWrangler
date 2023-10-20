@@ -9,4 +9,6 @@ export type FolderLocation =
   | "djMusic"
   | "rename"
   | "transfer"
-  | "backup";
+  | "backup"
+  | "djPlaylists"
+  | "djPlaylistImport";

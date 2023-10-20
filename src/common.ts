@@ -1,9 +1,4 @@
-import {
-  DownloadedSong,
-  FormattedSong,
-  LocalSong,
-  Song,
-} from "./models/Song.ts";
+import { DownloadedSong, LocalSong, Song } from "./models/Song.ts";
 import { FolderLocation } from "./models/types.ts";
 import { ffmpeg } from "https://deno.land/x/dffmpeg@v1.0.0-alpha.2/mod.ts";
 
@@ -34,6 +29,10 @@ export function getFolder(type: FolderLocation, linux = true): string {
         return "/home/tseitz/Documents/broken_songs/";
       case "djMusic":
         return "/Users/tseitz/Dropbox/DJ/SlimChance DJ Music/Collection/";
+      case "djPlaylists":
+        return "/Users/tseitz/Dropbox/DJ/SlimChance DJ Music/Playlist Backups/";
+      case "djPlaylistImport":
+        return "/Users/tseitz/Dropbox/DJ/SlimChance DJ Music/Playlist Backups/Import/";
       case "rename":
         return "/Users/tseitz/Dropbox/TransferMusic/Renamed/";
       case "backup":
@@ -93,8 +92,8 @@ export function removeBadCharacters(song: Song): Song {
   song.filename = song.filename.replace(/\u2771/g, "]"); // ❱
   song.filename = song.filename.replace(/\u2716/g, "x"); // ✖
   song.filename = song.filename.replace(/\u2718/g, "x");
-  song.filename = song.filename.replace(/\u00D8/g, "o"); // Ø
-  song.filename = song.filename.replace(/\u00f8/g, "o"); // ø
+  // song.filename = song.filename.replace(/\u00D8/g, "o"); // Ø
+  // song.filename = song.filename.replace(/\u00f8/g, "o"); // ø
   song.filename = song.filename.replace(/[\u201C-\u201D]/g, '"');
 
   song.filename = song.filename.replace(/\u2014/g, "-"); // —
@@ -119,7 +118,7 @@ export function removeBadCharacters(song: Song): Song {
   if (song.filename.includes("NEVER SAY DIE - BLACK LABEL")) {
     song.filename = song.filename.replace(
       "Never Say Die - Black Label",
-      "Never Say Die Black Label"
+      "Never Say Die Black Label",
     );
   }
   if (
@@ -130,8 +129,8 @@ export function removeBadCharacters(song: Song): Song {
       .slice(0, song.filename.toUpperCase().indexOf("TRACK OF"))
       .concat(
         song.filename.slice(
-          song.filename.toUpperCase().indexOf("OF THE DAY ") + 11
-        )
+          song.filename.toUpperCase().indexOf("OF THE DAY ") + 11,
+        ),
       );
     song.filename = song.filename.replace(/\"/, "- "); // replace first instance of " with -
     song.filename = song.filename.replace(/\"/, ""); // then remove the second one
@@ -144,8 +143,8 @@ export function removeBadCharacters(song: Song): Song {
       .slice(0, song.filename.toUpperCase().indexOf("PREMIERE"))
       .concat(
         song.filename.slice(
-          song.filename.toUpperCase().indexOf("PREMIERE ") + 9
-        )
+          song.filename.toUpperCase().indexOf("PREMIERE ") + 9,
+        ),
       );
     song.filename = song.filename.replace(/\'/, "- ");
     song.filename = song.filename.replace(/\'/, "");
@@ -170,7 +169,7 @@ export function checkRemix(song: Song): Song {
     song.artist = filename
       .slice(
         /(\(|\[)[^\)]+ REMIX\W/gi.exec(filename)!.index + 1,
-        / REMIX\W/gi.exec(filename)!.index
+        / REMIX\W/gi.exec(filename)!.index,
       )
       .trim();
     song.filename = filename
@@ -181,7 +180,7 @@ export function checkRemix(song: Song): Song {
     song.artist = filename
       .slice(
         /(\(|\[)[^\)]+ REFIX\)/gi.exec(filename)!.index + 1,
-        / REFIX/gi.exec(filename)!.index
+        / REFIX/gi.exec(filename)!.index,
       )
       .trim();
     song.filename = filename
@@ -192,7 +191,7 @@ export function checkRemix(song: Song): Song {
     song.artist = filename
       .slice(
         /(\(|\[)[^\)]+ FLIP(\)|\])/gi.exec(filename)!.index + 1,
-        / FLIP/gi.exec(filename)!.index
+        / FLIP/gi.exec(filename)!.index,
       )
       .trim();
     song.filename = filename
@@ -203,7 +202,7 @@ export function checkRemix(song: Song): Song {
     song.artist = filename
       .slice(
         /(\(|\[)[^\)]+ EDIT(\)|\])/gi.exec(filename)!.index + 1,
-        / EDIT/gi.exec(filename)!.index
+        / EDIT/gi.exec(filename)!.index,
       )
       .trim();
     song.filename = filename
@@ -214,7 +213,7 @@ export function checkRemix(song: Song): Song {
     song.artist = filename
       .slice(
         /(\(|\[)[^\)]+ BOOTLEG\)/gi.exec(filename)!.index + 1,
-        / BOOTLEG/gi.exec(filename)!.index
+        / BOOTLEG/gi.exec(filename)!.index,
       )
       .trim();
     song.filename = filename
@@ -225,7 +224,7 @@ export function checkRemix(song: Song): Song {
     song.artist = filename
       .slice(
         /(\(|\[)[^\)]+ REBOOT\)/gi.exec(filename)!.index + 1,
-        / REBOOT/gi.exec(filename)!.index
+        / REBOOT/gi.exec(filename)!.index,
       )
       .trim();
     song.filename = filename
@@ -313,55 +312,67 @@ export function checkWith(song: Song): Song {
 
   if (song.artist.length > 0) {
     if (filename.toUpperCase().includes("(W-")) {
-      song.artist += ` x ${filename.slice(
-        filename.toUpperCase().indexOf("(W- ") + 4,
-        filename.lastIndexOf(song.extension) - 1
-      )}`;
+      song.artist += ` x ${
+        filename.slice(
+          filename.toUpperCase().indexOf("(W- ") + 4,
+          filename.lastIndexOf(song.extension) - 1,
+        )
+      }`;
       song.filename = filename
         .slice(0, filename.toUpperCase().indexOf("(W-"))
         .trim()
         .concat(song.extension);
     } else if (filename.toUpperCase().includes("(WITH ")) {
-      song.artist += ` x ${filename.slice(
-        filename.toUpperCase().indexOf("(WITH ") + 6,
-        filename.lastIndexOf(song.extension) - 1
-      )}`;
+      song.artist += ` x ${
+        filename.slice(
+          filename.toUpperCase().indexOf("(WITH ") + 6,
+          filename.lastIndexOf(song.extension) - 1,
+        )
+      }`;
       song.filename = filename
         .slice(0, filename.toUpperCase().indexOf("(WITH"))
         .trim()
         .concat(song.extension);
     } else if (filename.toUpperCase().includes("(W_")) {
-      song.artist += ` x ${filename.slice(
-        filename.toUpperCase().indexOf("(W_ ") + 4,
-        filename.lastIndexOf(song.extension) - 1
-      )}`;
+      song.artist += ` x ${
+        filename.slice(
+          filename.toUpperCase().indexOf("(W_ ") + 4,
+          filename.lastIndexOf(song.extension) - 1,
+        )
+      }`;
       song.filename = filename
         .slice(0, filename.toUpperCase().indexOf("(W_"))
         .trim()
         .concat(song.extension);
     } else if (filename.toUpperCase().includes("W-")) {
-      song.artist += ` x ${filename.slice(
-        filename.toUpperCase().indexOf("W- ") + 3,
-        filename.lastIndexOf(song.extension)
-      )}`;
+      song.artist += ` x ${
+        filename.slice(
+          filename.toUpperCase().indexOf("W- ") + 3,
+          filename.lastIndexOf(song.extension),
+        )
+      }`;
       song.filename = filename
         .slice(0, filename.toUpperCase().indexOf("W-"))
         .trim()
         .concat(song.extension);
     } else if (filename.toUpperCase().includes("W_")) {
-      song.artist += ` x ${filename.slice(
-        filename.toUpperCase().indexOf("W_ ") + 3,
-        filename.lastIndexOf(song.extension)
-      )}`;
+      song.artist += ` x ${
+        filename.slice(
+          filename.toUpperCase().indexOf("W_ ") + 3,
+          filename.lastIndexOf(song.extension),
+        )
+      }`;
       song.filename = filename
         .slice(0, filename.toUpperCase().indexOf("W_"))
         .trim()
         .concat(song.extension);
     } else if (filename.toUpperCase().includes(" W ")) {
-      song.artist += ` x ${filename.slice(
-        filename.toUpperCase().indexOf(" W ") + 3,
-        filename.lastIndexOf(song.extension)
-      )}`;
+      song.artist += ` x ${
+        filename.slice(
+          filename.toUpperCase().indexOf(" W ") + 3,
+          filename.lastIndexOf(song.extension),
+        )
+      }`;
       song.filename = filename
         .slice(0, filename.toUpperCase().indexOf(" W "))
         .trim()
@@ -390,7 +401,7 @@ export function checkFeat(song: Song): Song {
     featuringArtist = origArtist
       .slice(
         exec!.index + exec![1].length + exec![2].length + exec![3].length,
-        /(\)|\]|$)/gi.exec(origArtist)!.index
+        /(\)|\]|$)/gi.exec(origArtist)!.index,
       )
       .trim();
     song.artist = origArtist.slice(0, exec!.index).trim();
@@ -400,7 +411,7 @@ export function checkFeat(song: Song): Song {
     featuringArtist = origTitle
       .slice(
         exec!.index + exec![1].length + exec![2].length + exec![3].length,
-        /(\)|\]|$)/gi.exec(origTitle)!.index
+        /(\)|\]|$)/gi.exec(origTitle)!.index,
       )
       .trim();
     song.title = origTitle.slice(0, exec!.index).trim();
@@ -410,7 +421,7 @@ export function checkFeat(song: Song): Song {
     featuringArtist = origAlbum
       .slice(
         exec!.index + exec![1].length + exec![2].length + exec![3].length,
-        /(\)|\]|$)/gi.exec(origAlbum)!.index
+        /(\)|\]|$)/gi.exec(origAlbum)!.index,
       )
       .trim();
     song.album = origAlbum.slice(0, exec!.index).trim();
@@ -421,7 +432,7 @@ export function checkFeat(song: Song): Song {
     featuringArtist = origArtist
       .slice(
         /(\(|\[)PROD\.?\s/gi.exec(origArtist)!.index + 7,
-        origArtist.lastIndexOf(")")
+        origArtist.lastIndexOf(")"),
       )
       .trim();
     song.artist = origArtist
@@ -432,7 +443,7 @@ export function checkFeat(song: Song): Song {
     featuringArtist = origTitle
       .slice(
         /(\(|\[)PROD\.?\s/gi.exec(origTitle)!.index + 7,
-        origTitle.lastIndexOf(")")
+        origTitle.lastIndexOf(")"),
       )
       .trim();
     song.title = origTitle
@@ -516,14 +527,13 @@ export async function renameAndMove(moveDir: string, song: DownloadedSong) {
     // https://wiki.multimedia.cx/index.php/FFmpeg_Metadata
 
     const process = ffmpeg();
-    // RekordBox doesn't like wav's. convert to flac
+    // RekordBox doesn't like wav's tagging. convert to aiff
     if (song.extension === ".wav") {
       process
         .input(song.fullFilename)
         .metadata({ artist: song.artist, title: song.title, album: song.album })
-        .audioCodec("flac")
         .overwrite()
-        .output(`${moveDir}${song.finalFilename.slice(0, -4)}.flac`);
+        .output(`${moveDir}${song.finalFilename.slice(0, -4)}.aiff`);
       // .output(`${song.directory}${song.artist} - ${song.title}.flac`);
     } else if (song.extension !== "aiff") {
       process
@@ -548,10 +558,54 @@ export async function renameAndMove(moveDir: string, song: DownloadedSong) {
   }
 }
 
+export async function convertLocalToWav(moveDir: string, song: LocalSong) {
+  song.tags = {
+    title: song.title,
+    artist: song.artist,
+    album: song.album,
+  };
+
+  if (song.tags) {
+    console.log("Setting Tags");
+
+    const process = ffmpeg();
+    process
+      .input(song.fullFilename)
+      .metadata({ artist: song.artist, title: song.title, album: song.album })
+      .audioBitrate("320k")
+      .overwrite() // overwrite any existing output files
+      .output(`${moveDir}${song.filename.slice(0, -5)}.mp3`);
+
+    try {
+      await process.run();
+      await Deno.remove(song.fullFilename);
+    } catch (e) {
+      console.log(e, song.filename);
+    }
+  } else {
+    console.log("No tags for, leaving in place: ", song.filename);
+    // renameFile(song.fullFilename, `${moveDir}${song.finalFilename}`);
+  }
+}
+
 export async function backupFile(
   startDir: string,
   backupDir: string,
-  name: string
+  name: string,
 ) {
-  return await Deno.copyFile(`${startDir}/${name}`, `${backupDir}/${name}`);
+  return await Deno.copyFile(`${startDir}${name}`, `${backupDir}${name}`);
+}
+
+export function setFinalDownloadedSongName(
+  song: DownloadedSong,
+): DownloadedSong {
+  if (song.dashCount === 1) {
+    song.finalFilename = song.album
+      ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`
+      : `${song.artist} - ${song.title}${song.extension}`;
+  } else {
+    song.finalFilename =
+      `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
+  }
+  return song;
 }

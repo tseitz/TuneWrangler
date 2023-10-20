@@ -7,18 +7,19 @@ Outgoing:             artist - album - title
 import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
 
 import {
-  getFolder,
+  backupFile,
   cacheMusic,
-  removeBadCharacters,
   checkFeat,
-  removeAnd,
-  lastCheck,
   checkIfDuplicate,
   checkRemix,
   checkWith,
+  getFolder,
+  lastCheck,
   logWithBreak,
+  removeAnd,
+  removeBadCharacters,
   renameAndMove,
-  backupFile,
+  setFinalDownloadedSongName,
 } from "./common.ts";
 import { DownloadedSong } from "./models/Song.ts";
 
@@ -62,7 +63,12 @@ async function main() {
 
       let song = new DownloadedSong(currEntry.name, startDir);
 
-      if (song.dashCount < 1 || !song.extension || song.extension === ".m3u") {
+      if (
+        song.dashCount < 1 ||
+        !song.extension ||
+        song.extension === ".m3u" ||
+        song.extension === ".zip"
+      ) {
         logWithBreak(`Skipping: ${song.filename}`);
         continue;
       }
@@ -109,7 +115,7 @@ function processDownloadedMusic(song: DownloadedSong): DownloadedSong {
   song = lastCheck(song);
 
   /* ALL TOGETHER NOW */
-  song = setFinalName(song);
+  song = setFinalDownloadedSongName(song);
 
   song.duplicate = checkIfDuplicate(song, musicCache);
   if (song.duplicate) {
@@ -135,31 +141,3 @@ function grabDownloadedArtist(song: DownloadedSong): DownloadedSong {
 
   return song;
 }
-
-function setFinalName(song: DownloadedSong): DownloadedSong {
-  if (song.dashCount === 1) {
-    song.finalFilename = song.album
-      ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`
-      : `${song.artist} - ${song.title}${song.extension}`;
-  } else {
-    song.finalFilename = `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
-  }
-  return song;
-}
-
-// async function renameFile(fullFilename: string, moveName: string) {
-//   const renamed = await Deno.rename(fullFilename, moveName);
-//   console.log(renamed);
-// }
-
-// used for my local songs with ratings at the end
-// function removeRatings() {
-// if (song.filename.match(/ \- [0-9]{1,3}/)) {
-//   const trimmedName = song.filename.replace(/ \- [0-9]{1,3}/, '')
-//   if (!debug) {
-//     console.log(trimmedName)
-//     renameFile(`${startDir}${song.filename}`, `${cacheDir}${trimmedName}`)
-//   }
-//   continue
-// }
-// }

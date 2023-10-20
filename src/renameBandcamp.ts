@@ -4,18 +4,18 @@ Tags local songs. Converts to flac if necessary
 import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
 
 import {
-  getFolder,
+  backupFile,
   cacheMusic,
-  removeBadCharacters,
   checkFeat,
-  removeAnd,
-  lastCheck,
   checkIfDuplicate,
   checkRemix,
   checkWith,
+  getFolder,
+  lastCheck,
   logWithBreak,
+  removeAnd,
+  removeBadCharacters,
   renameAndMove,
-  backupFile,
 } from "./common.ts";
 import { DownloadedSong, LocalSong } from "./models/Song.ts";
 
@@ -56,32 +56,55 @@ await main();
 async function main() {
   let count = 0;
   for await (const currEntry of Deno.readDir(startDir)) {
-    if (currEntry.isFile) {
-      await backupFile(startDir, backupDir, currEntry.name);
+    if (currEntry.isDirectory && currEntry.name === "bandcamp") {
+      for await (
+        const bandcampItem of Deno.readDir(
+          `${startDir}/${currEntry.name}`,
+        )
+      ) {
+        if (
+          bandcampItem.isFile && !bandcampItem.isDirectory &&
+          !bandcampItem.name.includes(".zip")
+        ) {
+          console.log(bandcampItem);
+          await backupFile(
+            `${startDir}${currEntry.name}/`,
+            backupDir,
+            bandcampItem.name,
+          );
 
-      let song = new LocalSong(currEntry.name, startDir);
+          let song = new LocalSong(
+            bandcampItem.name,
+            `${startDir}${currEntry.name}/`,
+          );
 
-      if (song.dashCount < 1 || !song.extension || song.extension === ".m3u") {
-        logWithBreak(`Skipping: ${song.filename}`);
-        continue;
-      }
+          if (
+            song.dashCount < 1 ||
+            !song.extension ||
+            song.extension === ".m3u"
+          ) {
+            logWithBreak(`Skipping: ${song.filename}`);
+            continue;
+          }
 
-      console.log("Processing: ", currEntry.name);
+          console.log("Processing: ", bandcampItem.name);
 
-      try {
-        song = processSongs(song);
-      } catch {
-        logWithBreak(`***Duplicate Song: ${song.filename}***`);
-        continue;
-      }
+          try {
+            song = processSongs(song);
+          } catch {
+            logWithBreak(`***Duplicate Song: ${song.filename}***`);
+            continue;
+          }
 
-      musicCache.push(song);
+          musicCache.push(song);
 
-      logWithBreak(song.finalFilename);
+          logWithBreak(song.finalFilename);
 
-      count++;
-      if (!debug) {
-        renameAndMove(moveDir, song);
+          count++;
+          if (!debug) {
+            renameAndMove(moveDir, song);
+          }
+        }
       }
     }
   }
@@ -149,7 +172,8 @@ function setFinalName(song: DownloadedSong): DownloadedSong {
       ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`
       : `${song.artist} - ${song.title}${song.extension}`;
   } else {
-    song.finalFilename = `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
+    song.finalFilename =
+      `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
   }
   return song;
 }

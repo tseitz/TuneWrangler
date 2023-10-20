@@ -3,9 +3,11 @@
   "description": "(Mostly) Deno application that wrangles my tunes.",
   "tasks": {
     "rM": "deno run --allow-read --allow-run --allow-write src/renameMusic.ts",
-    "retag": "deno run --allow-read --allow-run --allow-write src/retagSongs.ts",
-    "rB": "deno run --allow-read --allow-run --allow-net --allow-write --allow-env src/renameBeatport.ts",
+    "rBc": "deno run --allow-read --allow-run --allow-write src/renameBandcamp.ts",
+    "rBp": "deno run --allow-read --allow-run --allow-net --allow-write --allow-env src/renameBeatport.ts",
     "ytRb": "deno run --unstable --allow-env --allow-net --allow-read --allow-write --allow-run src/addRekordboxSongsToYoutube.ts",
-    "ytRbNoCheck": "deno run --unstable --allow-env --allow-net --allow-read --allow-write --allow-run --no-check src/addRekordboxSongsToYoutube.ts"
+    "ytRbNoCheck": "deno run --unstable --allow-env --allow-net --allow-read --allow-write --allow-run --no-check src/addRekordboxSongsToYoutube.ts",
+    "playlistImport": "deno run --allow-read --allow-write --allow-run src/betterM3uSearch.ts",
+    "cF": "deno run --allow-read --allow-write --allow-run src/convertFlacs.ts"
   }
 }
