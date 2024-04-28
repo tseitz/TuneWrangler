@@ -52,22 +52,12 @@ async function main() {
     if (currEntry.isDirectory && currEntry.name.includes("beatport")) {
       console.log("Processing: ", currEntry.name);
 
-      for await (
-        const beatportItem of Deno.readDir(
-          `${startDir}/${currEntry.name}`,
-        )
-      ) {
-        await backupFile(
-          `${startDir}/${currEntry.name}/`,
-          backupDir,
-          beatportItem.name,
-        );
+      for await (const beatportItem of Deno.readDir(`${startDir}/${currEntry.name}`)) {
+        await backupFile(`${startDir}/${currEntry.name}/`, backupDir, beatportItem.name);
 
         let song = new Song(beatportItem.name, `${startDir}${currEntry.name}/`);
 
-        const mTags = nodeId3.read(
-          `${startDir}/${currEntry.name}/${beatportItem.name}`,
-        );
+        const mTags = nodeId3.read(`${startDir}/${currEntry.name}/${beatportItem.name}`);
 
         song.title = mTags.title || "";
         song.artist = mTags.artist || "";
@@ -114,8 +104,7 @@ function setFinalName(song: Song): DownloadedSong {
       ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`
       : `${song.artist} - ${song.title}${song.extension}`;
   } else {
-    song.finalFilename =
-      `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
+    song.finalFilename = `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
   }
   return song;
 }

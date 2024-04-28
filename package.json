@@ -6,6 +6,7 @@
     "rM": "bun src/renameMusic.ts",
     "rBc": "bun src/renameBandcamp.ts",
     "rBp": "bun src/renameBeatport.ts",
+    "rI": "bun src/renameItunes.ts",
     "ytRb": "bun src/addRekordboxSongsToYoutube.ts",
     "ytRbNoCheck": "bun src/addRekordboxSongsToYoutube.ts",
     "playlistImport": "bun src/betterM3uSearch.ts",

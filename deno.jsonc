@@ -4,6 +4,7 @@
   "tasks": {
     "rM": "deno run --allow-read --allow-run --allow-write src/renameMusic.ts",
     "rBc": "deno run --allow-read --allow-run --allow-write src/renameBandcamp.ts",
+    "rI": "deno run --allow-read --allow-run --allow-net --allow-write --allow-env src/renameItunes.ts",
     "rBp": "deno run --allow-read --allow-run --allow-net --allow-write --allow-env src/renameBeatport.ts",
     "ytRb": "deno run --unstable --allow-env --allow-net --allow-read --allow-write --allow-run src/addRekordboxSongsToYoutube.ts",
     "ytRbNoCheck": "deno run --unstable --allow-env --allow-net --allow-read --allow-write --allow-run --no-check src/addRekordboxSongsToYoutube.ts",

@@ -111,41 +111,22 @@ export function removeBadCharacters(song: Song): Song {
 
   // Channels
   if (song.filename.toUpperCase().includes("[FIRE")) {
-    song.filename = song.filename
-      .substring(0, song.filename.toUpperCase().indexOf("[FIRE") - 1)
-      .concat(".mp3");
+    song.filename = song.filename.substring(0, song.filename.toUpperCase().indexOf("[FIRE") - 1).concat(".mp3");
   }
   if (song.filename.includes("NEVER SAY DIE - BLACK LABEL")) {
-    song.filename = song.filename.replace(
-      "Never Say Die - Black Label",
-      "Never Say Die Black Label",
-    );
+    song.filename = song.filename.replace("Never Say Die - Black Label", "Never Say Die Black Label");
   }
-  if (
-    song.filename.toUpperCase().includes("INSOMNIAC") &&
-    song.filename.toUpperCase().includes("TRACK OF THE DAY")
-  ) {
+  if (song.filename.toUpperCase().includes("INSOMNIAC") && song.filename.toUpperCase().includes("TRACK OF THE DAY")) {
     song.filename = song.filename
       .slice(0, song.filename.toUpperCase().indexOf("TRACK OF"))
-      .concat(
-        song.filename.slice(
-          song.filename.toUpperCase().indexOf("OF THE DAY ") + 11,
-        ),
-      );
+      .concat(song.filename.slice(song.filename.toUpperCase().indexOf("OF THE DAY ") + 11));
     song.filename = song.filename.replace(/\"/, "- "); // replace first instance of " with -
     song.filename = song.filename.replace(/\"/, ""); // then remove the second one
     song.dashCount = song.getDashCount();
-  } else if (
-    song.filename.toUpperCase().includes("DJMAG") &&
-    song.filename.toUpperCase().includes("PREMIERE")
-  ) {
+  } else if (song.filename.toUpperCase().includes("DJMAG") && song.filename.toUpperCase().includes("PREMIERE")) {
     song.filename = song.filename
       .slice(0, song.filename.toUpperCase().indexOf("PREMIERE"))
-      .concat(
-        song.filename.slice(
-          song.filename.toUpperCase().indexOf("PREMIERE ") + 9,
-        ),
-      );
+      .concat(song.filename.slice(song.filename.toUpperCase().indexOf("PREMIERE ") + 9));
     song.filename = song.filename.replace(/\'/, "- ");
     song.filename = song.filename.replace(/\'/, "");
     song.dashCount = song.getDashCount();
@@ -167,21 +148,12 @@ export function checkRemix(song: Song): Song {
   if (/(\(|\[)[^\)]+ REMIX\W/gi.test(filename)) {
     const filenameRegex = /(\(|\[)[^\)]+ REMIX\W/gi.exec(filename); // /(\(|\[)[^\)]+ REMIX(\)|\])/ig.exec(filename);
     song.artist = filename
-      .slice(
-        /(\(|\[)[^\)]+ REMIX\W/gi.exec(filename)!.index + 1,
-        / REMIX\W/gi.exec(filename)!.index,
-      )
+      .slice(/(\(|\[)[^\)]+ REMIX\W/gi.exec(filename)!.index + 1, / REMIX\W/gi.exec(filename)!.index)
       .trim();
-    song.filename = filename
-      .slice(0, filenameRegex!.index)
-      .trim()
-      .concat(song.extension);
+    song.filename = filename.slice(0, filenameRegex!.index).trim().concat(song.extension);
   } else if (/(\(|\[)[^\)]+ REFIX\)/gi.test(filename)) {
     song.artist = filename
-      .slice(
-        /(\(|\[)[^\)]+ REFIX\)/gi.exec(filename)!.index + 1,
-        / REFIX/gi.exec(filename)!.index,
-      )
+      .slice(/(\(|\[)[^\)]+ REFIX\)/gi.exec(filename)!.index + 1, / REFIX/gi.exec(filename)!.index)
       .trim();
     song.filename = filename
       .slice(0, /(\(|\[)[^\)]+ REFIX\)/gi.exec(filename)!.index)
@@ -189,10 +161,7 @@ export function checkRemix(song: Song): Song {
       .concat(song.extension);
   } else if (/(\(|\[)[^\)]+ FLIP(\)|\])/gi.test(filename)) {
     song.artist = filename
-      .slice(
-        /(\(|\[)[^\)]+ FLIP(\)|\])/gi.exec(filename)!.index + 1,
-        / FLIP/gi.exec(filename)!.index,
-      )
+      .slice(/(\(|\[)[^\)]+ FLIP(\)|\])/gi.exec(filename)!.index + 1, / FLIP/gi.exec(filename)!.index)
       .trim();
     song.filename = filename
       .slice(0, /(\(|\[)[^\)]+ FLIP(\)|\])/gi.exec(filename)!.index)
@@ -200,10 +169,7 @@ export function checkRemix(song: Song): Song {
       .concat(song.extension);
   } else if (/(\(|\[)[^\)]+ EDIT(\)|\])/gi.test(filename)) {
     song.artist = filename
-      .slice(
-        /(\(|\[)[^\)]+ EDIT(\)|\])/gi.exec(filename)!.index + 1,
-        / EDIT/gi.exec(filename)!.index,
-      )
+      .slice(/(\(|\[)[^\)]+ EDIT(\)|\])/gi.exec(filename)!.index + 1, / EDIT/gi.exec(filename)!.index)
       .trim();
     song.filename = filename
       .slice(0, /(\(|\[)[^\)]+ EDIT(\)|\])/gi.exec(filename)!.index)
@@ -211,10 +177,7 @@ export function checkRemix(song: Song): Song {
       .concat(song.extension);
   } else if (/(\(|\[)[^\)]+ BOOTLEG\)/gi.test(filename)) {
     song.artist = filename
-      .slice(
-        /(\(|\[)[^\)]+ BOOTLEG\)/gi.exec(filename)!.index + 1,
-        / BOOTLEG/gi.exec(filename)!.index,
-      )
+      .slice(/(\(|\[)[^\)]+ BOOTLEG\)/gi.exec(filename)!.index + 1, / BOOTLEG/gi.exec(filename)!.index)
       .trim();
     song.filename = filename
       .slice(0, /(\(|\[)[^\)]+ BOOTLEG\)/gi.exec(filename)!.index)
@@ -222,14 +185,9 @@ export function checkRemix(song: Song): Song {
       .concat(song.extension);
   } else if (/(\(|\[)[^\)]+ REBOOT\)/gi.test(filename)) {
     song.artist = filename
-      .slice(
-        /(\(|\[)[^\)]+ REBOOT\)/gi.exec(filename)!.index + 1,
-        / REBOOT/gi.exec(filename)!.index,
-      )
+      .slice(/(\(|\[)[^\)]+ REBOOT\)/gi.exec(filename)!.index + 1, / REBOOT/gi.exec(filename)!.index)
       .trim();
-    song.filename = filename
-      .slice(0, /(\(|\[)[^\)]+ REBOOT\)/gi.exec(filename)!.index - 1)
-      .concat(song.extension);
+    song.filename = filename.slice(0, /(\(|\[)[^\)]+ REBOOT\)/gi.exec(filename)!.index - 1).concat(song.extension);
   }
 
   if (origArtist !== song.artist) {
@@ -240,10 +198,7 @@ export function checkRemix(song: Song): Song {
   return song;
 }
 
-export function removeAnd(
-  song: Song,
-  ...types: Array<"artist" | "album">
-): Song {
+export function removeAnd(song: Song, ...types: Array<"artist" | "album">): Song {
   types.forEach((type) => {
     const origLabel = song[type];
 
@@ -312,71 +267,41 @@ export function checkWith(song: Song): Song {
 
   if (song.artist.length > 0) {
     if (filename.toUpperCase().includes("(W-")) {
-      song.artist += ` x ${
-        filename.slice(
-          filename.toUpperCase().indexOf("(W- ") + 4,
-          filename.lastIndexOf(song.extension) - 1,
-        )
-      }`;
-      song.filename = filename
-        .slice(0, filename.toUpperCase().indexOf("(W-"))
-        .trim()
-        .concat(song.extension);
+      song.artist += ` x ${filename.slice(
+        filename.toUpperCase().indexOf("(W- ") + 4,
+        filename.lastIndexOf(song.extension) - 1
+      )}`;
+      song.filename = filename.slice(0, filename.toUpperCase().indexOf("(W-")).trim().concat(song.extension);
     } else if (filename.toUpperCase().includes("(WITH ")) {
-      song.artist += ` x ${
-        filename.slice(
-          filename.toUpperCase().indexOf("(WITH ") + 6,
-          filename.lastIndexOf(song.extension) - 1,
-        )
-      }`;
-      song.filename = filename
-        .slice(0, filename.toUpperCase().indexOf("(WITH"))
-        .trim()
-        .concat(song.extension);
+      song.artist += ` x ${filename.slice(
+        filename.toUpperCase().indexOf("(WITH ") + 6,
+        filename.lastIndexOf(song.extension) - 1
+      )}`;
+      song.filename = filename.slice(0, filename.toUpperCase().indexOf("(WITH")).trim().concat(song.extension);
     } else if (filename.toUpperCase().includes("(W_")) {
-      song.artist += ` x ${
-        filename.slice(
-          filename.toUpperCase().indexOf("(W_ ") + 4,
-          filename.lastIndexOf(song.extension) - 1,
-        )
-      }`;
-      song.filename = filename
-        .slice(0, filename.toUpperCase().indexOf("(W_"))
-        .trim()
-        .concat(song.extension);
+      song.artist += ` x ${filename.slice(
+        filename.toUpperCase().indexOf("(W_ ") + 4,
+        filename.lastIndexOf(song.extension) - 1
+      )}`;
+      song.filename = filename.slice(0, filename.toUpperCase().indexOf("(W_")).trim().concat(song.extension);
     } else if (filename.toUpperCase().includes("W-")) {
-      song.artist += ` x ${
-        filename.slice(
-          filename.toUpperCase().indexOf("W- ") + 3,
-          filename.lastIndexOf(song.extension),
-        )
-      }`;
-      song.filename = filename
-        .slice(0, filename.toUpperCase().indexOf("W-"))
-        .trim()
-        .concat(song.extension);
+      song.artist += ` x ${filename.slice(
+        filename.toUpperCase().indexOf("W- ") + 3,
+        filename.lastIndexOf(song.extension)
+      )}`;
+      song.filename = filename.slice(0, filename.toUpperCase().indexOf("W-")).trim().concat(song.extension);
     } else if (filename.toUpperCase().includes("W_")) {
-      song.artist += ` x ${
-        filename.slice(
-          filename.toUpperCase().indexOf("W_ ") + 3,
-          filename.lastIndexOf(song.extension),
-        )
-      }`;
-      song.filename = filename
-        .slice(0, filename.toUpperCase().indexOf("W_"))
-        .trim()
-        .concat(song.extension);
+      song.artist += ` x ${filename.slice(
+        filename.toUpperCase().indexOf("W_ ") + 3,
+        filename.lastIndexOf(song.extension)
+      )}`;
+      song.filename = filename.slice(0, filename.toUpperCase().indexOf("W_")).trim().concat(song.extension);
     } else if (filename.toUpperCase().includes(" W ")) {
-      song.artist += ` x ${
-        filename.slice(
-          filename.toUpperCase().indexOf(" W ") + 3,
-          filename.lastIndexOf(song.extension),
-        )
-      }`;
-      song.filename = filename
-        .slice(0, filename.toUpperCase().indexOf(" W "))
-        .trim()
-        .concat(song.extension);
+      song.artist += ` x ${filename.slice(
+        filename.toUpperCase().indexOf(" W ") + 3,
+        filename.lastIndexOf(song.extension)
+      )}`;
+      song.filename = filename.slice(0, filename.toUpperCase().indexOf(" W ")).trim().concat(song.extension);
     }
   }
 
@@ -399,30 +324,21 @@ export function checkFeat(song: Song): Song {
   if (/(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/gi.test(origArtist)) {
     const exec = /(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/gi.exec(origArtist);
     featuringArtist = origArtist
-      .slice(
-        exec!.index + exec![1].length + exec![2].length + exec![3].length,
-        /(\)|\]|$)/gi.exec(origArtist)!.index,
-      )
+      .slice(exec!.index + exec![1].length + exec![2].length + exec![3].length, /(\)|\]|$)/gi.exec(origArtist)!.index)
       .trim();
     song.artist = origArtist.slice(0, exec!.index).trim();
   }
   if (/(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/gi.test(origTitle)) {
     const exec = /(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/gi.exec(origTitle);
     featuringArtist = origTitle
-      .slice(
-        exec!.index + exec![1].length + exec![2].length + exec![3].length,
-        /(\)|\]|$)/gi.exec(origTitle)!.index,
-      )
+      .slice(exec!.index + exec![1].length + exec![2].length + exec![3].length, /(\)|\]|$)/gi.exec(origTitle)!.index)
       .trim();
     song.title = origTitle.slice(0, exec!.index).trim();
   }
   if (/(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/gi.test(origAlbum)) {
     const exec = /(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/gi.exec(origAlbum);
     featuringArtist = origAlbum
-      .slice(
-        exec!.index + exec![1].length + exec![2].length + exec![3].length,
-        /(\)|\]|$)/gi.exec(origAlbum)!.index,
-      )
+      .slice(exec!.index + exec![1].length + exec![2].length + exec![3].length, /(\)|\]|$)/gi.exec(origAlbum)!.index)
       .trim();
     song.album = origAlbum.slice(0, exec!.index).trim();
   }
@@ -430,32 +346,18 @@ export function checkFeat(song: Song): Song {
   // (PROD. and [PROD
   if (/(\(|\[)PROD\.?\s/gi.test(origArtist)) {
     featuringArtist = origArtist
-      .slice(
-        /(\(|\[)PROD\.?\s/gi.exec(origArtist)!.index + 7,
-        origArtist.lastIndexOf(")"),
-      )
+      .slice(/(\(|\[)PROD\.?\s/gi.exec(origArtist)!.index + 7, origArtist.lastIndexOf(")"))
       .trim();
-    song.artist = origArtist
-      .slice(0, /(\(|\[)PROD\.?\s/gi.exec(origArtist)!.index)
-      .trim();
+    song.artist = origArtist.slice(0, /(\(|\[)PROD\.?\s/gi.exec(origArtist)!.index).trim();
   }
   if (/(\(|\[)PROD\.?\s/gi.test(origTitle)) {
     featuringArtist = origTitle
-      .slice(
-        /(\(|\[)PROD\.?\s/gi.exec(origTitle)!.index + 7,
-        origTitle.lastIndexOf(")"),
-      )
+      .slice(/(\(|\[)PROD\.?\s/gi.exec(origTitle)!.index + 7, origTitle.lastIndexOf(")"))
       .trim();
-    song.title = origTitle
-      .slice(0, /(\(|\[)PROD\.?\s/gi.exec(origTitle)!.index)
-      .trim();
+    song.title = origTitle.slice(0, /(\(|\[)PROD\.?\s/gi.exec(origTitle)!.index).trim();
   }
 
-  if (
-    song.artist !== origArtist ||
-    song.title !== origTitle ||
-    song.album !== origAlbum
-  ) {
+  if (song.artist !== origArtist || song.title !== origTitle || song.album !== origAlbum) {
     song.changed = true;
     console.log(`Feat: ${featuringArtist}`);
 
@@ -481,12 +383,8 @@ export function lastCheck(song: Song): Song {
 
   if (song.filename.includes("Track of the Day- ")) {
     song.album = song.artist;
-    song.artist = song.filename
-      .slice(song.filename.lastIndexOf("- ") + 2, song.filename.indexOf('"'))
-      .trim();
-    song.title = song.filename
-      .slice(song.filename.indexOf('"') + 1, song.filename.lastIndexOf('"'))
-      .trim();
+    song.artist = song.filename.slice(song.filename.lastIndexOf("- ") + 2, song.filename.indexOf('"')).trim();
+    song.title = song.filename.slice(song.filename.indexOf('"') + 1, song.filename.lastIndexOf('"')).trim();
     song.dashCount = 2;
   }
 
@@ -514,6 +412,12 @@ export function lastCheck(song: Song): Song {
   return song;
 }
 
+export function fixItunesAlbum(album: string): string {
+  album = album.replace(" - Single", "");
+  album = album.replace(" - EP", " EP");
+  return album;
+}
+
 export async function renameAndMove(moveDir: string, song: DownloadedSong) {
   song.tags = {
     title: song.title,
@@ -528,7 +432,7 @@ export async function renameAndMove(moveDir: string, song: DownloadedSong) {
 
     const process = ffmpeg();
     // RekordBox doesn't like wav's tagging. convert to aiff
-    if (song.extension === ".wav") {
+    if (song.extension === ".wav" || song.extension === ".m4a") {
       process
         .input(song.fullFilename)
         .metadata({ artist: song.artist, title: song.title, album: song.album })
@@ -588,24 +492,17 @@ export async function convertLocalToWav(moveDir: string, song: LocalSong) {
   }
 }
 
-export async function backupFile(
-  startDir: string,
-  backupDir: string,
-  name: string,
-) {
+export async function backupFile(startDir: string, backupDir: string, name: string) {
   return await Deno.copyFile(`${startDir}${name}`, `${backupDir}${name}`);
 }
 
-export function setFinalDownloadedSongName(
-  song: DownloadedSong,
-): DownloadedSong {
+export function setFinalDownloadedSongName(song: DownloadedSong): DownloadedSong {
   if (song.dashCount === 1) {
     song.finalFilename = song.album
       ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`
       : `${song.artist} - ${song.title}${song.extension}`;
   } else {
-    song.finalFilename =
-      `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
+    song.finalFilename = `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
   }
   return song;
 }

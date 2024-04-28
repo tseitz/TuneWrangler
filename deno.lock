@@ -1,6 +1,137 @@
 {
-  "version": "2",
+  "version": "3",
+  "packages": {
+    "specifiers": {
+      "npm:music-metadata": "npm:music-metadata@8.1.0"
+    },
+    "npm": {
+      "@tokenizer/token@0.3.0": {
+        "integrity": "sha512-OvjF+z51L3ov0OyAU0duzsYuvO01PH7x4t6DJx+guahgTnBHkhJdG7soQeTSFLWN3efnHyibZ4Z8l2EuWwJN3A==",
+        "dependencies": {}
+      },
+      "content-type@1.0.4": {
+        "integrity": "sha512-hIP3EEPs8tB9AT1L+NUqtwOAps4mk2Zob89MWXMHjHWg9milF/j4osnnQLXBCBFBk/tvIG/tUc9mOUJiPBhPXA==",
+        "dependencies": {}
+      },
+      "debug@4.3.4": {
+        "integrity": "sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==",
+        "dependencies": {
+          "ms": "ms@2.1.2"
+        }
+      },
+      "file-type@18.0.0": {
+        "integrity": "sha512-jjMwFpnW8PKofLE/4ohlhqwDk5k0NC6iy0UHAJFKoY1fQeGMN0GDdLgHQrvCbSpMwbqzoCZhRI5dETCZna5qVA==",
+        "dependencies": {
+          "readable-web-to-node-stream": "readable-web-to-node-stream@3.0.2",
+          "strtok3": "strtok3@7.0.0",
+          "token-types": "token-types@5.0.1"
+        }
+      },
+      "ieee754@1.2.1": {
+        "integrity": "sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==",
+        "dependencies": {}
+      },
+      "inherits@2.0.4": {
+        "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==",
+        "dependencies": {}
+      },
+      "media-typer@1.1.0": {
+        "integrity": "sha512-aisnrDP4GNe06UcKFnV5bfMNPBUw4jsLGaWwWfnH3v02GnBuXX2MCVn5RbrWo0j3pczUilYblq7fQ7Nw2t5XKw==",
+        "dependencies": {}
+      },
+      "ms@2.1.2": {
+        "integrity": "sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==",
+        "dependencies": {}
+      },
+      "music-metadata@8.1.0": {
+        "integrity": "sha512-Jyleh/645rPISMo+bZ3jua5QbFVL32xA+x3KoJPZeRHcPTVizCVUtAqJLtLVaPPQrIrLjgagv3DQlpP67lb3Dw==",
+        "dependencies": {
+          "@tokenizer/token": "@tokenizer/token@0.3.0",
+          "content-type": "content-type@1.0.4",
+          "debug": "debug@4.3.4",
+          "file-type": "file-type@18.0.0",
+          "media-typer": "media-typer@1.1.0",
+          "strtok3": "strtok3@7.0.0",
+          "token-types": "token-types@5.0.1"
+        }
+      },
+      "peek-readable@5.0.0": {
+        "integrity": "sha512-YtCKvLUOvwtMGmrniQPdO7MwPjgkFBtFIrmfSbYmYuq3tKDV/mcfAhBth1+C3ru7uXIZasc/pHnb+YDYNkkj4A==",
+        "dependencies": {}
+      },
+      "readable-stream@3.6.0": {
+        "integrity": "sha512-BViHy7LKeTz4oNnkcLJ+lVSL6vpiFeX6/d3oSH8zCW7UxP2onchk+vTGB143xuFjHS3deTgkKoXXymXqymiIdA==",
+        "dependencies": {
+          "inherits": "inherits@2.0.4",
+          "string_decoder": "string_decoder@1.3.0",
+          "util-deprecate": "util-deprecate@1.0.2"
+        }
+      },
+      "readable-web-to-node-stream@3.0.2": {
+        "integrity": "sha512-ePeK6cc1EcKLEhJFt/AebMCLL+GgSKhuygrZ/GLaKZYEecIgIECf4UaUuaByiGtzckwR4ain9VzUh95T1exYGw==",
+        "dependencies": {
+          "readable-stream": "readable-stream@3.6.0"
+        }
+      },
+      "safe-buffer@5.2.1": {
+        "integrity": "sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==",
+        "dependencies": {}
+      },
+      "string_decoder@1.3.0": {
+        "integrity": "sha512-hkRX8U1WjJFd8LsDJ2yQ/wWWxaopEsABU1XfkM8A+j0+85JAGppt16cr1Whg6KIbb4okU6Mql6BOj+uup/wKeA==",
+        "dependencies": {
+          "safe-buffer": "safe-buffer@5.2.1"
+        }
+      },
+      "strtok3@7.0.0": {
+        "integrity": "sha512-pQ+V+nYQdC5H3Q7qBZAz/MO6lwGhoC2gOAjuouGf/VO0m7vQRh8QNMl2Uf6SwAtzZ9bOw3UIeBukEGNJl5dtXQ==",
+        "dependencies": {
+          "@tokenizer/token": "@tokenizer/token@0.3.0",
+          "peek-readable": "peek-readable@5.0.0"
+        }
+      },
+      "token-types@5.0.1": {
+        "integrity": "sha512-Y2fmSnZjQdDb9W4w4r1tswlMHylzWIeOKpx0aZH9BgGtACHhrk3OkT52AzwcuqTRBZtvvnTjDBh8eynMulu8Vg==",
+        "dependencies": {
+          "@tokenizer/token": "@tokenizer/token@0.3.0",
+          "ieee754": "ieee754@1.2.1"
+        }
+      },
+      "util-deprecate@1.0.2": {
+        "integrity": "sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==",
+        "dependencies": {}
+      }
+    }
+  },
+  "redirects": {
+    "https://cdn.skypack.dev/-/peek-readable@v4.1.0-wocPsAHN8qqVR69mYN4Q/dist=es2019,mode=types/index.d.ts": "https://cdn.skypack.dev/-/peek-readable@v4.1.0-wocPsAHN8qqVR69mYN4Q/dist=es2019,mode=types/lib/index.d.ts",
+    "https://cdn.skypack.dev/-/strtok3@v6.3.0-MT7ECx8HHWf6HDt9NBYc/dist=es2019,mode=types/index.d.ts": "https://cdn.skypack.dev/-/strtok3@v6.3.0-MT7ECx8HHWf6HDt9NBYc/dist=es2019,mode=types/lib/index.d.ts",
+    "https://cdn.skypack.dev/-/token-types@v4.2.1-be0CSieNiiLE9IiimjCT/dist=es2019,mode=types/index.d.ts": "https://cdn.skypack.dev/-/token-types@v4.2.1-be0CSieNiiLE9IiimjCT/dist=es2019,mode=types/lib/index.d.ts",
+    "https://deno.land/std/media_types/mod.ts": "https://deno.land/std@0.222.1/media_types/mod.ts",
+    "https://deno.land/std/node/fs.ts": "https://deno.land/std@0.173.0/node/fs.ts",
+    "https://deno.land/x/mediainfo/mod.ts": "https://deno.land/x/mediainfo@v2.0.0/mod.ts"
+  },
   "remote": {
+    "https://cdn.skypack.dev/-/content-type@v1.0.5-V0T0mER3C0TA4q4R72KB/dist=es2019,mode=imports/optimized/content-type.js": "2862d2c6036890599abb91d707b452235199d33a257489b82f4b33a4f8143a6a",
+    "https://cdn.skypack.dev/-/debug@v4.3.4-o4liVvMlOnQWbLSYZMXw/dist=es2019,mode=imports/optimized/debug.js": "671100993996e39b501301a87000607916d4d2d9f8fc8e9c5200ae5ba64a1389",
+    "https://cdn.skypack.dev/-/file-type@v16.5.4-A0FHg8zhuAQQxJ53gOmm/dist=es2019,mode=imports/unoptimized/core.js": "66cfce1511b779b2469d6baaacad7771b54e2908ca8c42cfac412965cdc6d2ff",
+    "https://cdn.skypack.dev/-/file-type@v16.5.4-A0FHg8zhuAQQxJ53gOmm/dist=es2019,mode=imports/unoptimized/supported.js": "1f21745a9fbcafe7cf492ae118a8eec36f1c2dbbcad2f14f137d770ed54e039d",
+    "https://cdn.skypack.dev/-/file-type@v16.5.4-A0FHg8zhuAQQxJ53gOmm/dist=es2019,mode=imports/unoptimized/util.js": "59e0cf411a631a9f34f0ab2865582c9c7d53a68ab428b4c68324e14c14227ee0",
+    "https://cdn.skypack.dev/-/ieee754@v1.2.1-wxdRuKvQQOTpW1dpWzFI/dist=es2019,mode=imports/optimized/ieee754.js": "d2f73784b95c354f399103302c65c5d0fe52bc869379d322a0b2e1185d2ad3f8",
+    "https://cdn.skypack.dev/-/media-typer@v1.1.0-xxSUE7bWyj3DN63z33Cs/dist=es2019,mode=imports/optimized/media-typer.js": "563d85ecc806fa09597970bebc6ee8ca3e9582f2ab90f3fb89a822e1721fb935",
+    "https://cdn.skypack.dev/-/ms@v2.1.2-giBDZ1IA5lmQ3ZXaa87V/dist=es2019,mode=imports/optimized/ms.js": "fd88e2d51900437011f1ad232f3393ce97db1b87a7844b3c58dd6d65562c1276",
+    "https://cdn.skypack.dev/-/music-metadata@v7.14.0-0DWblkLpmKaOIMy5lcuu/dist=es2019,mode=imports/optimized/music-metadata.js": "d2657dcfb9a74ddc9dd5e8b76aaa73fa24f70809582a03e26fc0319eab6895ba",
+    "https://cdn.skypack.dev/-/peek-readable@v4.1.0-wocPsAHN8qqVR69mYN4Q/dist=es2019,mode=imports/optimized/peek-readable.js": "c8186fba071aeb85f6c7c7207a8fa0d6ddf9133c3caed93e91010ce718d70273",
+    "https://cdn.skypack.dev/-/strtok3@v6.3.0-MT7ECx8HHWf6HDt9NBYc/dist=es2019,mode=imports/optimized/strtok3.js": "7bc70392f99d99a08f51a7341b649bdd35905237ae17ea6f2cb7faaedb214a1c",
+    "https://cdn.skypack.dev/-/strtok3@v6.3.0-MT7ECx8HHWf6HDt9NBYc/dist=es2019,mode=imports/unoptimized/lib/AbstractTokenizer.js": "72182120e741f67af0e50a07516d694b2d1e3556b6b1f210dbb5db8c7829ada2",
+    "https://cdn.skypack.dev/-/strtok3@v6.3.0-MT7ECx8HHWf6HDt9NBYc/dist=es2019,mode=imports/unoptimized/lib/BufferTokenizer.js": "6b57f125b248a60acc92dcfccde783c66527009b7414d8193119dde318436d32",
+    "https://cdn.skypack.dev/-/strtok3@v6.3.0-MT7ECx8HHWf6HDt9NBYc/dist=es2019,mode=imports/unoptimized/lib/ReadStreamTokenizer.js": "0f631dbfd417c29038966e2929ddcd49fd8bfff60a568d8aa94bffe5a9e43f0b",
+    "https://cdn.skypack.dev/-/strtok3@v6.3.0-MT7ECx8HHWf6HDt9NBYc/dist=es2019,mode=imports/unoptimized/lib/core.js": "6372c8f9093b3e7561d4ac8144aada42881694141e63c15cc48b8f5498478aad",
+    "https://cdn.skypack.dev/-/token-types@v4.2.0-kToOCrEzNvc3A1dffmE4/dist=es2019,mode=imports/optimized/token-types.js": "1e5f2780e3704503fbc36e7172f0abd3c9c53f95a4ebccd74992bc448312bf1c",
+    "https://cdn.skypack.dev/-/token-types@v4.2.1-be0CSieNiiLE9IiimjCT/dist=es2019,mode=imports/optimized/token-types.js": "e5be34c91b1af4895bfc8bcd3ba7abd85315c40651d0605aa1d74e6c34d27d7b",
+    "https://cdn.skypack.dev/error/node:node:fs?from=music-metadata": "19dce9991bd05260d516d5d8b7875121ad8151c25a40c6946a570081a569e8d1",
+    "https://cdn.skypack.dev/error/node:node:fs?from=strtok3": "60e61018e2740f8626a0f2c4ec9efdababd0f37849dacf9daa742df8f7e02b1b",
+    "https://cdn.skypack.dev/music-metadata?dts": "14ea184c4ea1705311a08168bd940676cdbaf0e8d07d8178fd99c25d99d2cc68",
     "https://deno.land/std@0.157.0/_util/assert.ts": "e94f2eb37cebd7f199952e242c77654e43333c1ac4c5c700e929ea3aa5489f74",
     "https://deno.land/std@0.157.0/_util/os.ts": "8a33345f74990e627b9dfe2de9b040004b08ea5146c7c9e8fe9a29070d193934",
     "https://deno.land/std@0.157.0/path/_constants.ts": "df1db3ffa6dd6d1252cc9617e5d72165cd2483df90e93833e13580687b6083c3",
@@ -256,11 +387,19 @@
     "https://deno.land/x/dffmpeg@v1.0.0-alpha.2/util/validation.ts": "4b1c17785c673f3989c1be507f9e463dde0c5e65bd75c30e7010457fe5ec559a",
     "https://deno.land/x/dlogger@v1.0.0/deps.ts": "eba27940cfcf479cb910dd73339d4e9f327bd110e96007871d11702c4cb1a9d1",
     "https://deno.land/x/dlogger@v1.0.0/mod.ts": "0d89a4a25915632fce82436399493e917f8df4abfef0d48f87ea506a9288eb8c",
+    "https://deno.land/x/mediainfo@v2.0.0/mod.ts": "c3aa398fdbb53f8d1c5d66bb907d07ad3c907c1b43192d41811546b8e614032a",
     "https://esm.sh/node-id3@0.2.5": "0fa2251adce629c09468f5b766209f207d3ebf768b2a7463dd7de1b416418258",
     "https://esm.sh/v103/iconv-lite@0.6.2/deno/iconv-lite.js": "f84afed4c540fcdbb9ca9bdd0e03384eb568b69cdc97b684bfcf7377dd35121c",
     "https://esm.sh/v103/node-id3@0.2.5/deno/node-id3.js": "eac554131999704a3bdf9eacdabc8ec4e0d23856cd18a64da0b609f7a61b81ed",
     "https://esm.sh/v103/node-id3@0.2.5/index.d.ts": "6c0b23771fd9ca7ca1510179c93930d7c821cb00a02c66b44e662c84f6de789c",
     "https://esm.sh/v103/node_buffer.js": "445d389cb8c9f9fad5ff869ca2c2a863d178d410795ebd5f2f39d9a029156d56",
     "https://esm.sh/v103/safer-buffer@2.1.2/deno/safer-buffer.js": "829d74a27d5f50855699a80f2e300b41fc4f9fd6a9466790ff2a8815d40102a6"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:bun-types@latest"
+      ]
+    }
   }
 }

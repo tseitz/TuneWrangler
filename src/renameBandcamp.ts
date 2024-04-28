@@ -57,25 +57,23 @@ async function main() {
   let count = 0;
   for await (const currEntry of Deno.readDir(startDir)) {
     if (currEntry.isDirectory && currEntry.name === "bandcamp") {
-      for await (
-        const bandcampItem of Deno.readDir(
-          `${startDir}/${currEntry.name}`,
-        )
-      ) {
+      for await (const bandcampItem of Deno.readDir(
+        `${startDir}/${currEntry.name}`
+      )) {
         if (
-          bandcampItem.isFile && !bandcampItem.isDirectory &&
+          bandcampItem.isFile &&
+          !bandcampItem.isDirectory &&
           !bandcampItem.name.includes(".zip")
         ) {
-          console.log(bandcampItem);
           await backupFile(
             `${startDir}${currEntry.name}/`,
             backupDir,
-            bandcampItem.name,
+            bandcampItem.name
           );
 
           let song = new LocalSong(
             bandcampItem.name,
-            `${startDir}${currEntry.name}/`,
+            `${startDir}${currEntry.name}/`
           );
 
           if (
@@ -172,8 +170,7 @@ function setFinalName(song: DownloadedSong): DownloadedSong {
       ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`
       : `${song.artist} - ${song.title}${song.extension}`;
   } else {
-    song.finalFilename =
-      `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
+    song.finalFilename = `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
   }
   return song;
 }
