@@ -25,7 +25,7 @@ import { DownloadedSong } from "./models/Song.ts";
 
 const unix = true;
 let debug = true;
-let clear = true;
+let clear = false;
 // let trimRating = true;
 
 const startDir = getFolder("downloaded", unix);
@@ -38,6 +38,7 @@ const backupDir = getFolder("backup", unix);
 Deno.args.forEach((value) => {
   if (value === "--move") {
     debug = false;
+    clear = true;
   }
   if (value === "--no-clear") {
     clear = false;
@@ -59,16 +60,9 @@ async function main() {
     if (currEntry.isFile) {
       console.log("Processing: ", currEntry.name);
 
-      await backupFile(startDir, backupDir, currEntry.name);
-
       let song = new DownloadedSong(currEntry.name, startDir);
 
-      if (
-        song.dashCount < 1 ||
-        !song.extension ||
-        song.extension === ".m3u" ||
-        song.extension === ".zip"
-      ) {
+      if (song.dashCount < 1 || !song.extension || song.extension === ".m3u" || song.extension === ".zip") {
         logWithBreak(`Skipping: ${song.filename}`);
         continue;
       }
@@ -86,11 +80,13 @@ async function main() {
 
       count++;
       if (!debug) {
+        await backupFile(startDir, backupDir, currEntry.name);
         renameAndMove(moveDir, song);
       }
-    } else {
-      logWithBreak(`Skipping (not a file): ${currEntry.name}`);
     }
+    //  else {
+    //   logWithBreak(`Skipping (not a file): ${currEntry.name}`);
+    // }
   }
   console.log(`Total Count: ${count}`);
 }

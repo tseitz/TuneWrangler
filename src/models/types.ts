@@ -1,6 +1,7 @@
 export type FolderLocation =
   | "youtube"
   | "downloaded"
+  | "itunes"
   | "music"
   | "downloads"
   | "playlists"

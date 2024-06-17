@@ -1,8 +1,9 @@
 /*
 Renames downloaded music from Beatport to format I like
 */
-import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
+import * as fs from "https://deno.land/std@0.170.0/fs/mod.ts";
 import * as mm from "npm:music-metadata";
+import { walk } from "https://deno.land/std@0.170.0/fs/walk.ts";
 
 import {
   backupFile,
@@ -15,7 +16,9 @@ import {
   removeAnd,
   removeBadCharacters,
   renameAndMove,
-  fixItunesAlbum,
+  fixItunesLabeling,
+  checkRemix,
+  checkWith,
 } from "./common.ts";
 import { DownloadedSong, Song } from "./models/Song.ts";
 
@@ -35,7 +38,7 @@ Deno.args.forEach((value) => {
   }
 });
 
-const startDir = getFolder("downloaded", unix);
+const startDir = getFolder("itunes", unix);
 const cacheDir = getFolder("djMusic", unix);
 const moveDir = getFolder("rename", unix);
 const backupDir = getFolder("backup", unix);
@@ -49,53 +52,48 @@ await main();
 
 async function main() {
   let count = 0;
-  for await (const currEntry of Deno.readDir(startDir)) {
-    if (currEntry.isDirectory && currEntry.name.includes("itunes")) {
-      console.log("Processing: ", currEntry.name);
 
-      for await (const itunesItem of Deno.readDir(`${startDir}/${currEntry.name}`)) {
-        if (!itunesItem.isDirectory) {
-          await backupFile(`${startDir}/${currEntry.name}/`, backupDir, itunesItem.name);
+  for await (const itunesItem of walk(startDir)) {
+    if (!itunesItem.isDirectory) {
+      console.log("Processing: ", itunesItem.name);
 
-          let song = new Song(itunesItem.name, `${startDir}${currEntry.name}/`);
+      let song = new Song(itunesItem.name, itunesItem.path.replace(itunesItem.name, ""));
+      // console.log(song);
 
-          if (!song.extension || song.extension === ".plist") {
-            logWithBreak(`Skipping: ${song.filename}`);
-            continue;
-          }
+      if (!song.extension || song.extension === ".plist") {
+        logWithBreak(`Skipping: ${song.filename}`);
+        continue;
+      }
 
-          const mTags = await mm.parseFile(`${startDir}/${currEntry.name}/${itunesItem.name}`);
+      const mTags = await mm.parseFile(itunesItem.path);
 
-          song.title = mTags.common.title || "";
-          song.artist = mTags.common.artist || "";
-          song.album = fixItunesAlbum(mTags.common.album || "");
-          console.log(`${song.artist} - ${song.album} - ${song.title}`);
+      song.album = fixItunesLabeling(mTags.common.album || "");
+      song = grabItunesArtist(song, mTags.common.artist);
+      song.title = fixItunesLabeling(song.title || mTags.common.title || "");
 
-          song = removeBadCharacters(song);
+      song = removeBadCharacters(song);
 
-          song = checkFeat(song);
-          song = removeAnd(song, "artist", "album");
-          song = lastCheck(song);
+      song = checkFeat(song);
+      song = removeAnd(song, "artist", "album");
+      song = lastCheck(song);
 
-          song = setFinalName(song);
+      song = setFinalName(song);
 
-          song.duplicate = checkIfDuplicate(song, musicCache);
-          if (song.duplicate) {
-            logWithBreak(`Duplicate Song: ${song.filename}`);
-            continue;
-          }
+      song.duplicate = checkIfDuplicate(song, musicCache);
+      if (song.duplicate) {
+        logWithBreak(`Duplicate Song: ${song.filename}`);
+        continue;
+      }
 
-          musicCache.push(song);
+      musicCache.push(song);
 
-          logWithBreak(song.finalFilename);
+      logWithBreak(song.finalFilename);
 
-          count++;
+      count++;
 
-          console.log(song.fullFilename);
-          if (!debug) {
-            renameAndMove(moveDir, song);
-          }
-        }
+      if (!debug) {
+        await backupFile(song.directory, backupDir, itunesItem.name);
+        renameAndMove(moveDir, song);
       }
     }
   }
@@ -110,4 +108,28 @@ function setFinalName(song: Song): DownloadedSong {
     ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`
     : `${song.artist} - ${song.title}${song.extension}`;
   return song;
+}
+
+function grabItunesArtist(song: Song, artist: string = ""): Song {
+  song = checkRemix(song);
+
+  if (song.remix) {
+    /* if it's a remix, the original artist is assigned to album, remove &'s from it */
+    song.album = artist;
+    song.title = getRemixTitle(song.filename, song.extension);
+    song = removeAnd(song, "album");
+  } else {
+    /* otherwise the artist is straightforward */
+    song.artist = artist;
+  }
+
+  song = checkWith(song);
+
+  return song;
+}
+
+function getRemixTitle(filename: string, extension: string) {
+  const regex = new RegExp(`^\\d{2}\\s(.+)\\.(${extension.replace(".", "")})$`);
+  const match = filename.match(regex);
+  return match ? match[1] : "";
 }

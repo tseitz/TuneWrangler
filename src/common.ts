@@ -17,6 +17,8 @@ export function getFolder(type: FolderLocation, linux = true): string {
         return "/Users/tseitz/Dropbox/TransferMusic/Youtube/";
       case "downloaded":
         return "/Users/tseitz/Dropbox/TransferMusic/Downloaded/";
+      case "itunes":
+        return "/Users/tseitz/Dropbox/TransferMusic/Downloaded/itunes/Music";
       case "music":
         return "/media/tseitz/Storage SSD/Dropbox/Music/";
       case "downloads":
@@ -322,21 +324,21 @@ export function checkFeat(song: Song): Song {
   // slice the find index, plus the length of the first capturing group and the second capturing group
   // (FEAT.  (FT.  [FEAT.  [FT.  FEAT.  FT.  FEAT  FT
   if (/(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/gi.test(origArtist)) {
-    const exec = /(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/gi.exec(origArtist);
+    const exec = /(\(|\[|\s)(FEAT|FT|FEATURING)(\.?)\s.+(\)|\]|$)/gi.exec(origArtist);
     featuringArtist = origArtist
       .slice(exec!.index + exec![1].length + exec![2].length + exec![3].length, /(\)|\]|$)/gi.exec(origArtist)!.index)
       .trim();
     song.artist = origArtist.slice(0, exec!.index).trim();
   }
   if (/(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/gi.test(origTitle)) {
-    const exec = /(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/gi.exec(origTitle);
+    const exec = /(\(|\[|\s)(FEAT|FT|FEATURING)(\.?)\s.+(\)|\]|$)/gi.exec(origTitle);
     featuringArtist = origTitle
       .slice(exec!.index + exec![1].length + exec![2].length + exec![3].length, /(\)|\]|$)/gi.exec(origTitle)!.index)
       .trim();
     song.title = origTitle.slice(0, exec!.index).trim();
   }
   if (/(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/gi.test(origAlbum)) {
-    const exec = /(\(|\[|\s)(FEAT|FT)(\.?)\s.+(\)|\]|$)/gi.exec(origAlbum);
+    const exec = /(\(|\[|\s)(FEAT|FT|FEATURING)(\.?)\s.+(\)|\]|$)/gi.exec(origAlbum);
     featuringArtist = origAlbum
       .slice(exec!.index + exec![1].length + exec![2].length + exec![3].length, /(\)|\]|$)/gi.exec(origAlbum)!.index)
       .trim();
@@ -393,7 +395,8 @@ export function lastCheck(song: Song): Song {
     !title.toUpperCase().includes("VIP") &&
     !title.toUpperCase().includes("WIP") &&
     !title.toUpperCase().includes("CLIP") &&
-    !title.toUpperCase().includes("INSTRUMENTAL")
+    !title.toUpperCase().includes("INSTRUMENTAL") &&
+    !title.toUpperCase().includes("EXTENDED")
   ) {
     console.log(`Title: ${title}`);
     song.title = title.slice(0, /(\(|\[)/g.exec(title)!.index).trim();
@@ -412,10 +415,12 @@ export function lastCheck(song: Song): Song {
   return song;
 }
 
-export function fixItunesAlbum(album: string): string {
-  album = album.replace(" - Single", "");
-  album = album.replace(" - EP", " EP");
-  return album;
+export function fixItunesLabeling(str: string): string {
+  str = str.replace(" - Single", "");
+  str = str.replace(" - EP", " EP");
+  str = str.replace(" / ", " x ");
+  str = str.replace(", ", " ");
+  return str;
 }
 
 export async function renameAndMove(moveDir: string, song: DownloadedSong) {
@@ -432,22 +437,21 @@ export async function renameAndMove(moveDir: string, song: DownloadedSong) {
 
     const process = ffmpeg();
     // RekordBox doesn't like wav's tagging. convert to aiff
+    // ffmpeg automatically carries over metadata
     if (song.extension === ".wav" || song.extension === ".m4a") {
       process
         .input(song.fullFilename)
-        .metadata({ artist: song.artist, title: song.title, album: song.album })
+        // .metadata({ artist: song.artist, title: song.title, album: song.album })
+        .threads(8)
         .overwrite()
         .output(`${moveDir}${song.finalFilename.slice(0, -4)}.aiff`);
-      // .output(`${song.directory}${song.artist} - ${song.title}.flac`);
     } else if (song.extension !== "aiff") {
       process
         .input(song.fullFilename)
-        .metadata({ artist: song.artist, title: song.title, album: song.album })
+        // .metadata({ artist: song.artist, title: song.title, album: song.album })
+        .threads(8)
         .overwrite() // overwrite any existing output files
         .output(`${moveDir}${song.finalFilename}`);
-      // .output(
-      //   `${song.directory}${song.artist} - ${song.title}${song.extension}`
-      // );
     }
 
     try {

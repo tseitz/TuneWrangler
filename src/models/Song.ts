@@ -36,10 +36,7 @@ export class Song {
     }
 
     // YouTube naming Artist - Topic
-    if (
-      second.trim() === "Topic" &&
-      !this.filename.includes("Various Artists")
-    ) {
+    if (second.trim() === "Topic" && !this.filename.includes("Various Artists")) {
       second = this.grabFirst();
     }
 
@@ -54,12 +51,7 @@ export class Song {
     if (this.filename.lastIndexOf(".") === -1) {
       return this.filename.slice(this.filename.lastIndexOf(" - ") + 3).trim();
     } else {
-      return this.filename
-        .slice(
-          this.filename.lastIndexOf(" - ") + 3,
-          this.filename.lastIndexOf(".")
-        )
-        .trim();
+      return this.filename.slice(this.filename.lastIndexOf(" - ") + 3, this.filename.lastIndexOf(".")).trim();
     }
   }
 }
