@@ -9,15 +9,9 @@ import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
 import {
   backupFile,
   cacheMusic,
-  checkFeat,
   checkIfDuplicate,
-  checkRemix,
-  checkWith,
   getFolder,
-  lastCheck,
   logWithBreak,
-  removeAnd,
-  removeBadCharacters,
   renameAndMove,
   setFinalDownloadedSongName,
 } from "./common.ts";
@@ -56,6 +50,7 @@ await main();
 
 async function main() {
   let count = 0;
+
   for await (const currEntry of Deno.readDir(startDir)) {
     if (currEntry.isFile) {
       console.log("Processing: ", currEntry.name);
@@ -81,21 +76,23 @@ async function main() {
       count++;
       if (!debug) {
         await backupFile(startDir, backupDir, currEntry.name);
-        renameAndMove(moveDir, song);
+        // renameAndMove(moveDir, song);
+        renameAndMove(moveDir, song, undefined, clear);
       }
     }
     //  else {
     //   logWithBreak(`Skipping (not a file): ${currEntry.name}`);
     // }
   }
+
   console.log(`Total Count: ${count}`);
 }
 
 function processDownloadedMusic(song: DownloadedSong): DownloadedSong {
-  song = removeBadCharacters(song);
+  song.removeBadCharacters();
 
   /* GRAB ARTIST */
-  song = grabDownloadedArtist(song);
+  grabDownloadedArtist(song);
 
   /* GRAB ALBUM */
   if (!song.album && song.dashCount > 1) {
@@ -106,9 +103,9 @@ function processDownloadedMusic(song: DownloadedSong): DownloadedSong {
   song.title = song.grabLast();
 
   /* FINAL CHECK */
-  song = checkFeat(song);
-  song = removeAnd(song, "artist", "album");
-  song = lastCheck(song);
+  song.checkFeat();
+  song.removeAnd("artist", "album");
+  song.lastCheck();
 
   /* ALL TOGETHER NOW */
   song = setFinalDownloadedSongName(song);
@@ -122,18 +119,18 @@ function processDownloadedMusic(song: DownloadedSong): DownloadedSong {
 }
 
 function grabDownloadedArtist(song: DownloadedSong): DownloadedSong {
-  song = checkRemix(song);
+  song.checkRemix();
 
   if (song.remix) {
     /* if it's a remix, the original artist is assigned to album, remove &'s from it */
     song.album = song.dashCount === 1 ? song.grabFirst() : song.grabSecond();
-    song = removeAnd(song, "album");
+    song.removeAnd("album");
   } else {
     /* otherwise the artist is straightforward */
     song.artist = song.dashCount === 1 ? song.grabFirst() : song.grabSecond();
   }
 
-  song = checkWith(song);
+  song.checkWith();
 
   return song;
 }

@@ -6,12 +6,7 @@ Outgoing:             artist - album - title
 */
 import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
 
-import {
-  backupFile,
-  convertLocalToWav,
-  getFolder,
-  logWithBreak,
-} from "./common.ts";
+import { backupFile, convertLocalToWav, getFolder, logWithBreak } from "./common.ts";
 import { LocalSong } from "./models/Song.ts";
 
 const unix = true;
@@ -45,19 +40,15 @@ async function main() {
     if (currEntry.isFile) {
       await backupFile(startDir, backupDir, currEntry.name);
 
-      let song = new LocalSong(currEntry.name, startDir);
+      const song = new LocalSong(currEntry.name, startDir);
 
-      if (
-        song.extension !== ".flac"
-      ) {
+      if (song.extension !== ".flac") {
         // logWithBreak(`Skipping: ${song.filename}`);
         continue;
       }
 
       console.log("Processing: ", currEntry.name);
-      if (
-        !debug && currEntry.name
-      ) {
+      if (!debug && currEntry.name) {
         await convertLocalToWav(moveDir, song);
       }
       count++;

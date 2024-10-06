@@ -3,20 +3,7 @@ Tags local songs. Converts to flac if necessary
 */
 import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
 
-import {
-  backupFile,
-  cacheMusic,
-  checkFeat,
-  checkIfDuplicate,
-  checkRemix,
-  checkWith,
-  getFolder,
-  lastCheck,
-  logWithBreak,
-  removeAnd,
-  removeBadCharacters,
-  renameAndMove,
-} from "./common.ts";
+import { backupFile, cacheMusic, checkIfDuplicate, getFolder, logWithBreak, renameAndMove } from "./common.ts";
 import { DownloadedSong, LocalSong } from "./models/Song.ts";
 
 const unix = true;
@@ -57,30 +44,13 @@ async function main() {
   let count = 0;
   for await (const currEntry of Deno.readDir(startDir)) {
     if (currEntry.isDirectory && currEntry.name === "bandcamp") {
-      for await (const bandcampItem of Deno.readDir(
-        `${startDir}/${currEntry.name}`
-      )) {
-        if (
-          bandcampItem.isFile &&
-          !bandcampItem.isDirectory &&
-          !bandcampItem.name.includes(".zip")
-        ) {
-          await backupFile(
-            `${startDir}${currEntry.name}/`,
-            backupDir,
-            bandcampItem.name
-          );
+      for await (const bandcampItem of Deno.readDir(`${startDir}/${currEntry.name}`)) {
+        if (bandcampItem.isFile && !bandcampItem.isDirectory && !bandcampItem.name.includes(".zip")) {
+          await backupFile(`${startDir}${currEntry.name}/`, backupDir, bandcampItem.name);
 
-          let song = new LocalSong(
-            bandcampItem.name,
-            `${startDir}${currEntry.name}/`
-          );
+          let song = new LocalSong(bandcampItem.name, `${startDir}${currEntry.name}/`);
 
-          if (
-            song.dashCount < 1 ||
-            !song.extension ||
-            song.extension === ".m3u"
-          ) {
+          if (song.dashCount < 1 || !song.extension || song.extension === ".m3u") {
             logWithBreak(`Skipping: ${song.filename}`);
             continue;
           }
@@ -100,7 +70,7 @@ async function main() {
 
           count++;
           if (!debug) {
-            renameAndMove(moveDir, song);
+            renameAndMove(moveDir, song, undefined, clear);
           }
         }
       }
@@ -109,12 +79,11 @@ async function main() {
   console.log(`Total Count: ${count}`);
 }
 
-function processSongs(song: DownloadedSong) {
-  song = removeBadCharacters(song);
+function processSongs(song: DownloadedSong): DownloadedSong {
+  song.removeBadCharacters();
 
   /* GRAB ARTIST */
   song = grabLocalArtist(song);
-  // console.log(song.artist);
 
   /* GRAB ALBUM */
   if (!song.album && song.dashCount > 1) {
@@ -130,9 +99,9 @@ function processSongs(song: DownloadedSong) {
   }
 
   /* FINAL CHECK */
-  song = checkFeat(song);
-  song = removeAnd(song, "artist", "album");
-  song = lastCheck(song);
+  song.checkFeat();
+  song.removeAnd("artist", "album");
+  song.lastCheck();
 
   /* ALL TOGETHER NOW */
   song = setFinalName(song);
@@ -148,18 +117,18 @@ function processSongs(song: DownloadedSong) {
 }
 
 function grabLocalArtist(song: DownloadedSong): DownloadedSong {
-  song = checkRemix(song);
+  song.checkRemix();
 
   if (song.remix) {
     /* if it's a remix, the original artist is assigned to album, remove &'s from it */
     song.album = song.dashCount === 1 ? song.grabFirst() : song.grabSecond();
-    song = removeAnd(song, "album");
+    song.removeAnd("album");
   } else {
     /* otherwise the artist is straightforward */
     song.artist = song.grabFirst();
   }
 
-  song = checkWith(song);
+  song.checkWith();
 
   return song;
 }

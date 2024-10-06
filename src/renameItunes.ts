@@ -2,23 +2,16 @@
 Renames downloaded music from Beatport to format I like
 */
 import * as fs from "https://deno.land/std@0.170.0/fs/mod.ts";
-import * as mm from "npm:music-metadata";
 import { walk } from "https://deno.land/std@0.170.0/fs/walk.ts";
 
 import {
   backupFile,
   cacheMusic,
-  checkFeat,
   checkIfDuplicate,
   getFolder,
-  lastCheck,
   logWithBreak,
-  removeAnd,
-  removeBadCharacters,
   renameAndMove,
   fixItunesLabeling,
-  checkRemix,
-  checkWith,
 } from "./common.ts";
 import { DownloadedSong, Song } from "./models/Song.ts";
 
@@ -65,17 +58,22 @@ async function main() {
         continue;
       }
 
-      const mTags = await mm.parseFile(itunesItem.path);
+      const command = new Deno.Command("ffprobe", {
+        args: ["-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", song.fullFilename],
+      });
+      const { stdout } = await command.output();
+      const output = new TextDecoder().decode(stdout);
+      const metadata = JSON.parse(output);
 
-      song.album = fixItunesLabeling(mTags.common.album || "");
-      song = grabItunesArtist(song, mTags.common.artist);
-      song.title = fixItunesLabeling(song.title || mTags.common.title || "");
+      song.album = fixItunesLabeling(metadata.format.tags.album || "");
+      song = grabItunesArtist(song, metadata.format.tags.artist);
+      song.title = fixItunesLabeling(song.title || metadata.format.tags.title || "");
 
-      song = removeBadCharacters(song);
+      song.removeBadCharacters();
 
-      song = checkFeat(song);
-      song = removeAnd(song, "artist", "album");
-      song = lastCheck(song);
+      song.checkFeat();
+      song.removeAnd("artist", "album");
+      song.lastCheck();
 
       song = setFinalName(song);
 
@@ -93,7 +91,7 @@ async function main() {
 
       if (!debug) {
         await backupFile(song.directory, backupDir, itunesItem.name);
-        renameAndMove(moveDir, song);
+        renameAndMove(moveDir, song, undefined, clear);
       }
     }
   }
@@ -111,19 +109,19 @@ function setFinalName(song: Song): DownloadedSong {
 }
 
 function grabItunesArtist(song: Song, artist: string = ""): Song {
-  song = checkRemix(song);
+  song.checkRemix();
 
   if (song.remix) {
     /* if it's a remix, the original artist is assigned to album, remove &'s from it */
     song.album = artist;
     song.title = getRemixTitle(song.filename, song.extension);
-    song = removeAnd(song, "album");
+    song.removeAnd("album");
   } else {
     /* otherwise the artist is straightforward */
     song.artist = artist;
   }
 
-  song = checkWith(song);
+  song.checkWith();
 
   return song;
 }

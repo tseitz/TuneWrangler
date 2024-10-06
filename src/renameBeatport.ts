@@ -2,20 +2,9 @@
 Renames downloaded music from Beatport to format I like
 */
 import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
-import nodeId3 from "https://esm.sh/node-id3@0.2.5";
+import nodeId3 from "npm:node-id3";
 
-import {
-  backupFile,
-  cacheMusic,
-  checkFeat,
-  checkIfDuplicate,
-  getFolder,
-  lastCheck,
-  logWithBreak,
-  removeAnd,
-  removeBadCharacters,
-  renameAndMove,
-} from "./common.ts";
+import { backupFile, cacheMusic, checkIfDuplicate, getFolder, logWithBreak, renameAndMove } from "./common.ts";
 import { DownloadedSong, Song } from "./models/Song.ts";
 
 const unix = true;
@@ -68,11 +57,11 @@ async function main() {
           continue;
         }
 
-        song = removeBadCharacters(song);
+        song.removeBadCharacters();
 
-        song = checkFeat(song);
-        song = removeAnd(song, "artist", "album");
-        song = lastCheck(song);
+        song.checkFeat();
+        song.removeAnd("artist", "album");
+        song.lastCheck();
 
         song = setFinalName(song);
 

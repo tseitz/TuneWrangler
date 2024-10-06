@@ -9,17 +9,15 @@ Requires:
 import { YouTube } from "https:/deno.land/x/youtube@v0.3.0/mod.ts";
 import { readLines } from "https://deno.land/std@0.167.0/io/buffer.ts";
 
-import { getFolder, splitArtist } from "./common.ts";
+import { getFolder } from "../common.ts";
 
-import { LocalSong } from "./models/Song.ts";
+import { LocalSong } from "../models/Song.ts";
 
 const yt = new YouTube(Deno.env.get("YOUTUBE_API_KEY") || "", "");
 
 const djDir = getFolder("djMusic");
 
-const f = await Deno.open(
-  "/Users/tseitz/code/projects/TuneWrangler/FileAnalysis/fix-list.txt"
-);
+const f = await Deno.open("/Users/tseitz/code/projects/TuneWrangler/FileAnalysis/fix-list.txt");
 
 const badMatches: string[] = [];
 
@@ -29,7 +27,7 @@ for await (const l of readLines(f)) {
   const song = new LocalSong(l, djDir);
   // console.log(song);
 
-  const artists = splitArtist(song.artist);
+  const artists = song.splitArtist();
   const q = `${artists.join(" ")} ${song.title}`;
   console.log(`Search: ${q}`);
   const results = await yt.search_list({
@@ -50,9 +48,7 @@ for await (const l of readLines(f)) {
     // console.log(firstItem);
     console.log("Title: ", firstItem.snippet.title);
     // TODO: this should probably be more restrictive
-    const artistInTitle = artists.some((artist) =>
-      videoTitle.includes(artist.toLowerCase())
-    );
+    const artistInTitle = artists.some((artist) => videoTitle.includes(artist.toLowerCase()));
     if (!artistInTitle && !videoTitle.includes(song.title.toLowerCase())) {
       console.log("**Bad Match**");
       badMatches.push(l);
