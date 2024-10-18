@@ -1,0 +1,27 @@
+{
+  "data": [
+    {
+      "parent": "B2B",
+      "mainConditions": ["B2B"],
+      "negativeConditions": ["Archive"],
+      "playlists": [
+        { "name": "Openers", "operator": 1, "contains": ["Openers"] },
+        { "name": "Main Party", "operator": 1, "contains": ["Main Party"] },
+        { "name": "Main Party Rotation", "operator": 1, "contains": ["Main Party", "The Rotation"] },
+        { "name": "Afterparty", "operator": 1, "contains": ["Afterparty"] },
+        { "name": "Afterparty Rotation", "operator": 1, "contains": ["Afterparty", "The Rotation"] },
+        { "name": "Party Hits", "operator": 1, "contains": ["Party Hits"] },
+        { "name": "Party Hits Rotation", "operator": 1, "contains": ["Party Hits", "The Rotation"] },
+        { "name": "Dub", "operator": 1, "contains": ["Dub"] },
+        { "name": "Melters", "operator": 1, "contains": ["Melters"] },
+        { "name": "Weird", "operator": 1, "contains": ["Weird"] },
+        { "name": "Weird Rotation", "operator": 1, "contains": ["Weird", "The Rotation"] },
+        { "name": "Breaky", "operator": 1, "contains": ["Breaky"] },
+        { "name": "Breaky Rotation", "operator": 1, "contains": ["Breaky", "The Rotation"] },
+        { "name": "Rotation", "operator": 1, "contains": ["The Rotation"] },
+        { "name": "Closers", "operator": 1, "contains": ["Closers"] },
+        { "name": "All", "operator": 1, "contains": [] }
+      ]
+    }
+  ]
+}

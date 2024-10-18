@@ -1,0 +1,25 @@
+{
+  "data": [
+    {
+      "parent": "Ketamine",
+      "mainConditions": ["Ketamine Music"],
+      "negativeConditions": ["Archive"],
+      "playlists": [
+        { "name": "Openers", "operator": 1, "contains": ["Openers"] },
+        { "name": "Dub", "operator": 1, "contains": ["Dub"] },
+        { "name": "Dub Rotation", "operator": 1, "contains": ["Dub", "The Rotation"] },
+        { "name": "Weird", "operator": 1, "contains": ["Weird"] },
+        { "name": "Weird Rotation", "operator": 1, "contains": ["Weird", "The Rotation"] },
+        { "name": "Chillin Chillin", "operator": 1, "contains": ["Chillin Chillin"] },
+        { "name": "Chillin Chillin Rotation", "operator": 1, "contains": ["Chillin Chillin", "The Rotation"] },
+        { "name": "Heavy Chillin", "operator": 1, "contains": ["Heavy Chillin"] },
+        { "name": "Heavy Chillin Rotation", "operator": 1, "contains": ["Heavy Chillin", "The Rotation"] },
+        { "name": "Trippin", "operator": 1, "contains": ["Trippin"] },
+        { "name": "Trippin Rotation", "operator": 2, "contains": ["Trippin", "The Rotation"] },
+        { "name": "Rotation", "operator": 1, "contains": ["The Rotation"] },
+        { "name": "Closers", "operator": 1, "contains": ["Closers"] },
+        { "name": "All", "operator": 1, "contains": [] }
+      ]
+    }
+  ]
+}

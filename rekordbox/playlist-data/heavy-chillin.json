@@ -1,0 +1,23 @@
+{
+  "data": [
+    {
+      "parent": "Heavy Chillin",
+      "mainConditions": ["Heavy Chillin"],
+      "negativeConditions": [],
+      "playlists": [
+        { "name": "Openers", "operator": 1, "contains": ["Openers"] },
+        { "name": "Dub", "operator": 1, "playlistType": "folder", "link": "dub.json" },
+        { "name": "Breaky", "operator": 1, "contains": ["Breaky"] },
+        { "name": "Trippin", "operator": 1, "contains": ["Trippin"] },
+        { "name": "Weird", "operator": 1, "contains": ["Weird"] },
+        { "name": "Beats", "operator": 1, "contains": ["Beats"] },
+        { "name": "Chill", "operator": 1, "contains": ["Chill"] },
+        { "name": "Rotation", "operator": 1, "contains": ["The Rotation"] },
+        { "name": "Clean", "operator": 1, "contains": [], "doesNotContain": ["Dirty"] },
+        { "name": "Rotation Clean", "operator": 1, "contains": ["The Rotation"], "doesNotContain": ["Dirty"] },
+        { "name": "Closers", "operator": 1, "contains": ["Closers"] },
+        { "name": "All", "operator": 1, "contains": [] }
+      ]
+    }
+  ]
+}

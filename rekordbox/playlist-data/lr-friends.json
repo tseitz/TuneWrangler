@@ -1,0 +1,27 @@
+{
+  "data": [
+    {
+      "parent": "LR Friends",
+      "mainConditions": ["LR Friends"],
+      "negativeConditions": ["Archive"],
+      "playlists": [
+        { "name": "Openers", "operator": 1, "contains": ["Openers"] },
+        { "name": "Breaky", "operator": 1, "contains": ["Breaky"] },
+        { "name": "Breaky Rotation", "operator": 1, "contains": ["Breaky", "The Rotation"] },
+        { "name": "Dub", "operator": 1, "contains": ["Dub"] },
+        { "name": "Dub Rotation", "operator": 1, "contains": ["Dub", "The Rotation"] },
+        { "name": "House", "operator": 1, "contains": ["House"] },
+        { "name": "House Rotation", "operator": 1, "contains": ["House", "The Rotation"] },
+        { "name": "Weird", "operator": 1, "contains": ["Weird"] },
+        { "name": "Weird Rotation", "operator": 1, "contains": ["Weird", "The Rotation"] },
+        { "name": "DnB", "operator": 1, "contains": ["DnB"] },
+        { "name": "DnB Rotation", "operator": 1, "contains": ["DnB", "The Rotation"] },
+        { "name": "Chillin Chillin", "operator": 1, "contains": ["Chillin Chillin"] },
+        { "name": "Heavy Chillin", "operator": 1, "contains": ["Heavy Chillin"] },
+        { "name": "Rotation", "operator": 1, "contains": ["The Rotation"] },
+        { "name": "Closers", "operator": 1, "contains": ["Closers"] },
+        { "name": "All", "operator": 1, "contains": [] }
+      ]
+    }
+  ]
+}

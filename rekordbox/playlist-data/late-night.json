@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "parent": "Late Night",
+      "mainConditions": ["Late Night"],
+      "negativeConditions": ["Archive"],
+      "playlists": [
+        { "name": "Openers", "operator": 1, "contains": ["Openers"] },
+        { "name": "Rotation", "operator": 1, "contains": ["The Rotation"] },
+        { "name": "Dub", "operator": 1, "contains": ["Dub"] },
+        { "name": "Closers", "operator": 1, "contains": ["Closers"] },
+        { "name": "All", "operator": 1, "contains": [] }
+      ]
+    }
+  ]
+}

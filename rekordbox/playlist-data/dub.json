@@ -1,0 +1,26 @@
+{
+  "data": [
+    {
+      "parent": "Dub",
+      "mainConditions": ["Dub"],
+      "negativeConditions": ["Archive"],
+      "playlists": [
+        { "name": "Dub Openers", "operator": 1, "contains": ["Openers"] },
+        { "name": "Dub Hype", "operator": 1, "contains": ["Dub Hype"] },
+        { "name": "Dub Breaky", "operator": 1, "contains": ["Breaky"] },
+        { "name": "Dub Chill", "operator": 1, "contains": ["Dub Chill"] },
+        { "name": "Dub Deep", "operator": 1, "contains": ["Dub Deep"] },
+        { "name": "Dub Dark Spooky", "operator": 1, "contains": ["Dub Dark Spooky"] },
+        { "name": "Dub Feels", "operator": 1, "contains": ["Dub Feels"] },
+        { "name": "Dub Grime", "operator": 1, "contains": ["Dub Grime"] },
+        { "name": "Dub Swing", "operator": 1, "contains": ["Dub Swing"] },
+        { "name": "Dub Triplets", "operator": 1, "contains": ["Dub Triplet Type"] },
+        { "name": "Dub Trippy/Interesting", "operator": 1, "contains": ["Dub Trippy/Interesting"] },
+        { "name": "Dub That's Not Dub", "operator": 1, "contains": ["Dub That's Not Dub"] },
+        { "name": "Dub Wobblers", "operator": 1, "contains": ["Dub Wobblers"] },
+        { "name": "Dub Doubles", "operator": 1, "contains": ["Dub Doubles"] },
+        { "name": "Dub Closers", "operator": 1, "contains": ["Closers"] },
+        { "name": "Dub All", "operator": 1, "contains": [] }      ]
+    }
+  ]
+}

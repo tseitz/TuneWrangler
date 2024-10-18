@@ -1,0 +1,19 @@
+{
+  "data": [
+    {
+      "parent": "Breaky",
+      "mainConditions": ["Breaky"],
+      "negativeConditions": ["Archive"],
+      "playlists": [
+        { "name": "Openers", "operator": 1, "contains": ["Openers"] },
+        { "name": "Rotation", "operator": 1, "contains": ["The Rotation"] },
+        { "name": "Breaky Deep", "operator": 1, "contains": ["Dub"] },
+        { "name": "Breaky Deep Rotation", "operator": 1, "contains": ["Dub", "The Rotation"] },
+        { "name": "Breaky Not Deep", "operator": 1, "doesNotContain": ["Dub"] },
+        { "name": "Breaky Not Deep Rotation", "operator": 1, "doesNotContain": ["Dub"], "contains": ["The Rotation"] },
+        { "name": "Closers", "operator": 1, "contains": ["Closers"] },
+        { "name": "All", "operator": 1, "contains": [] }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "data": [
+    {
+      "parent": "Crispy Speakers",
+      "mainConditions": ["Crispy Speakers"],
+      "negativeConditions": ["Archive"],
+      "playlists": [
+        { "name": "Openers", "operator": 1, "contains": ["Openers"] },
+        { "name": "Dub", "operator": 1, "playlistType": "folder", "link": "dub.json" },
+        { "name": "Breaky", "operator": 1, "contains": ["Breaky"] },
+        { "name": "Weird", "operator": 1, "contains": ["Weird"] },
+        { "name": "DnB", "operator": 1, "contains": ["DnB"] },
+        { "name": "Party Hits", "operator": 1, "contains": ["Party Hits"] },
+        { "name": "Heavy", "operator": 1, "contains": ["Heavy"] },
+        { "name": "House", "operator": 1, "contains": ["House"] },
+        { "name": "Closers", "operator": 1, "contains": ["Closers"] },
+        { "name": "All", "operator": 1, "contains": [] }
+      ]
+    }
+  ]
+}

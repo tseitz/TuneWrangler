@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "parent": "DnB",
+      "mainConditions": ["DnB"],
+      "negativeConditions": ["Archive"],
+      "playlists": [
+        { "name": "Openers", "operator": 1, "contains": ["Openers"] },
+        { "name": "Deep", "operator": 1, "contains": ["DnB Deep Vibes"] },
+        { "name": "Deep Rotation", "operator": 1, "contains": ["DnB Deep Vibes", "The Rotation"] },
+        { "name": "Jump Up", "operator": 1, "contains": ["DnB Jump Up"] },
+        { "name": "Liquid", "operator": 1, "contains": ["DnB Liquid"] },
+        { "name": "Liquid Rotation", "operator": 1, "contains": ["DnB Liquid", "The Rotation"] },
+        { "name": "Rotation", "operator": 1, "contains": ["The Rotation"] },
+        { "name": "Closers", "operator": 1, "contains": ["Closers"] },
+        { "name": "All", "operator": 1, "contains": [] }
+      ]
+    }
+  ]
+}
