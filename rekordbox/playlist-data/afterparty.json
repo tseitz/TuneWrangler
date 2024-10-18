@@ -14,6 +14,7 @@
         { "name": "Crispy Speakers", "operator": 1, "playlistType": "folder", "link": "crispy-speakers.json" },
         { "name": "B2B", "operator": 1, "contains": ["B2B"] },
         { "name": "DnB", "operator": 1, "contains": ["DnB"] },
+        { "name": "Vibes", "operator": 1, "contains": ["Vibes"] },
         { "name": "Heavy", "operator": 1, "contains": ["Heavy"] },
         { "name": "Riddim", "operator": 1, "contains": ["Riddim"] },
         { "name": "Jungle", "operator": 1, "contains": ["Jungle"] },

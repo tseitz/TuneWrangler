@@ -7,11 +7,9 @@
       "playlists": [
         { "name": "Openers", "operator": 1, "contains": ["Openers"] },
         { "name": "Feely Feels", "operator": 1, "contains": ["Feely Feels"] },
-        { "name": "Feely Feels Rotation", "operator": 1, "contains": ["Feely Feels", "The Rotation"] },
         { "name": "Happy Feels", "operator": 1, "contains": ["Happy Feels"] },
-        { "name": "Happy Feels Rotation", "operator": 1, "contains": ["Happy Feels", "The Rotation"] },
-        { "name": "Heavy Feels", "operator": 1, "contains": ["Heavy Feels"] },
-        { "name": "Heavy Feels Rotation", "operator": 1, "contains": ["Heavy Feels", "The Rotation"] },
+        { "name": "Chill Feels", "operator": 5, "ratings": ["1", "2"] },
+        { "name": "Heavy Feels", "operator": 5, "ratings": ["4", "5"] },
         { "name": "Closers", "operator": 1, "contains": ["Closers"] },
         { "name": "All", "operator": 2, "contains": ["Feely Feels", "Happy Feels", "Heavy Feels", "Dub Feels"] }
       ]

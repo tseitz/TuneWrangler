@@ -38,13 +38,20 @@ def add_tag_condition_to_smart_playlist(
     # print("Tag Left Bitshift: ", left_bitshift(int(tag.ID)))
     # print("Tag Right Bitshift: ", right_bitshift(int(tag.ID)))
 
-    smart_list.add_condition(
-        condition_type,
-        operator,
-        left_bitshift(int(tag.ID)),
-        value_left=condition[0],
-        value_right=condition[1],
-    )
+    if condition_type == Property.RATING:
+        smart_list.add_condition(
+            condition_type,
+            operator,
+            left_bitshift(int(tag.ID)),
+            value_left=condition[0],
+            value_right=condition[1],
+        )
+    else:
+        smart_list.add_condition(
+            condition_type,
+            operator,
+            left_bitshift(int(tag.ID)),
+        )
 
 
 def create_smart_playlist_from_data(
@@ -57,6 +64,7 @@ def create_smart_playlist_from_data(
     parent_playlist_id: int = None,
     playlist_type: str = "playlist",
     link: str = None,
+    rating: list[str] = [],
     sequence: int = None,
 ):
     if playlist_type == "folder":
@@ -99,7 +107,7 @@ def create_smart_playlist_from_data(
             condition, smart_list, Operator.NOT_CONTAINS
         )
 
-    for condition in rating_less_than:
+    for condition in rating:
         add_tag_condition_to_smart_playlist(
             condition, smart_list, Operator.IN_RANGE, Property.RATING
         )
@@ -154,6 +162,7 @@ def add_data_to_playlist(
                 category.get("negativeConditions", []),
                 playlist.get("contains", []),
                 playlist.get("doesNotContain", []),
+                playlist.get("rating", []),
                 parent_playlist_id,
                 playlist.get("playlistType", None),
                 playlist.get("link", None),

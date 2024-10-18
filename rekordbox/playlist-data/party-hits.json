@@ -6,17 +6,17 @@
       "negativeConditions": ["Archive"],
       "playlists": [
         { "name": "Openers", "operator": 1, "contains": ["Openers"] },
+        { "name": "B2B", "operator": 1, "contains": ["B2B"] },
         { "name": "Dub", "operator": 1, "contains": ["Dub"] },
         { "name": "Breaky", "operator": 1, "contains": ["Breaky"] },
         { "name": "Weird", "operator": 1, "contains": ["Weird"] },
-        { "name": "Crispy Speakers", "operator": 1, "playlistType": "folder", "link": "crispy-speakers.json" },
-        { "name": "B2B", "operator": 1, "contains": ["B2B"] },
+        { "name": "Vibes", "operator": 1, "contains": ["Vibes"] },
+        { "name": "Crispy Speakers", "operator": 1, "contains": ["Crispy Speakers"] },
         { "name": "DnB", "operator": 1, "contains": ["DnB"] },
         { "name": "Heavy", "operator": 1, "contains": ["Heavy"] },
         { "name": "House", "operator": 1, "contains": ["House"] },
         { "name": "Feels", "operator": 1, "contains": ["Feels"] },
         { "name": "Closers", "operator": 1, "contains": ["Closers"] },
-        { "name": "Rotation", "operator": 1, "contains": ["The Rotation"] },
         { "name": "All", "operator": 1, "contains": [] }
       ]
     }

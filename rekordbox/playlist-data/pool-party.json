@@ -6,7 +6,6 @@
       "negativeConditions": ["Archive"],
       "playlists": [
         { "name": "Openers", "operator": 1, "contains": ["Openers"] },
-        { "name": "Rotation", "operator": 1, "contains": ["The Rotation"] },
         { "name": "Breaky", "operator": 1, "contains": ["Breaky"] },
         { "name": "House", "operator": 1, "contains": ["House"] },
         { "name": "Not Dirty", "operator": 1, "doesNotContain": ["Dirty"] },

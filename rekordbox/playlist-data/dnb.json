@@ -9,8 +9,11 @@
         { "name": "Deep", "operator": 1, "contains": ["DnB Deep Vibes"] },
         { "name": "Deep Rotation", "operator": 1, "contains": ["DnB Deep Vibes", "The Rotation"] },
         { "name": "Jump Up", "operator": 1, "contains": ["DnB Jump Up"] },
+        { "name": "Jump Up Rotation", "operator": 1, "contains": ["DnB Jump Up", "The Rotation"] },
         { "name": "Liquid", "operator": 1, "contains": ["DnB Liquid"] },
         { "name": "Liquid Rotation", "operator": 1, "contains": ["DnB Liquid", "The Rotation"] },
+        { "name": "Chillin", "operator": 1, "contains": ["Chillin"] },
+        { "name": "Chill", "operator": 5, "rating": ["1", "2"] },
         { "name": "Rotation", "operator": 1, "contains": ["The Rotation"] },
         { "name": "Closers", "operator": 1, "contains": ["Closers"] },
         { "name": "All", "operator": 1, "contains": [] }

@@ -6,13 +6,11 @@
       "negativeConditions": ["Archive"],
       "playlists": [
         { "name": "Openers", "operator": 1, "contains": ["Heavy", "Openers"] },
-        { "name": "Rotation", "operator": 1, "contains": ["Heavy", "The Rotation"] },
-        { "name": "Riddim", "operator": 1, "contains": ["Riddim"] },
-        { "name": "Riddim Rotation", "operator": 1, "contains": ["Riddim", "The Rotation"] },
-        { "name": "Closers", "operator": 1, "contains": ["Heavy", "Closers"] },
+        { "name": "Just Heavy", "operator": 1, "contains": ["Heavy"] },
+        { "name": "Just Riddim", "operator": 1, "contains": ["Riddim"] },
+        { "name": "Closers", "operator": 1, "contains": ["Closers"] },
         { "name": "All No Riddim", "operator": 1, "contains": ["Heavy"], "doesNotContain": ["Riddim"] },
-        { "name": "All No Riddim Rotation", "operator": 1, "contains": ["Heavy", "The Rotation"], "doesNotContain": ["Riddim"] },
-        { "name": "All", "operator": 1, "contains": ["Heavy"] }
+        { "name": "All", "operator": 1, "contains": [] }
       ]
     }
   ]

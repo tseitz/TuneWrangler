@@ -6,17 +6,10 @@
       "negativeConditions": ["Archive"],
       "playlists": [
         { "name": "Openers", "operator": 1, "contains": ["Openers"] },
-        { "name": "Dub", "operator": 1, "contains": ["Dub"] },
-        { "name": "Dub Rotation", "operator": 1, "contains": ["Dub", "The Rotation"] },
+        { "name": "Dub", "operator": 1, "playlistType": "folder", "link": "dub.json" },
         { "name": "Weird", "operator": 1, "contains": ["Weird"] },
-        { "name": "Weird Rotation", "operator": 1, "contains": ["Weird", "The Rotation"] },
-        { "name": "Chillin Chillin", "operator": 1, "contains": ["Chillin Chillin"] },
-        { "name": "Chillin Chillin Rotation", "operator": 1, "contains": ["Chillin Chillin", "The Rotation"] },
-        { "name": "Heavy Chillin", "operator": 1, "contains": ["Heavy Chillin"] },
-        { "name": "Heavy Chillin Rotation", "operator": 1, "contains": ["Heavy Chillin", "The Rotation"] },
-        { "name": "Trippin", "operator": 1, "contains": ["Trippin"] },
-        { "name": "Trippin Rotation", "operator": 2, "contains": ["Trippin", "The Rotation"] },
-        { "name": "Rotation", "operator": 1, "contains": ["The Rotation"] },
+        { "name": "Chiller", "operator": 5, "rating": ["1", "2"] },
+        { "name": "Heavier", "operator": 5, "rating": ["4", "5"] },
         { "name": "Closers", "operator": 1, "contains": ["Closers"] },
         { "name": "All", "operator": 1, "contains": [] }
       ]
