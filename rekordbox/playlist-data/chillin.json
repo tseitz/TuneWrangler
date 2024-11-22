@@ -10,6 +10,8 @@
         { "name": "Breaky", "operator": 1, "contains": ["Breaky"] },
         { "name": "Trippin", "operator": 1, "contains": ["Trippin"] },
         { "name": "Weird", "operator": 1, "contains": ["Weird"] },
+        { "name": "DnB", "operator": 1, "contains": ["DnB"] },
+        { "name": "LR Friends", "operator": 1, "contains": ["LR Friends"] },
         { "name": "Beats", "operator": 1, "contains": ["Beats"] },
         { "name": "Feels", "operator": 1, "contains": ["Feels"] },
         { "name": "Chiller", "operator": 5, "rating": ["1", "2"] },

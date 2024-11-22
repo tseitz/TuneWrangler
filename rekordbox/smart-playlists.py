@@ -1,12 +1,10 @@
 import json
-import shutil
 import os
-import xml.etree.ElementTree as ET
+from typing import Union
 from sqlalchemy.orm.exc import NoResultFound
 from pyrekordbox import Rekordbox6Database
 from pyrekordbox.db6.smartlist import (
     SmartList,
-    Condition,
     Property,
     Operator,
     LogicalOperator,
@@ -17,7 +15,7 @@ from app import backup_rekordbox_md
 
 db = Rekordbox6Database()
 
-commit = True
+commit = False
 
 created = []
 
@@ -28,12 +26,13 @@ def add_tag_condition_to_smart_playlist(
     operator: Operator = Operator.CONTAINS,
     condition_type: Property = Property.MYTAG,
 ):
-    if condition_type == Property.MYTAG:
+    if condition_type == Property.MYTAG or condition_type == Property.RATING:
         try:
             tag = db.get_my_tag(Name=condition).one()
+            print(tag.Name)
         except NoResultFound as ex:
             print(f"{ex} -> {condition} not found")
-        print(tag.Name)
+            return
     # print("Tag ID: ", tag.ID)
     # print("Tag Left Bitshift: ", left_bitshift(int(tag.ID)))
     # print("Tag Right Bitshift: ", right_bitshift(int(tag.ID)))
@@ -57,15 +56,15 @@ def add_tag_condition_to_smart_playlist(
 def create_smart_playlist_from_data(
     playlist_name: str,
     logical_operator: LogicalOperator = LogicalOperator.ALL,
-    main_conditions: set = [],
-    negative_conditions: set = [],
+    main_conditions: set = set(),
+    negative_conditions: set = set(),
     contains: list[str] = [],
     does_not_contain: list[str] = [],
-    parent_playlist_id: int = None,
+    parent_playlist_id: Union[int, None] = None,
     playlist_type: str = "playlist",
-    link: str = None,
+    link: Union[str, None] = None,
     rating: list[str] = [],
-    sequence: int = None,
+    sequence: int = 0,
 ):
     if playlist_type == "folder":
         if link is None:
@@ -127,7 +126,10 @@ def create_smart_playlist_from_data(
 
 
 def add_data_to_playlist(
-    data, default_playlist_id: int = None, extra_conditions: set = [], index: int = None
+    data,
+    default_playlist_id: Union[int, None] = None,
+    extra_conditions: set = set(),
+    index: int = 0,
 ):
     for category in data:
         # only set index on the original parent
@@ -156,17 +158,17 @@ def add_data_to_playlist(
         for playlist in category["playlists"]:
             print()
             create_smart_playlist_from_data(
-                playlist["name"],
-                playlist["operator"],
-                main_conditions,
-                category.get("negativeConditions", []),
-                playlist.get("contains", []),
-                playlist.get("doesNotContain", []),
-                playlist.get("rating", []),
-                parent_playlist_id,
-                playlist.get("playlistType", None),
-                playlist.get("link", None),
-                index,
+                playlist_name=playlist["name"],
+                logical_operator=playlist["operator"],
+                main_conditions=main_conditions,
+                negative_conditions=category.get("negativeConditions", set()),
+                contains=playlist.get("contains", []),
+                does_not_contain=playlist.get("doesNotContain", []),
+                rating=playlist.get("rating", []),
+                parent_playlist_id=parent_playlist_id,
+                playlist_type=playlist.get("playlistType", None),
+                link=playlist.get("link", None),
+                sequence=index,
             )
 
 

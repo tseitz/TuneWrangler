@@ -8,6 +8,7 @@
         { "name": "Openers", "operator": 1, "contains": ["Heavy", "Openers"] },
         { "name": "Just Heavy", "operator": 1, "contains": ["Heavy"] },
         { "name": "Just Riddim", "operator": 1, "contains": ["Riddim"] },
+        { "name": "Moshpit", "operator": 1, "contains": ["Moshpit"] },
         { "name": "Closers", "operator": 1, "contains": ["Closers"] },
         { "name": "All No Riddim", "operator": 1, "contains": ["Heavy"], "doesNotContain": ["Riddim"] },
         { "name": "All", "operator": 1, "contains": [] }
