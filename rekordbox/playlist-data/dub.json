@@ -18,7 +18,7 @@
         { "name": "Dub Trippy/Interesting", "operator": 1, "contains": ["Dub Trippy/Interesting"] },
         { "name": "Dub That's Not Dub", "operator": 1, "contains": ["Dub That's Not Dub"] },
         { "name": "Dub Dark Spooky", "operator": 1, "contains": ["Dub Dark Spooky"] },
-        { "name": "Dub Chill", "operator": 5, "contains": ["1", "2"] },
+        { "name": "Dub Chill", "operator": 5, "rating": ["1", "2"] },
         { "name": "Dub Hype", "operator": 5, "rating": ["4", "5"] },
         { "name": "Dub Feels", "operator": 1, "contains": ["Dub Feels"] },
         { "name": "Dub Closers", "operator": 1, "contains": ["Closers"] },

@@ -7,7 +7,7 @@
       "playlists": [
         { "name": "Openers", "operator": 1, "contains": ["Openers"] },
         { "name": "Rotation", "operator": 1, "contains": ["The Rotation"] },
-        { "name": "Dub", "operator": 1, "contains": ["Dub"] },
+        { "name": "Dub", "operator": 1, "playlistType": "folder", "link": "dub.json" },
         { "name": "Closers", "operator": 1, "contains": ["Closers"] },
         { "name": "All", "operator": 1, "contains": [] }
       ]

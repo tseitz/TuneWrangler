@@ -118,11 +118,11 @@ def remove_from_playlist(db, playlist, content):
 
 def backup_rekordbox_md():
     db_source = "/Users/tseitz/Library/Application Support/Pioneer"
-    db_destination = "/Users/tseitz/Dropbox/DJ/SlimChance DJ Music/Rekordbox DB Backup/Application Support"
+    db_destination = "/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Rekordbox DB Backup/Application Support"
 
     lib_source = "/Users/tseitz/Library/Pioneer"
     lib_destination = (
-        "/Users/tseitz/Dropbox/DJ/SlimChance DJ Music/Rekordbox DB Backup/Library"
+        "/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Rekordbox DB Backup/Library"
     )
 
     if not os.path.exists(db_destination):

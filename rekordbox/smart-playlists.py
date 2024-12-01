@@ -26,31 +26,25 @@ def add_tag_condition_to_smart_playlist(
     operator: Operator = Operator.CONTAINS,
     condition_type: Property = Property.MYTAG,
 ):
-    if condition_type == Property.MYTAG or condition_type == Property.RATING:
-        try:
-            tag = db.get_my_tag(Name=condition).one()
-            print(tag.Name)
-        except NoResultFound as ex:
-            print(f"{ex} -> {condition} not found")
-            return
+    try:
+        tag = db.get_my_tag(Name=condition).one()
+        print(tag.Name)
+    except NoResultFound as ex:
+        print(f"{ex} -> {condition} not found, exiting")
+        return
     # print("Tag ID: ", tag.ID)
     # print("Tag Left Bitshift: ", left_bitshift(int(tag.ID)))
     # print("Tag Right Bitshift: ", right_bitshift(int(tag.ID)))
 
-    if condition_type == Property.RATING:
-        smart_list.add_condition(
-            condition_type,
-            operator,
-            left_bitshift(int(tag.ID)),
-            value_left=condition[0],
-            value_right=condition[1],
-        )
-    else:
-        smart_list.add_condition(
-            condition_type,
-            operator,
-            left_bitshift(int(tag.ID)),
-        )
+    smart_list.add_condition(
+        condition_type,
+        operator,
+        left_bitshift(int(tag.ID)),
+    )
+
+
+def add_rating_condition_to_smart_playlist(rating: list[str], smart_list: SmartList):
+    smart_list.add_condition(Property.RATING, Operator.IN_RANGE, rating[0], rating[1])
 
 
 def create_smart_playlist_from_data(
@@ -64,7 +58,7 @@ def create_smart_playlist_from_data(
     playlist_type: str = "playlist",
     link: Union[str, None] = None,
     rating: list[str] = [],
-    sequence: int = 0,
+    sequence: Union[int, None] = None,
 ):
     if playlist_type == "folder":
         if link is None:
@@ -106,10 +100,8 @@ def create_smart_playlist_from_data(
             condition, smart_list, Operator.NOT_CONTAINS
         )
 
-    for condition in rating:
-        add_tag_condition_to_smart_playlist(
-            condition, smart_list, Operator.IN_RANGE, Property.RATING
-        )
+    if rating:
+        add_rating_condition_to_smart_playlist(rating, smart_list)
 
     playlist_exists = db.get_playlist(
         Name=playlist_name, ParentID=parent_playlist_id
@@ -129,7 +121,7 @@ def add_data_to_playlist(
     data,
     default_playlist_id: Union[int, None] = None,
     extra_conditions: set = set(),
-    index: int = 0,
+    index: Union[int, None] = None,
 ):
     for category in data:
         # only set index on the original parent
@@ -176,20 +168,21 @@ def main():
     # Read JSON file
     folder = "playlist-data"
 
-    for index, filename in enumerate(os.listdir(folder), 5):
-        if filename.endswith(".json"):
+    for index, filename in enumerate(os.listdir(folder), 0):
+        if filename.endswith(".json"):  #  and filename == "rotation.json"
             file_path = os.path.join(folder, filename)
 
             with open(file_path, "r") as json_file:
-                # with open("playlist-data/my-set.json", "r") as json_file:
                 data = json.load(json_file)["data"]
 
-                add_data_to_playlist(data, index=index)
+            add_data_to_playlist(data, index=index)
 
     print("Created: ", created)
     if commit is True:
+        print("Backing up library and committing...")
         backup_rekordbox_md()
         db.commit()
+        print("Complete!")
 
 
 if __name__ == "__main__":
