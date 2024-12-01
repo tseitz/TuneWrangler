@@ -1,12 +1,13 @@
 {
   "data": [
     {
-      "parent": "Beats",
-      "mainConditions": ["Beats"],
+      "parent": "Vibes",
+      "mainConditions": ["Vibes"],
       "negativeConditions": ["Archive"],
       "playlists": [
         { "name": "Openers", "operator": 1, "contains": ["Openers"] },
-        { "name": "Rotation", "operator": 1, "contains": ["The Rotation"] },
+        { "name": "Dub", "operator": 1, "contains": ["Dub"] },
+        { "name": "Breaky", "operator": 1, "contains": ["Breaky"] },
         { "name": "Chiller", "operator": 5, "rating": ["1", "2"] },
         { "name": "Heavier", "operator": 5, "rating": ["4", "5"] },
         { "name": "Closers", "operator": 1, "contains": ["Closers"] },

@@ -6,11 +6,10 @@
       "negativeConditions": ["Archive"],
       "playlists": [
         { "name": "Openers", "operator": 1, "contains": ["Openers"] },
-        { "name": "Rotation", "operator": 1, "contains": ["The Rotation"] },
         { "name": "Breaky Deep", "operator": 1, "contains": ["Dub"] },
-        { "name": "Breaky Deep Rotation", "operator": 1, "contains": ["Dub", "The Rotation"] },
         { "name": "Breaky Not Deep", "operator": 1, "doesNotContain": ["Dub"] },
-        { "name": "Breaky Not Deep Rotation", "operator": 1, "doesNotContain": ["Dub"], "contains": ["The Rotation"] },
+        { "name": "Chiller", "operator": 5, "rating": ["1", "2"] },
+        { "name": "Heavier", "operator": 5, "rating": ["4", "5"] },
         { "name": "Closers", "operator": 1, "contains": ["Closers"] },
         { "name": "All", "operator": 1, "contains": [] }
       ]

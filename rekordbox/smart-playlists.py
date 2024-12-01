@@ -169,20 +169,22 @@ def main():
     folder = "playlist-data"
 
     for index, filename in enumerate(os.listdir(folder), 0):
-        if filename.endswith(".json"):  #  and filename == "rotation.json"
+        if filename.endswith(".json") and filename == "main-party.json":
             file_path = os.path.join(folder, filename)
 
             with open(file_path, "r") as json_file:
                 data = json.load(json_file)["data"]
 
-            add_data_to_playlist(data, index=index)
+            add_data_to_playlist(data, index=index + 1)
 
     print("Created: ", created)
-    if commit is True:
-        print("Backing up library and committing...")
+    if commit is True and len(created) > 0:
+        print("\nBacking up library and committing...")
         backup_rekordbox_md()
         db.commit()
         print("Complete!")
+    else:
+        print("Nothing to commit")
 
 
 if __name__ == "__main__":
