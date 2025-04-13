@@ -1,8 +1,8 @@
 {
   "data": [
     {
-      "parent": "Vibes",
-      "mainConditions": ["Vibes"],
+      "parent": "Weird",
+      "mainConditions": ["Weird"],
       "negativeConditions": ["Archive"],
       "playlists": [
         { "name": "Openers", "operator": 1, "contains": ["Openers"] },

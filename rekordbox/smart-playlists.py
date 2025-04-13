@@ -15,7 +15,7 @@ from app import backup_rekordbox_md
 
 db = Rekordbox6Database()
 
-commit = False
+commit = True
 
 created = []
 
@@ -169,13 +169,17 @@ def main():
     folder = "playlist-data"
 
     for index, filename in enumerate(os.listdir(folder), 0):
-        if filename.endswith(".json") and filename == "main-party.json":
-            file_path = os.path.join(folder, filename)
+        # if filename == "weird.json":
+        # if filename.endswith(".json"):  # and filename == "main-party.json":
+        file_path = os.path.join(folder, filename)
 
-            with open(file_path, "r") as json_file:
-                data = json.load(json_file)["data"]
+        if os.path.isdir(file_path):
+            continue
 
-            add_data_to_playlist(data, index=index + 1)
+        with open(file_path, "r") as json_file:
+            data = json.load(json_file)["data"]
+
+        add_data_to_playlist(data, index=index + 1)
 
     print("Created: ", created)
     if commit is True and len(created) > 0:
