@@ -1,18 +1,17 @@
 {
   "data": [
     {
-      "parent": "DnB",
-      "mainConditions": ["DnB"],
+      "parent": "Earthy",
+      "mainConditions": ["Earthy"],
       "negativeConditions": ["Archive"],
       "playlists": [
         { "name": "Openers", "operator": 1, "contains": ["Openers"] },
-        { "name": "Deep", "operator": 1, "contains": ["DnB Deep Vibes"] },
-        { "name": "Jump Up", "operator": 1, "contains": ["DnB Jump Up"] },
-        { "name": "Liquid", "operator": 1, "contains": ["DnB Liquid"] },
         { "name": "Party Hits", "operator": 1, "contains": ["Party Hits"] },
         { "name": "Underplayed", "operator": 1, "contains": ["Underplayed"] },
         { "name": "Not Overplayed", "operator": 1, "doesNotContain": ["Overplayed"] },
+        { "name": "Not Dirty", "operator": 1, "doesNotContain": ["Dirty"] },
         { "name": "Chiller", "operator": 5, "rating": ["1", "3"] },
+        { "name": "Heavier", "operator": 5, "rating": ["4", "5"] },
         { "name": "Beginning", "operator": 1, "contains": ["Beginning"] },
         { "name": "Middle", "operator": 1, "contains": ["Middle"] },
         { "name": "End", "operator": 1, "contains": ["End"] },

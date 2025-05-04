@@ -15,10 +15,6 @@ from app import backup_rekordbox_md
 
 db = Rekordbox6Database()
 
-commit = True
-
-created = []
-
 
 def add_tag_condition_to_smart_playlist(
     condition: str,
@@ -108,13 +104,13 @@ def create_smart_playlist_from_data(
     ).one_or_none()
 
     if not playlist_exists:
-        created.append(playlist_name)
         db.create_smart_playlist(
             playlist_name,
             smart_list=smart_list,
             parent=parent_playlist_id,
             # seq=sequence,
         )
+        return playlist_name
 
 
 def add_data_to_playlist(
@@ -122,6 +118,7 @@ def add_data_to_playlist(
     default_playlist_id: Union[int, None] = None,
     extra_conditions: set = set(),
     index: Union[int, None] = None,
+    created: list[str] = [],
 ):
     for category in data:
         # only set index on the original parent
@@ -149,7 +146,7 @@ def add_data_to_playlist(
 
         for playlist in category["playlists"]:
             print()
-            create_smart_playlist_from_data(
+            playlist_created = create_smart_playlist_from_data(
                 playlist_name=playlist["name"],
                 logical_operator=playlist["operator"],
                 main_conditions=main_conditions,
@@ -162,11 +159,19 @@ def add_data_to_playlist(
                 link=playlist.get("link", None),
                 sequence=index,
             )
+            if playlist_created:
+                created.append(playlist_created)
 
 
 def main():
     # Read JSON file
     folder = "playlist-data"
+    commit = False
+    created = []
+
+    if commit is True:
+        print("\nCommit is True, backing up library...")
+        backup_rekordbox_md()
 
     for index, filename in enumerate(os.listdir(folder), 0):
         # if filename == "weird.json":
@@ -179,16 +184,16 @@ def main():
         with open(file_path, "r") as json_file:
             data = json.load(json_file)["data"]
 
-        add_data_to_playlist(data, index=index + 1)
+        add_data_to_playlist(data, index=index + 1, created=created)
 
-    print("Created: ", created)
-    if commit is True and len(created) > 0:
-        print("\nBacking up library and committing...")
-        backup_rekordbox_md()
-        db.commit()
-        print("Complete!")
-    else:
-        print("Nothing to commit")
+        print("Created: ", created)
+        if commit is True and len(created) > 0:
+            print(f"\nCommitting {data['parent']} playlist...")
+            db.commit()
+            print("Committed")
+            created = []
+
+    print("Complete!")
 
 
 if __name__ == "__main__":
