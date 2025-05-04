@@ -1,14 +1,14 @@
 {
   "data": [
     {
-      "parent": "Earthy",
-      "mainConditions": ["Earthy"],
+      "parent": "Morningtime Vibes",
+      "mainConditions": ["Morningtime Vibes"],
       "negativeConditions": ["Archive"],
       "playlists": [
         { "name": "Openers", "operator": 1, "contains": ["Openers"] },
         { "name": "Party Hits", "operator": 1, "contains": ["Party Hits"] },
-        { "name": "Underplayed", "operator": 1, "contains": ["Underplayed"] },
-        { "name": "Not Overplayed", "operator": 1, "doesNotContain": ["Overplayed"] },
+        { "name": "Dub", "operator": 1, "contains": ["Dub"] },
+        { "name": "Breaky", "operator": 1, "contains": ["Breaky"] },
         { "name": "Not Dirty", "operator": 1, "doesNotContain": ["Dirty"] },
         { "name": "Beginning", "operator": 1, "contains": ["Beginning"] },
         { "name": "Middle", "operator": 1, "contains": ["Middle"] },

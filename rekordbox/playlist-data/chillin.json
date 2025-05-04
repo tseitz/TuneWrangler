@@ -13,7 +13,6 @@
         { "name": "DnB", "operator": 1, "playlistType": "folder", "link": "dnb.json" },
         { "name": "Beats", "operator": 1, "playlistType": "folder", "link": "beats.json" },
         { "name": "Vibes", "operator": 1, "playlistType": "folder", "link": "vibes.json" },
-        { "name": "Morningtime Vibes", "operator": 1, "playlistType": "folder", "link": "morningtime-vibes.json" },
         { "name": "LR Friends", "operator": 1, "playlistType": "folder", "link": "lr-friends.json" },
         { "name": "Feels", "operator": 1, "playlistType": "folder", "link": "feels.json" },
         { "name": "Chiller", "operator": 5, "rating": ["1", "3"] },

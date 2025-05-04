@@ -1,12 +1,18 @@
 {
   "data": [
     {
-      "parent": "Earthy",
-      "mainConditions": ["Earthy"],
+      "parent": "Party Hits",
+      "mainConditions": ["Party Hits"],
       "negativeConditions": ["Archive"],
       "playlists": [
         { "name": "Openers", "operator": 1, "contains": ["Openers"] },
-        { "name": "Party Hits", "operator": 1, "contains": ["Party Hits"] },
+        { "name": "Dub", "operator": 1, "contains": ["Dub"] },
+        { "name": "Breaky", "operator": 1, "contains": ["Breaky"] },
+        { "name": "Weird", "operator": 1, "contains": ["Weird"] },
+        { "name": "Vibes", "operator": 1, "contains": ["Vibes"] },
+        { "name": "Melters", "operator": 1, "contains": ["Melters"] },
+        { "name": "Chiller", "operator": 5, "rating": ["1", "3"] },
+        { "name": "Heavier", "operator": 5, "rating": ["4", "5"] },
         { "name": "Underplayed", "operator": 1, "contains": ["Underplayed"] },
         { "name": "Not Overplayed", "operator": 1, "doesNotContain": ["Overplayed"] },
         { "name": "Not Dirty", "operator": 1, "doesNotContain": ["Dirty"] },

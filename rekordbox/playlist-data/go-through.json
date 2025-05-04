@@ -1,0 +1,17 @@
+{
+  "data": [
+    {
+      "parent": "Go Through",
+      "mainConditions": [],
+      "negativeConditions": [],
+      "playlists": [
+        { "name": "Weird and Vibes", "operator": 1, "contains": ["Weird"] },
+        { "name": "Bad Quality", "operator": 1, "contains": ["Bad Quality"] },
+        { "name": "Bad Grid", "operator": 1, "contains": ["Bad Grid"] },
+        { "name": "B2B", "operator": 1, "contains": ["B2B"] },
+        { "name": "Jayden", "operator": 1, "contains": ["Jayden"] },
+        { "name": "Grime Shit", "operator": 1, "contains": ["Grime Shit"] }
+      ]
+    }
+  ]
+}

@@ -71,6 +71,7 @@ def create_smart_playlist_from_data(
             data = json.load(json_file)["data"]
 
             main_conditions.update(contains)
+            # TODO: needs to log created from here
             add_data_to_playlist(data, parent_playlist_id, main_conditions)
             return
 
@@ -162,20 +163,24 @@ def add_data_to_playlist(
             if playlist_created:
                 created.append(playlist_created)
 
+    return created
+
 
 def main():
     # Read JSON file
     folder = "playlist-data"
-    commit = False
+    commit = True
     created = []
 
     if commit is True:
         print("\nCommit is True, backing up library...")
         backup_rekordbox_md()
 
-    for index, filename in enumerate(os.listdir(folder), 0):
-        # if filename == "weird.json":
-        # if filename.endswith(".json"):  # and filename == "main-party.json":
+    for index, filename in enumerate(sorted(os.listdir(folder)), 0):
+        # if filename == "crispy-speakers.json":
+        # if index < 5:
+        #     continue
+
         file_path = os.path.join(folder, filename)
 
         if os.path.isdir(file_path):
@@ -184,16 +189,16 @@ def main():
         with open(file_path, "r") as json_file:
             data = json.load(json_file)["data"]
 
-        add_data_to_playlist(data, index=index + 1, created=created)
+        created = add_data_to_playlist(data, index=index + 1, created=created)
 
         print("Created: ", created)
         if commit is True and len(created) > 0:
-            print(f"\nCommitting {data['parent']} playlist...")
+            print(f"\nCommitting {data[0]['parent']} playlist...")
             db.commit()
             print("Committed")
             created = []
 
-    print("Complete!")
+    print("\nComplete!")
 
 
 if __name__ == "__main__":
