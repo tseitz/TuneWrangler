@@ -88,7 +88,8 @@ deno task validate
 ```
 
 This will:
+
 - Detect your platform
 - Show all configured paths
 - Validate that paths exist
-- Display any configuration errors 
+- Display any configuration errors

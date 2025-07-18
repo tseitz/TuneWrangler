@@ -1,6 +1,7 @@
 import { DownloadedSong, LocalSong, Song, Tags } from "../models/Song.ts";
 import { FolderLocation } from "../models/types.ts";
 import { loadConfig, validatePaths } from "../../config/index.ts";
+import { logError, ConfigurationError } from "./errors.ts";
 // import ffmpeg from "npm:fluent-ffmpeg";
 import ffmpeg from "npm:ffmpeg";
 import nodeId3 from "npm:node-id3";
@@ -11,39 +12,40 @@ const MAX_CONCURRENT_OPERATIONS = 10;
 const semaphore = new Semaphore(MAX_CONCURRENT_OPERATIONS);
 
 export function getFolder(type: FolderLocation): string {
-  const config = loadConfig();
+  try {
+    const config = loadConfig();
 
-  switch (type) {
-    case "youtube":
-      return config.youtube;
-    case "downloaded":
-      return config.downloaded;
-    case "itunes":
-      return config.itunes;
-    case "music":
-      return config.music;
-    case "downloads":
-      return config.downloads;
-    case "playlists":
-      return config.playlists;
-    case "formatted":
-      return config.formatted;
-    case "broken":
-      return config.broken;
-    case "djMusic":
-      return config.djMusic;
-    case "djPlaylists":
-      return config.djPlaylists;
-    case "djPlaylistImport":
-      return config.djPlaylistImport;
-    case "rename":
-      return config.rename;
-    case "backup":
-      return config.backup;
-    case "transfer":
-      return config.transfer;
-    default:
-      throw new Error(`Unknown folder type: ${type}`);
+    switch (type) {
+      case "youtube":
+        return config.youtube;
+      case "downloaded":
+        return config.downloaded;
+      case "itunes":
+        return config.itunes;
+      case "music":
+        return config.music;
+      case "downloads":
+        return config.downloads;
+      case "djMusic":
+        return config.djMusic;
+      case "djPlaylists":
+        return config.djPlaylists;
+      case "djPlaylistImport":
+        return config.djPlaylistImport;
+      case "rename":
+        return config.rename;
+      case "backup":
+        return config.backup;
+      case "transfer":
+        return config.transfer;
+      default:
+        throw new ConfigurationError(`Unknown folder type: ${type}`, type);
+    }
+  } catch (error) {
+    if (error instanceof ConfigurationError) {
+      throw error;
+    }
+    throw new ConfigurationError(`Failed to load configuration for folder type: ${type}`, type);
   }
 }
 
@@ -58,18 +60,23 @@ export function logWithBreak(message: string): void {
  * Validates the current configuration and logs any issues
  */
 export async function validateConfiguration(): Promise<boolean> {
-  const config = loadConfig();
-  const validation = await validatePaths(config);
+  try {
+    const config = loadConfig();
+    const validation = await validatePaths(config);
 
-  if (!validation.valid) {
-    console.error("❌ Configuration validation failed:");
-    validation.errors.forEach((error) => console.error(`  - ${error}`));
-    console.error("\nPlease check your environment variables or update the default paths.");
+    if (!validation.valid) {
+      console.error("❌ Configuration validation failed:");
+      validation.errors.forEach((error) => console.error(`  - ${error}`));
+      console.error("\nPlease check your environment variables or update the default paths.");
+      return false;
+    }
+
+    console.log("✅ Configuration validation passed");
+    return true;
+  } catch (error) {
+    logError(error, { operation: "validateConfiguration" });
     return false;
   }
-
-  console.log("✅ Configuration validation passed");
-  return true;
 }
 
 export async function cacheMusic(cacheDir: string): Promise<LocalSong[]> {
