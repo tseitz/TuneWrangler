@@ -116,6 +116,16 @@ export function getErrorMessage(error: unknown): string {
 }
 
 /**
+ * Error thrown when performance operations fail
+ */
+export class PerformanceError extends TuneWranglerError {
+  constructor(message: string, public readonly operation?: string, public readonly metrics?: Record<string, unknown>) {
+    super(message, "PERFORMANCE_ERROR", { operation, metrics });
+    this.name = "PerformanceError";
+  }
+}
+
+/**
  * Utility function to log errors with context
  */
 export function logError(error: unknown, context?: Record<string, unknown>): void {

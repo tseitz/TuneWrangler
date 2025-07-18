@@ -24,6 +24,10 @@ This is a Deno-based music file management tool with TypeScript, CLI interface, 
   - `docs/` - Documentation
   - `examples/` - Example scripts and configurations
 
+### General Rules
+
+- No need to add a summary markdown file of what you did after the request. Only documentation of the actual feature implemented is necessary
+
 ## Markdown Linting Rules
 
 ### MD031: Fenced Code Blocks

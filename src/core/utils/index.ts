@@ -4,6 +4,7 @@ export * from "./errors.ts";
 export * from "./validation.ts";
 export * from "./retry.ts";
 export * from "./logger.ts";
+export * from "./performance.ts";
 
 // Re-export types for convenience
 export type {
@@ -23,3 +24,5 @@ export type { RetryOptions } from "./retry.ts";
 export type { SupportedAudioFormat } from "./validation.ts";
 
 export type { LogLevel, LogEntry, LoggerConfig } from "./logger.ts";
+
+export type { PerformanceMetrics, BatchConfig, CacheConfig, StreamConfig } from "./performance.ts";
