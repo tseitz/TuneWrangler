@@ -1,0 +1,320 @@
+# TuneWrangler Cursor Rules
+
+## Project Overview
+This is a Deno-based music file management tool with TypeScript, CLI interface, and comprehensive documentation.
+
+## Code Style & Standards
+
+### TypeScript/JavaScript
+- Use TypeScript for all new code
+- Follow Deno standards and formatting
+- Use strict type checking
+- Prefer async/await over Promises
+- Use descriptive variable and function names
+- Add JSDoc comments for public APIs
+
+### File Organization
+- Keep related functionality together
+- Use clear, descriptive file names
+- Follow the established directory structure:
+  - `src/cli/` - Command-line interface
+  - `src/core/` - Core functionality and utilities
+  - `src/config/` - Configuration management
+  - `src/processors/` - Music processing modules
+  - `docs/` - Documentation
+  - `examples/` - Example scripts and configurations
+
+## Markdown Linting Rules
+
+### MD031: Fenced Code Blocks
+**Rule**: Fenced code blocks should be surrounded by blank lines
+
+**Before (incorrect)**:
+```markdown
+Some text here
+```typescript
+const example = "code";
+```
+More text here
+```
+
+**After (correct)**:
+```markdown
+Some text here
+
+```typescript
+const example = "code";
+```
+
+More text here
+```
+
+**Implementation**: Always add blank lines before and after fenced code blocks (```).
+
+### MD013: Line Length
+**Rule**: Line length should not exceed 100 characters
+- Break long lines at logical points
+- Use proper indentation for continued lines
+
+### MD014: Dollar Signs Used Before Commands
+**Rule**: Dollar signs should not be used before commands
+- Use `command` instead of `$ command`
+- Exception: When showing shell prompts, use `$ ` format
+
+### MD022: Headers Should Be Surrounded by Blank Lines
+**Rule**: Headers should be surrounded by blank lines
+
+**Before (incorrect)**:
+```markdown
+Some text
+# Header
+More text
+```
+
+**After (correct)**:
+```markdown
+Some text
+
+# Header
+
+More text
+```
+
+### MD025: Multiple Top-Level Headers
+**Rule**: Only one top-level header per document
+- Use `#` for document title only
+- Use `##` for main sections
+- Use `###` for subsections
+
+### MD026: Trailing Punctuation in Headers
+**Rule**: Headers should not end with punctuation
+- Remove trailing periods, colons, etc. from headers
+
+### MD029: Ordered List Item Prefix
+**Rule**: Ordered list item prefix should be consistent
+- Use `1.` for all items in ordered lists
+- Let markdown auto-number
+
+### MD030: List Item Marker Spaces
+**Rule**: List item markers should be followed by a single space
+- Use `- ` for unordered lists
+- Use `1. ` for ordered lists
+
+### MD033: No Inline HTML
+**Rule**: Avoid inline HTML when possible
+- Use markdown syntax instead of HTML tags
+- Exception: Complex tables or special formatting
+
+### MD041: First Line in File Should Be a Top-Level Heading
+**Rule**: Files should start with a top-level heading
+- Begin markdown files with `# Title`
+
+## Documentation Standards
+
+### README Files
+- Start with a clear title and description
+- Include installation and usage instructions
+- Add examples for common use cases
+- Include troubleshooting section
+- Link to related documentation
+
+### API Documentation
+- Use JSDoc comments for all public functions
+- Include parameter types and descriptions
+- Provide usage examples
+- Document error conditions
+
+### Code Comments
+- Use clear, descriptive comments
+- Explain "why" not just "what"
+- Keep comments up to date with code changes
+- Use TODO comments for future improvements
+
+## Error Handling
+
+### Error Types
+- Use custom error classes from `src/core/utils/errors.ts`
+- Include meaningful error messages
+- Add context information to errors
+- Log errors with appropriate levels
+
+### Validation
+- Validate inputs early and often
+- Use validation functions from `src/core/utils/validation.ts`
+- Provide clear error messages for validation failures
+
+## Logging
+
+### Log Levels
+- Use appropriate log levels (DEBUG, INFO, WARN, ERROR, FATAL)
+- Include context with log messages
+- Use structured logging for complex data
+- Follow the logging patterns established in the codebase
+
+### Log Messages
+- Use clear, action-oriented messages
+- Include relevant context (file paths, operation names, etc.)
+- Use consistent formatting and emoji usage
+
+## Testing
+
+### Test Structure
+- Write tests for all new functionality
+- Use descriptive test names
+- Group related tests together
+- Include both positive and negative test cases
+
+### Test Coverage
+- Aim for high test coverage
+- Test error conditions and edge cases
+- Mock external dependencies
+- Use fixtures for test data
+
+## Performance
+
+### File Operations
+- Use streaming for large files
+- Implement proper error handling and retries
+- Monitor memory usage for large operations
+- Use appropriate buffer sizes
+
+### CLI Performance
+- Minimize startup time
+- Use efficient algorithms for file processing
+- Implement progress indicators for long operations
+- Provide cancellation options
+
+## Security
+
+### File System
+- Validate all file paths
+- Check file permissions before operations
+- Sanitize user inputs
+- Use secure defaults
+
+### Configuration
+- Validate configuration values
+- Use environment variables for sensitive data
+- Provide secure configuration examples
+- Document security considerations
+
+## Git Workflow
+
+### Commit Messages
+- Use conventional commit format
+- Write clear, descriptive commit messages
+- Reference issues when applicable
+- Keep commits focused and atomic
+
+### Branch Naming
+- Use descriptive branch names
+- Follow the pattern: `feature/description` or `fix/description`
+- Use lowercase and hyphens
+
+## Code Review Guidelines
+
+### What to Look For
+- Code correctness and logic
+- Error handling and edge cases
+- Performance implications
+- Security considerations
+- Documentation quality
+- Test coverage
+
+### Review Process
+- Be constructive and helpful
+- Focus on the code, not the person
+- Suggest improvements when possible
+- Approve when standards are met
+
+## Automation
+
+### Scripts
+- Make scripts executable and robust
+- Include error handling and logging
+- Provide clear usage instructions
+- Test scripts in different environments
+
+### Configuration
+- Use environment variables for configuration
+- Provide sensible defaults
+- Validate configuration values
+- Document all configuration options
+
+## When Editing Files
+
+### Markdown Files
+1. **Always fix MD031 issues**: Add blank lines around fenced code blocks
+2. **Check line length**: Keep lines under 100 characters
+3. **Validate headers**: Ensure proper spacing and hierarchy
+4. **Fix list formatting**: Use consistent markers and spacing
+5. **Update table of contents**: Keep navigation current
+
+### TypeScript Files
+1. **Follow Deno standards**: Use Deno formatting and linting
+2. **Add proper types**: Use strict typing
+3. **Include error handling**: Use custom error classes
+4. **Add logging**: Use the established logging system
+5. **Write tests**: Include unit tests for new functionality
+
+### Configuration Files
+1. **Validate syntax**: Ensure proper JSON/configuration format
+2. **Document options**: Add comments for unclear settings
+3. **Use secure defaults**: Provide safe configuration examples
+4. **Test configuration**: Verify settings work as expected
+
+## Common Patterns
+
+### Error Handling Pattern
+```typescript
+try {
+  // Operation
+} catch (error) {
+  logger.error("Operation failed", error as Error, { context });
+  throw new CustomError("Operation failed", error as Error);
+}
+```
+
+### Validation Pattern
+```typescript
+const validatedValue = validateInput(input, "inputName");
+if (!validatedValue) {
+  throw new ValidationError("Invalid input", "inputName", input);
+}
+```
+
+### Logging Pattern
+```typescript
+logger.startOperation("operation name", { context });
+try {
+  // Operation
+  logger.endOperation("operation name", { success: true });
+} catch (error) {
+  logger.error("Operation failed", error as Error);
+  throw error;
+}
+```
+
+## Quick Fixes for Common Issues
+
+### MD031: Missing Blank Lines Around Code Blocks
+**Problem**: Code blocks not surrounded by blank lines
+**Solution**: Add blank lines before and after ``` blocks
+
+### MD013: Line Too Long
+**Problem**: Lines exceed 100 characters
+**Solution**: Break at logical points, use proper indentation
+
+### MD022: Headers Not Surrounded by Blank Lines
+**Problem**: Headers touching other content
+**Solution**: Add blank lines before and after headers
+
+### MD025: Multiple Top-Level Headers
+**Problem**: Multiple # headers in document
+**Solution**: Use only one # header, use ## for sections
+
+### MD029: Inconsistent List Numbering
+**Problem**: Mixed list numbering styles
+**Solution**: Use 1. for all ordered list items
+
+Remember: Always prioritize code quality, user experience, and maintainability. When in doubt, follow the established patterns in the codebase. 

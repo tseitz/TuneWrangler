@@ -4,7 +4,6 @@
 
 [![Deno](https://img.shields.io/badge/Deno-1.40+-000000?logo=deno&logoColor=white)](https://deno.land/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.0.0-blue.svg)]()
 
 TuneWrangler is a powerful, Deno-based tool for managing and organizing music files. It provides intelligent file renaming, playlist management, format conversion, and comprehensive logging for music enthusiasts, DJs, and audio professionals.
 
@@ -24,6 +23,7 @@ TuneWrangler is a powerful, Deno-based tool for managing and organizing music fi
 ### Installation
 
 1. **Install Deno** (if not already installed):
+
    ```bash
    # macOS/Linux
    curl -fsSL https://deno.land/install.sh | sh
@@ -33,12 +33,14 @@ TuneWrangler is a powerful, Deno-based tool for managing and organizing music fi
    ```
 
 2. **Clone the repository**:
+
    ```bash
    git clone https://github.com/yourusername/TuneWrangler.git
    cd TuneWrangler
    ```
 
 3. **Install CLI wrapper** (optional):
+
    ```bash
    chmod +x install.sh
    ./install.sh
@@ -271,18 +273,21 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 **Configuration validation fails:**
 ```bash
+
 ./tunewrangler validate
 # Check the output and ensure all paths exist
 ```
 
 **Permission errors:**
 ```bash
+
 # Ensure you have read/write permissions
 chmod +rw /path/to/music/directory
 ```
 
 **File format not supported:**
 ```bash
+
 # Check supported formats
 ./tunewrangler convert --help
 ```
