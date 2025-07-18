@@ -10,6 +10,7 @@
     "ytRb": "deno run --unstable --allow-env --allow-net --allow-read --allow-write --allow-run src/processors/addM3uToYoutubePlaylist.ts",
     "ytRbNoCheck": "deno run --unstable --allow-env --allow-net --allow-read --allow-write --allow-run --no-check src/processors/addM3uToYoutubePlaylist.ts",
     "playlistImport": "deno run --allow-read --allow-write --allow-run src/processors/betterM3uSearch.ts",
-    "cF": "deno run --allow-read --allow-write --allow-run src/processors/convertFlacs.ts"
+    "cF": "deno run --allow-read --allow-write --allow-run src/processors/convertFlacs.ts",
+    "cli": "deno run --allow-read --allow-write --allow-run --allow-net --allow-env --allow-sys src/cli/main.ts"
   }
 }
