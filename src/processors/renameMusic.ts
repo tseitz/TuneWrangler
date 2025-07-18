@@ -15,8 +15,8 @@ import {
   renameAndMove,
   isProcessable,
   setFinalDownloadedSongName,
-} from "./common.ts";
-import { DownloadedSong } from "./models/Song.ts";
+} from "../core/utils/common.ts";
+import { DownloadedSong } from "../core/models/Song.ts";
 
 const unix = true;
 let debug = true;

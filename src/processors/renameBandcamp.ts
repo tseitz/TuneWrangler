@@ -3,8 +3,15 @@ Tags local songs. Converts to flac if necessary
 */
 import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
 
-import { backupFile, cacheMusic, checkIfDuplicate, getFolder, logWithBreak, renameAndMove } from "./common.ts";
-import { DownloadedSong, LocalSong } from "./models/Song.ts";
+import {
+  backupFile,
+  cacheMusic,
+  checkIfDuplicate,
+  getFolder,
+  logWithBreak,
+  renameAndMove,
+} from "../core/utils/common.ts";
+import { DownloadedSong, LocalSong } from "../core/models/Song.ts";
 
 const unix = true;
 let debug = true;

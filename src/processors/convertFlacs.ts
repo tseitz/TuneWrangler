@@ -6,8 +6,8 @@ Outgoing:             artist - album - title
 */
 import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
 
-import { backupFile, convertLocalToWav, getFolder, logWithBreak } from "./common.ts";
-import { LocalSong } from "./models/Song.ts";
+import { backupFile, convertLocalToWav, getFolder, logWithBreak } from "../core/utils/common.ts";
+import { LocalSong } from "../core/models/Song.ts";
 
 const unix = true;
 let debug = true;

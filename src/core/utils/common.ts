@@ -1,10 +1,10 @@
-import { DownloadedSong, LocalSong, Song, Tags } from "./models/Song.ts";
-import { FolderLocation } from "./models/types.ts";
+import { DownloadedSong, LocalSong, Song, Tags } from "../models/Song.ts";
+import { FolderLocation } from "../models/types.ts";
 // import ffmpeg from "npm:fluent-ffmpeg";
 import ffmpeg from "npm:ffmpeg";
 import nodeId3 from "npm:node-id3";
 import { join } from "https://deno.land/std/path/mod.ts";
-import { Semaphore } from "./models/Semaphore.ts";
+import { Semaphore } from "../models/Semaphore.ts";
 
 const MAX_CONCURRENT_OPERATIONS = 10;
 const semaphore = new Semaphore(MAX_CONCURRENT_OPERATIONS);

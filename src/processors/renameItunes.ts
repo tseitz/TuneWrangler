@@ -13,8 +13,8 @@ import {
   renameAndMove,
   fixItunesLabeling,
   isProcessable,
-} from "./common.ts";
-import { DownloadedSong, Song } from "./models/Song.ts";
+} from "../core/utils/common.ts";
+import { DownloadedSong, Song } from "../core/models/Song.ts";
 
 const unix = true;
 let debug = true;

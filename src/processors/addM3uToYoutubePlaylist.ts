@@ -1,17 +1,15 @@
 /*
-Redownloads low bitrate files from YouTube using youtube-dl
+Adds items from an m3u file to a youtube playlist
 
 Requires:
-- checkBitrate to be ran first which outputs fix-list.txt
-- youtube-dl to be installed
 - getYoutubeAuth to be ran first to get token
 */
 import { YouTube } from "https:/deno.land/x/youtube@v0.3.0/mod.ts";
 import { readLines } from "https://deno.land/std@0.167.0/io/buffer.ts";
 
-import { getFolder } from "../common.ts";
+import { getFolder } from "../core/utils/common.ts";
 
-import { LocalSong } from "../models/Song.ts";
+import { LocalSong } from "../core/models/Song.ts";
 
 const yt = new YouTube(Deno.env.get("YOUTUBE_API_KEY") || "", "");
 
@@ -64,19 +62,18 @@ for await (const l of readLines(f)) {
 
   if (videoId && videoId !== "") {
     try {
-      const p = Deno.run({
-        cmd: [
-          "youtube-dl",
+      const p = new Deno.Command("youtube-dl", {
+        args: [
           `https://www.youtube.com/watch?v=${videoId}`,
           "--abort-on-error", // TODO: doesn't trigger catch
         ],
         stderr: "piped",
       });
       // TODO: fix this, not throwing error properly
-      const [status, err] = await Promise.all([p.status(), p.stderrOutput()]);
-      // await p.status();
-      console.log(err);
-      p.close();
+      const { stdout, stderr } = await p.output();
+      const output = new TextDecoder().decode(stdout);
+      console.log(output);
+      console.log(stderr);
     } catch (e) {
       console.log("caught error", e);
       badMatches.push(l);

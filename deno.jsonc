@@ -2,13 +2,13 @@
   "title": "TuneWrangler",
   "description": "(Mostly) Deno application that wrangles my tunes.",
   "tasks": {
-    "rM": "deno run --allow-read --allow-run --allow-write --allow-env src/renameMusic.ts",
-    "rBc": "deno run --allow-read --allow-run --allow-write --allow-env --allow-sys src/renameBandcamp.ts",
-    "rI": "deno run --allow-read --allow-run --allow-net --allow-write --allow-env src/renameItunes.ts",
-    "rBp": "deno run --allow-read --allow-run --allow-net --allow-write --allow-env src/renameBeatport.ts",
-    "ytRb": "deno run --unstable --allow-env --allow-net --allow-read --allow-write --allow-run src/addRekordboxSongsToYoutube.ts",
-    "ytRbNoCheck": "deno run --unstable --allow-env --allow-net --allow-read --allow-write --allow-run --no-check src/addRekordboxSongsToYoutube.ts",
-    "playlistImport": "deno run --allow-read --allow-write --allow-run src/betterM3uSearch.ts",
-    "cF": "deno run --allow-read --allow-write --allow-run src/convertFlacs.ts"
+    "rM": "deno run --allow-read --allow-run --allow-write --allow-env src/processors/renameMusic.ts",
+    "rBc": "deno run --allow-read --allow-run --allow-write --allow-env --allow-sys src/processors/renameBandcamp.ts",
+    "rI": "deno run --allow-read --allow-run --allow-net --allow-write --allow-env src/processors/renameItunes.ts",
+    "rBp": "deno run --allow-read --allow-run --allow-net --allow-write --allow-env src/processors/renameBeatport.ts",
+    "ytRb": "deno run --unstable --allow-env --allow-net --allow-read --allow-write --allow-run src/processors/addM3uToYoutubePlaylist.ts",
+    "ytRbNoCheck": "deno run --unstable --allow-env --allow-net --allow-read --allow-write --allow-run --no-check src/processors/addM3uToYoutubePlaylist.ts",
+    "playlistImport": "deno run --allow-read --allow-write --allow-run src/processors/betterM3uSearch.ts",
+    "cF": "deno run --allow-read --allow-write --allow-run src/processors/convertFlacs.ts"
   }
 }

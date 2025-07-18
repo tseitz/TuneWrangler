@@ -4,8 +4,15 @@ Renames downloaded music from Beatport to format I like
 import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
 import nodeId3 from "npm:node-id3";
 
-import { backupFile, cacheMusic, checkIfDuplicate, getFolder, logWithBreak, renameAndMove } from "./common.ts";
-import { DownloadedSong, Song } from "./models/Song.ts";
+import {
+  backupFile,
+  cacheMusic,
+  checkIfDuplicate,
+  getFolder,
+  logWithBreak,
+  renameAndMove,
+} from "../core/utils/common.ts";
+import { DownloadedSong, Song } from "../core/models/Song.ts";
 
 const unix = true;
 let debug = true;
