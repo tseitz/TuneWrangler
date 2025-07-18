@@ -14,7 +14,6 @@ import {
 } from "../core/utils/common.ts";
 import { DownloadedSong, Song } from "../core/models/Song.ts";
 
-const unix = true;
 let debug = true;
 let clear = true;
 // let trimRating = true;
@@ -30,10 +29,10 @@ Deno.args.forEach((value) => {
   }
 });
 
-const startDir = getFolder("downloaded", unix);
-const cacheDir = getFolder("djMusic", unix);
-const moveDir = getFolder("rename", unix);
-const backupDir = getFolder("backup", unix);
+const startDir = getFolder("downloaded");
+const cacheDir = getFolder("djMusic");
+const moveDir = getFolder("rename");
+const backupDir = getFolder("backup");
 
 // empty out the backup directory
 if (clear) await fs.emptyDir(backupDir);

@@ -18,15 +18,15 @@ import {
 } from "../core/utils/common.ts";
 import { DownloadedSong } from "../core/models/Song.ts";
 
-const unix = true;
+// Configuration is now handled automatically by the config system
 let debug = true;
 let clear = false;
 // let trimRating = true;
 
-const startDir = getFolder("downloaded", unix);
-const cacheDir = getFolder("djMusic", unix);
-const moveDir = getFolder("rename", unix);
-const backupDir = getFolder("backup", unix);
+const startDir = getFolder("downloaded");
+const cacheDir = getFolder("djMusic");
+const moveDir = getFolder("rename");
+const backupDir = getFolder("backup");
 
 // pass arg "--move" to write tags and move file
 // --no-clear does not clear out the backup directory

@@ -9,13 +9,12 @@ import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
 import { backupFile, convertLocalToWav, getFolder, logWithBreak } from "../core/utils/common.ts";
 import { LocalSong } from "../core/models/Song.ts";
 
-const unix = true;
 let debug = true;
 let clear = true;
 
-const startDir = getFolder("djMusic", unix);
-const moveDir = getFolder("djMusic", unix);
-const backupDir = getFolder("backup", unix);
+const startDir = getFolder("djMusic");
+const moveDir = getFolder("djMusic");
+const backupDir = getFolder("backup");
 
 // pass arg "--move" to write tags and move file
 // --no-clear does not clear out the backup directory

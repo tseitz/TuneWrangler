@@ -1,5 +1,6 @@
 import { DownloadedSong, LocalSong, Song, Tags } from "../models/Song.ts";
 import { FolderLocation } from "../models/types.ts";
+import { loadConfig, validatePaths } from "../../config/index.ts";
 // import ffmpeg from "npm:fluent-ffmpeg";
 import ffmpeg from "npm:ffmpeg";
 import nodeId3 from "npm:node-id3";
@@ -9,51 +10,40 @@ import { Semaphore } from "../models/Semaphore.ts";
 const MAX_CONCURRENT_OPERATIONS = 10;
 const semaphore = new Semaphore(MAX_CONCURRENT_OPERATIONS);
 
-export function getFolder(type: FolderLocation, linux = true): string {
-  if (linux) {
-    switch (type) {
-      case "youtube":
-        return "/Users/tseitz/Dropbox/TransferMusic/Youtube/";
-      case "downloaded":
-        return "/Users/tseitz/Dropbox/TransferMusic/Downloaded/";
-      case "itunes":
-        return "/Users/tseitz/Dropbox/TransferMusic/Downloaded/itunes/Music";
-      case "music":
-        return "/media/tseitz/Storage SSD/Dropbox/Music/";
-      case "downloads":
-        return "/home/tseitz/Downloads/";
-      case "playlists":
-        return "/home/tseitz/Documents/playlists/";
-      case "formatted":
-        return "/home/tseitz/Documents/formatted_playlists/";
-      case "broken":
-        return "/home/tseitz/Documents/broken_songs/";
-      case "djMusic":
-        return "/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Collection/";
-      case "djPlaylists":
-        return "/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Playlist Backups/";
-      case "djPlaylistImport":
-        return "/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Playlist Backups/Import/";
-      case "rename":
-        return "/Users/tseitz/Dropbox/TransferMusic/Renamed/";
-      case "backup":
-        return "/Users/tseitz/Dropbox/TransferMusic/bak/";
-      default:
-        return "";
-    }
-  } else {
-    switch (type) {
-      case "transfer":
-        return "G:\\Dropbox\\TransferMusic\\"; // process.env.OS === 'Windows_NT' ? 'D:\\Dropbox\\TransferMusic\\';
-      case "music":
-        return "G:\\Dropbox\\Music\\"; // process.env.OS === 'Windows_NT' ? 'D:\\Dropbox\\Music\\';
-      case "downloads":
-        return "C:\\Users\\tdsei\\Downloads\\"; // process.env.OS === 'Windows_NT' ? 'C:\\Users\\Scooter\\Downloads\\';
-      case "playlists":
-        return "G:\\Dropbox\\MediaMonkeyPlaylists\\"; // process.env.OS === 'Windows_NT' ? 'D:\\Dropbox\\MediaMonkeyPlaylists\\';
-      default:
-        return "";
-    }
+export function getFolder(type: FolderLocation): string {
+  const config = loadConfig();
+
+  switch (type) {
+    case "youtube":
+      return config.youtube;
+    case "downloaded":
+      return config.downloaded;
+    case "itunes":
+      return config.itunes;
+    case "music":
+      return config.music;
+    case "downloads":
+      return config.downloads;
+    case "playlists":
+      return config.playlists;
+    case "formatted":
+      return config.formatted;
+    case "broken":
+      return config.broken;
+    case "djMusic":
+      return config.djMusic;
+    case "djPlaylists":
+      return config.djPlaylists;
+    case "djPlaylistImport":
+      return config.djPlaylistImport;
+    case "rename":
+      return config.rename;
+    case "backup":
+      return config.backup;
+    case "transfer":
+      return config.transfer;
+    default:
+      throw new Error(`Unknown folder type: ${type}`);
   }
 }
 
@@ -62,6 +52,24 @@ export function logWithBreak(message: string): void {
   console.log(`
 ----------------------------------
 `);
+}
+
+/**
+ * Validates the current configuration and logs any issues
+ */
+export async function validateConfiguration(): Promise<boolean> {
+  const config = loadConfig();
+  const validation = await validatePaths(config);
+
+  if (!validation.valid) {
+    console.error("❌ Configuration validation failed:");
+    validation.errors.forEach((error) => console.error(`  - ${error}`));
+    console.error("\nPlease check your environment variables or update the default paths.");
+    return false;
+  }
+
+  console.log("✅ Configuration validation passed");
+  return true;
 }
 
 export async function cacheMusic(cacheDir: string): Promise<LocalSong[]> {
