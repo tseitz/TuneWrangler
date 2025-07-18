@@ -13,6 +13,7 @@ import {
   getFolder,
   logWithBreak,
   renameAndMove,
+  isProcessable,
   setFinalDownloadedSongName,
 } from "./common.ts";
 import { DownloadedSong } from "./models/Song.ts";
@@ -52,7 +53,7 @@ async function main() {
   let count = 0;
 
   for await (const currEntry of Deno.readDir(startDir)) {
-    if (currEntry.isFile) {
+    if (isProcessable(currEntry)) {
       console.log("Processing: ", currEntry.name);
 
       let song = new DownloadedSong(currEntry.name, startDir);
@@ -65,7 +66,7 @@ async function main() {
       try {
         song = processDownloadedMusic(song);
       } catch {
-        logWithBreak(`***Duplicate Song: ${song.filename}***`);
+        logWithBreak(`***Duplicate Song: ${song.finalFilename}***`);
         continue;
       }
 

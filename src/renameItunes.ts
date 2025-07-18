@@ -12,6 +12,7 @@ import {
   logWithBreak,
   renameAndMove,
   fixItunesLabeling,
+  isProcessable,
 } from "./common.ts";
 import { DownloadedSong, Song } from "./models/Song.ts";
 
@@ -47,7 +48,7 @@ async function main() {
   let count = 0;
 
   for await (const itunesItem of walk(startDir)) {
-    if (!itunesItem.isDirectory) {
+    if (isProcessable(itunesItem)) {
       console.log("Processing: ", itunesItem.name);
 
       let song = new Song(itunesItem.name, itunesItem.path.replace(itunesItem.name, ""));

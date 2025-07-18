@@ -29,11 +29,11 @@ export function getFolder(type: FolderLocation, linux = true): string {
       case "broken":
         return "/home/tseitz/Documents/broken_songs/";
       case "djMusic":
-        return "/Users/tseitz/Dropbox/DJ/SlimChance DJ Music/Collection/";
+        return "/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Collection/";
       case "djPlaylists":
-        return "/Users/tseitz/Dropbox/DJ/SlimChance DJ Music/Playlist Backups/";
+        return "/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Playlist Backups/";
       case "djPlaylistImport":
-        return "/Users/tseitz/Dropbox/DJ/SlimChance DJ Music/Playlist Backups/Import/";
+        return "/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Playlist Backups/Import/";
       case "rename":
         return "/Users/tseitz/Dropbox/TransferMusic/Renamed/";
       case "backup":
@@ -121,10 +121,10 @@ export function checkIfDuplicate(song: Song, musicArr: Song[] = []): boolean {
 }
 
 export function fixItunesLabeling(str: string): string {
-  str = str.replace(" - Single", "");
-  str = str.replace(" - EP", "");
-  str = str.replace(" / ", " x ");
-  str = str.replace(", ", " ");
+  str = str.replaceAll(" - Single", "");
+  str = str.replaceAll(" - EP", "");
+  str = str.replaceAll(/\s?\/\s?/g, " x ");
+  str = str.replaceAll(", ", " ");
   return str;
 }
 
@@ -248,6 +248,8 @@ export async function renameAndMove(
     if (song.extension === ".wav" || song.extension === ".m4a") {
       finalPath = `${moveDir}${song.finalFilename.slice(0, song.extension.length * -1)}.aiff`;
       await convertToAiff(song, finalPath, tempImageFile);
+    } else if (song.extension === ".mp3") {
+      await convertToMp3(song, finalPath, tempImageFile);
     } else {
       finalPath = `${moveDir}${song.finalFilename}`;
       await convertToAiff(song, finalPath, tempImageFile);
@@ -304,4 +306,47 @@ export function setFinalDownloadedSongName(song: DownloadedSong): DownloadedSong
     song.finalFilename = `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
   }
   return song;
+}
+
+async function convertToMp3(song: Song, outputFile: string, artworkFile?: string) {
+  try {
+    const convertCommand = new Deno.Command("ffmpeg", {
+      args: [
+        "-i",
+        song.fullFilename,
+        "-c:a",
+        "libmp3lame",
+        "-b:a",
+        "320k",
+        "-map_metadata",
+        "0",
+        "-id3v2_version",
+        "3",
+        "-metadata",
+        `title=${song.title}`,
+        "-metadata",
+        `artist=${song.artist}`,
+        "-metadata",
+        `album=${song.album}`,
+        "-metadata",
+        `album_artist=${song.artist}`,
+        "-y",
+        outputFile,
+      ],
+    });
+
+    const convertResult = await convertCommand.output();
+    if (!convertResult.success) {
+      throw new Error(`FFmpeg conversion failed: ${new TextDecoder().decode(convertResult.stderr)}`);
+    }
+
+    console.log(`Conversion complete: ${outputFile}`);
+  } catch (error) {
+    console.error("An error occurred:", error);
+    throw error;
+  }
+}
+
+export function isProcessable(folderItem: Deno.DirEntry): boolean {
+  return folderItem.isFile && folderItem.name !== ".DS_Store" && folderItem.name !== ".spotdl-cache";
 }
