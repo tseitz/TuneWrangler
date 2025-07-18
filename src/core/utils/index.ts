@@ -3,6 +3,7 @@ export * from "./common.ts";
 export * from "./errors.ts";
 export * from "./validation.ts";
 export * from "./retry.ts";
+export * from "./logger.ts";
 
 // Re-export types for convenience
 export type {
@@ -20,3 +21,5 @@ export type {
 export type { RetryOptions } from "./retry.ts";
 
 export type { SupportedAudioFormat } from "./validation.ts";
+
+export type { LogLevel, LogEntry, LoggerConfig } from "./logger.ts";

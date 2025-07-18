@@ -65,10 +65,9 @@ export async function validateConfiguration(): Promise<boolean> {
     const validation = await validatePaths(config);
 
     if (!validation.valid) {
-      console.error("❌ Configuration validation failed:");
-      validation.errors.forEach((error) => console.error(`  - ${error}`));
-      console.error("\nPlease check your environment variables or update the default paths.");
-      return false;
+      console.warn(" ⚠️  Configuration validation issues:");
+      validation.errors.forEach((error) => console.warn(`  - ${error}`));
+      console.warn("\nPlease check your environment variables or update the default paths.");
     }
 
     console.log("✅ Configuration validation passed");

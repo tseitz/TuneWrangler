@@ -1,6 +1,7 @@
 import { parse } from "https://deno.land/std@0.224.0/flags/mod.ts";
 import { validateConfiguration } from "../../core/utils/common.ts";
 import { loadConfig } from "../../config/index.ts";
+import { getLogger } from "../../core/utils/logger.ts";
 
 export async function renameMusic(args: string[]): Promise<void> {
   const flags = parse(args, {
@@ -195,6 +196,7 @@ This command converts FLAC files to other audio formats.
 }
 
 export async function validate(args: string[]): Promise<void> {
+  const logger = getLogger();
   const flags = parse(args, {
     boolean: ["help"],
     alias: { help: "h" },
@@ -218,11 +220,13 @@ configured paths exist and are accessible.
     return;
   }
 
+  logger.startOperation("validate configuration");
   console.log("🔧 Validating TuneWrangler configuration...\n");
 
   try {
     // Load and display configuration
     const config = loadConfig();
+    logger.configurationLoaded(Object.fromEntries(Object.entries(config)));
     console.log("📋 Current Configuration:");
     Object.entries(config).forEach(([key, value]) => {
       console.log(`  ${key}: ${value}`);
@@ -233,12 +237,15 @@ configured paths exist and are accessible.
     const isValid = await validateConfiguration();
 
     if (isValid) {
+      logger.endOperation("validate configuration", { success: true });
       console.log("✅ Configuration is valid!");
     } else {
+      logger.error("Configuration validation failed");
       console.log("❌ Configuration has issues. Please check the errors above.");
       Deno.exit(1);
     }
   } catch (error) {
+    logger.error("Validation failed", error as Error);
     console.error("❌ Validation failed:", error);
     Deno.exit(1);
   }

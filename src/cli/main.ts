@@ -3,6 +3,7 @@
 import { parse } from "https://deno.land/std@0.224.0/flags/mod.ts";
 import { validateConfiguration } from "../core/utils/common.ts";
 import { logError } from "../core/utils/errors.ts";
+import { configureLogger, getLogger, LogLevel } from "../core/utils/logger.ts";
 
 // Import all commands
 import {
@@ -15,6 +16,7 @@ import {
   convertFlacs,
   validate,
 } from "./commands/validate.ts";
+import { logs } from "./commands/logs.ts";
 
 const VERSION = "1.0.0";
 
@@ -82,6 +84,13 @@ const commands: Record<string, Command> = {
     usage: "tunewrangler validate [options]",
     examples: ["tunewrangler validate", "tunewrangler validate --help"],
     execute: validate,
+  },
+  logs: {
+    name: "logs",
+    description: "Manage and view log files",
+    usage: "tunewrangler logs [options]",
+    examples: ["tunewrangler logs --list", "tunewrangler logs --tail", "tunewrangler logs --help"],
+    execute: logs,
   },
 };
 
@@ -155,6 +164,18 @@ async function main(): Promise<void> {
     _: string[];
   };
 
+  // Configure logging based on CLI flags
+  const logLevel = args.verbose ? LogLevel.DEBUG : args.quiet ? LogLevel.ERROR : LogLevel.INFO;
+  configureLogger({
+    level: logLevel,
+    enableConsole: !args.quiet,
+    enableFile: true,
+    logDir: "./logs",
+    format: "text",
+  });
+
+  const logger = getLogger();
+
   // Handle global flags
   if (args.help && args._.length === 0) {
     showHelp();
@@ -165,6 +186,8 @@ async function main(): Promise<void> {
     showVersion();
     return;
   }
+
+  logger.startOperation("TuneWrangler CLI", { args: args._ });
 
   // Get command and sub-args
   const commandName = args._[0] as string;
@@ -178,6 +201,7 @@ async function main(): Promise<void> {
 
   // No command provided
   if (!commandName) {
+    logger.error("No command specified");
     console.error("❌ No command specified");
     console.log("Run 'tunewrangler --help' to see available commands.");
     Deno.exit(1);
@@ -186,20 +210,32 @@ async function main(): Promise<void> {
   // Check if command exists
   const command = commands[commandName];
   if (!command) {
+    logger.error(`Unknown command: ${commandName}`);
     console.error(`❌ Unknown command: ${commandName}`);
     console.log("Run 'tunewrangler --help' to see available commands.");
     Deno.exit(1);
   }
 
+  // For logs command, pass all remaining arguments including flags
+  if (commandName === "logs") {
+    const logsArgs = Deno.args.slice(Deno.args.indexOf("logs") + 1);
+    await command.execute(logsArgs);
+    return;
+  }
+
   // Validate configuration before running commands
-  if (commandName !== "validate") {
+  if (commandName !== "validate" && commandName !== "logs") {
     try {
+      logger.debug("Validating configuration before running command");
       const isValid = await validateConfiguration();
       if (!isValid) {
+        logger.error("Configuration validation failed");
         console.error("❌ Configuration validation failed. Run 'tunewrangler validate' to check your setup.");
         Deno.exit(1);
       }
+      logger.debug("Configuration validation passed");
     } catch (error) {
+      logger.error("Configuration validation error", error as Error, { operation: "configuration validation" });
       logError(error, { operation: "configuration validation" });
       Deno.exit(1);
     }
@@ -207,10 +243,13 @@ async function main(): Promise<void> {
 
   // Execute command
   try {
+    logger.startOperation(command.name, { args: subArgs });
     console.log(`🚀 Running: ${command.name}`);
     await command.execute(subArgs);
+    logger.endOperation(command.name, { success: true });
     console.log(`✅ ${command.name} completed successfully`);
   } catch (error) {
+    logger.error(`Command execution failed: ${command.name}`, error as Error, { operation: command.name });
     logError(error, { operation: command.name });
     Deno.exit(1);
   }
@@ -218,8 +257,11 @@ async function main(): Promise<void> {
 
 // Run the CLI
 if (import.meta.main) {
-  main().catch((error) => {
+  main().catch(async (error) => {
+    const logger = getLogger();
+    logger.fatal("CLI execution failed", error as Error, { operation: "main" });
     logError(error, { operation: "main" });
+    await logger.close();
     Deno.exit(1);
   });
 }

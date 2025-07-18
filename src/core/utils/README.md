@@ -1,167 +1,218 @@
-# Core Utilities
+# TuneWrangler Core Utilities
 
-This module provides comprehensive error handling, validation, and utility functions for the TuneWrangler application.
+This directory contains the core utilities for TuneWrangler, including error handling, validation, retry mechanisms, and logging.
 
-## Error Handling
+## Logging System
 
-### Custom Error Types
+The logging system provides structured, configurable logging with multiple output formats and levels.
 
-The application uses custom error types for different failure scenarios:
+### Features
 
-- **`TuneWranglerError`** - Base error class for all application errors
-- **`FilePathError`** - File path validation and access errors
-- **`AudioProcessingError`** - Audio file processing failures
-- **`MetadataError`** - Metadata parsing failures
-- **`ConfigurationError`** - Configuration validation errors
-- **`DuplicateError`** - Duplicate file detection
-- **`UnsupportedFormatError`** - Unsupported file format errors
-- **`NetworkError`** - Network operation failures
-- **`PermissionError`** - Permission denied errors
+- **Multiple Log Levels**: DEBUG, INFO, WARN, ERROR, FATAL
+- **Console Output**: Colored, formatted output for development
+- **File Output**: Persistent logs with automatic rotation
+- **Structured Logging**: JSON and text formats
+- **Context Support**: Additional metadata with each log entry
+- **Error Tracking**: Automatic error stack traces
+- **Log Management**: Built-in CLI commands for log management
 
-### Error Logging
+### Quick Start
 
 ```typescript
-import { logError } from "../core/utils/errors.ts";
+import { getLogger, info, error, LogLevel } from "../core/utils/logger.ts";
 
-try {
-  // Some operation
-} catch (error) {
-  logError(error, { context: "additional info" });
-}
+// Get the global logger
+const logger = getLogger();
+
+// Basic logging
+logger.info("Processing started");
+logger.error("Something went wrong", new Error("Details"));
+
+// Convenience functions
+info("Quick info message");
+error("Quick error message", new Error("Details"));
+
+// With context
+logger.info("File processed", { filename: "song.mp3", size: 1024 });
 ```
 
-## Input Validation
-
-### File Validation
+### Configuration
 
 ```typescript
-import { validateFilePath, validateAudioFormat, validateDirectory } from "../core/utils/validation.ts";
+import { configureLogger, LogLevel } from "../core/utils/logger.ts";
 
-// Validate file exists and is accessible
-await validateFilePath("/path/to/file.mp3", "read");
-
-// Validate audio format
-const format = validateAudioFormat("/path/to/file.mp3");
-
-// Validate directory exists and is writable
-await validateDirectory("/path/to/directory", "write");
+// Configure global logger
+configureLogger({
+  level: LogLevel.DEBUG,        // Minimum log level
+  enableConsole: true,          // Show logs in console
+  enableFile: true,             // Save logs to file
+  logDir: "./logs",             // Log directory
+  maxFileSize: 10 * 1024 * 1024, // 10MB max file size
+  maxFiles: 5,                  // Keep 5 log files
+  format: "text",               // "text" or "json"
+});
 ```
 
-### Data Validation
+### Log Levels
+
+- **DEBUG (0)**: Detailed information for debugging
+- **INFO (1)**: General information about program execution
+- **WARN (2)**: Warning messages for potential issues
+- **ERROR (3)**: Error messages for recoverable errors
+- **FATAL (4)**: Critical errors that may cause program termination
+
+### Convenience Methods
+
+The logger provides specialized methods for common operations:
 
 ```typescript
-import { validateString, validateNumberRange, validateArray } from "../core/utils/validation.ts";
+// Operation tracking
+logger.startOperation("file processing", { filename: "song.mp3" });
+logger.endOperation("file processing", { success: true });
 
-// Validate string
-const title = validateString(songTitle, "title", 1);
+// File operations
+logger.processingFile("song.mp3");
+logger.fileProcessed("song.mp3", "song_renamed.mp3");
+logger.fileSkipped("song.mp3", "already exists");
+logger.fileError("song.mp3", new Error("Permission denied"));
 
-// Validate number range
-const rating = validateNumberRange(songRating, 1, 5, "rating");
+// Duplicate detection
+logger.duplicateFound("song_copy.mp3", "song.mp3");
 
-// Validate array
-const artists = validateArray(songArtists, "artists");
+// Configuration
+logger.configurationLoaded({ musicDir: "/music" });
+logger.configurationError("Invalid path", { path: "/invalid" });
 ```
 
-## Retry Mechanism
+### CLI Integration
 
-The application includes retry logic for operations that might fail due to temporary issues:
+The logging system is automatically integrated with the CLI:
 
-```typescript
-import { withRetry, withFileRetry, withNetworkRetry } from "../core/utils/retry.ts";
+```bash
+# Normal logging (INFO level)
+./tunewrangler validate
 
-// Generic retry
-const result = await withRetry(async () => {
-  return await someOperation();
-}, { maxAttempts: 3, delayMs: 1000 });
+# Verbose logging (DEBUG level)
+./tunewrangler --verbose validate
 
-// File operation retry
-const fileContent = await withFileRetry(async () => {
-  return await Deno.readTextFile("/path/to/file");
-}, "/path/to/file");
-
-// Network operation retry
-const response = await withNetworkRetry(async () => {
-  return await fetch("https://api.example.com/data");
-}, "https://api.example.com/data");
+# Quiet mode (ERROR level only)
+./tunewrangler --quiet validate
 ```
 
-## Usage Examples
+### Log Management
 
-### Processing a Music File
+Use the built-in `logs` command to manage log files:
+
+```bash
+# List all log files
+./tunewrangler logs --list
+
+# Show last 50 lines of current log
+./tunewrangler logs --tail
+
+# Show specific log file
+./tunewrangler logs --file tunewrangler-2025-07-18.log
+
+# Clear all log files
+./tunewrangler logs --clear
+```
+
+### Log File Format
+
+Log files are automatically created with the format: `tunewrangler-YYYY-MM-DD.log`
+
+**Text Format Example:**
+```
+[2025-07-18T16:42:22.639Z] INFO: 🚀 Starting operation: TuneWrangler CLI
+  Context: { args: [ "logs" ] }
+[2025-07-18T16:42:22.641Z] INFO: 🚀 Starting operation: logs command
+  Context: { flags: { _: [], tail: true, help: false } }
+```
+
+**JSON Format Example:**
+```json
+{"timestamp":"2025-07-18T16:42:22.639Z","level":"INFO","message":"🚀 Starting operation: TuneWrangler CLI","context":{"args":["logs"]}}
+{"timestamp":"2025-07-18T16:42:22.641Z","level":"INFO","message":"🚀 Starting operation: logs command","context":{"flags":{"_":[],"tail":true,"help":false}}}
+```
+
+### Automatic Log Rotation
+
+- Log files are automatically rotated when they exceed the maximum size
+- Old log files are automatically deleted when the maximum number is reached
+- Log files are created daily with date-based naming
+
+### Best Practices
+
+1. **Use Appropriate Levels**: Use DEBUG for development, INFO for normal operations, WARN for potential issues, ERROR for recoverable errors, FATAL for critical failures.
+
+2. **Include Context**: Always include relevant context with your log messages:
+   ```typescript
+   logger.info("File processed", { 
+     filename: "song.mp3", 
+     size: 1024, 
+     duration: "3:45" 
+   });
+   ```
+
+3. **Log Errors Properly**: Always pass the error object to error logging:
+   ```typescript
+   try {
+     // ... operation
+   } catch (error) {
+     logger.error("Operation failed", error, { operation: "file processing" });
+   }
+   ```
+
+4. **Use Convenience Methods**: Use the built-in convenience methods for common operations to ensure consistent logging.
+
+5. **Configure Appropriately**: In production, consider:
+   - Setting log level to INFO or WARN
+   - Enabling file logging
+   - Using JSON format for better parsing
+   - Setting appropriate file size and count limits
+
+### Integration with Other Systems
+
+The logging system can be easily extended to integrate with external logging services:
 
 ```typescript
-import { 
-  validateAudioFormat, 
-  validateFilePath, 
-  AudioProcessingError,
-  withAudioRetry 
-} from "../core/utils/index.ts";
-
-async function processMusicFile(filePath: string) {
-  try {
-    // Validate file exists
-    await validateFilePath(filePath, "process");
+class CustomLogger extends Logger {
+  async writeLog(entry: LogEntry): Promise<void> {
+    // Call parent implementation
+    await super.writeLog(entry);
     
-    // Validate audio format
-    const format = validateAudioFormat(filePath);
-    
-    // Process with retry
-    const result = await withAudioRetry(async () => {
-      return await convertAudio(filePath);
-    }, filePath);
-    
-    return result;
-  } catch (error) {
-    if (error instanceof AudioProcessingError) {
-      console.error(`Failed to process ${filePath}:`, error.message);
-    } else {
-      console.error("Unexpected error:", error);
-    }
-    throw error;
+    // Send to external service
+    await this.sendToExternalService(entry);
+  }
+  
+  private async sendToExternalService(entry: LogEntry): Promise<void> {
+    // Implementation for external service
   }
 }
+
+// Use custom logger
+setLogger(new CustomLogger());
 ```
 
-### Configuration Validation
+### Performance Considerations
 
-```typescript
-import { 
-  validateConfiguration, 
-  ConfigurationError 
-} from "../core/utils/index.ts";
+- Logging is asynchronous and won't block your application
+- File I/O is buffered for better performance
+- Log rotation happens in the background
+- Context objects are serialized only when needed
 
-async function startApplication() {
-  try {
-    const isValid = await validateConfiguration();
-    if (!isValid) {
-      throw new ConfigurationError("Configuration validation failed");
-    }
-    
-    // Continue with application startup
-  } catch (error) {
-    if (error instanceof ConfigurationError) {
-      console.error("Configuration error:", error.message);
-      process.exit(1);
-    }
-    throw error;
-  }
-}
-```
+### Troubleshooting
 
-## Best Practices
+**Logs not appearing:**
+- Check log level configuration
+- Verify console/file output is enabled
+- Check file permissions for log directory
 
-1. **Always validate inputs** before processing
-2. **Use specific error types** for better error handling
-3. **Log errors with context** for debugging
-4. **Use retry mechanisms** for transient failures
-5. **Handle errors gracefully** with user-friendly messages
-6. **Validate configuration** at startup
+**Large log files:**
+- Adjust `maxFileSize` configuration
+- Reduce `maxFiles` count
+- Use appropriate log levels
 
-## Error Recovery
-
-The system provides several recovery mechanisms:
-
-- **Automatic retries** for transient failures
-- **Graceful degradation** when non-critical operations fail
-- **Detailed error logging** for debugging
-- **User-friendly error messages** for common issues 
+**Missing context:**
+- Ensure context objects are serializable
+- Check for circular references in context objects 
