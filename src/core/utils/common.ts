@@ -312,7 +312,9 @@ export async function backupFile(startDir: string, backupDir: string, name: stri
 }
 
 export function setFinalDownloadedSongName(song: DownloadedSong): DownloadedSong {
-  if (song.dashCount === 1) {
+  if (song.dashCount === 0) {
+    song.finalFilename = `${song.artist} - ${song.title}${song.extension}`;
+  } else if (song.dashCount === 1) {
     song.finalFilename = song.album
       ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`
       : `${song.artist} - ${song.title}${song.extension}`;

@@ -56,34 +56,46 @@ async function main() {
     if (isProcessable(currEntry)) {
       console.log("Processing: ", currEntry.name);
 
-      let song = new DownloadedSong(currEntry.name, startDir);
-
-      if (song.dashCount < 1 || !song.extension || song.extension === ".m3u" || song.extension === ".zip") {
-        logWithBreak(`Skipping: ${song.filename}`);
-        continue;
-      }
-
       try {
-        song = processDownloadedMusic(song);
-      } catch {
-        logWithBreak(`***Duplicate Song: ${song.finalFilename}***`);
+        let song = new DownloadedSong(currEntry.name, startDir);
+
+        if (!song.extension || song.extension === ".m3u" || song.extension === ".zip") {
+          logWithBreak(`Skipping: ${song.filename}`);
+          continue;
+        }
+
+        if (song.dashCount > 0) {
+          song = processDownloadedMusic(song);
+        }
+
+        try {
+          /* ALL TOGETHER NOW */
+          song = setFinalDownloadedSongName(song);
+
+          song.duplicate = checkIfDuplicate(song, musicCache);
+          if (song.duplicate) {
+            throw "Duplicate Song";
+          }
+        } catch {
+          logWithBreak(`***Duplicate Song: ${song.finalFilename}***`);
+          continue;
+        }
+
+        musicCache.push(song);
+
+        logWithBreak(song.finalFilename);
+
+        count++;
+        if (!debug) {
+          await backupFile(startDir, backupDir, currEntry.name);
+          // renameAndMove(moveDir, song);
+          renameAndMove(moveDir, song, undefined, clear);
+        }
+      } catch (error) {
+        logWithBreak(`Skipping: ${currEntry.name} - ${error}`);
         continue;
-      }
-
-      musicCache.push(song);
-
-      logWithBreak(song.finalFilename);
-
-      count++;
-      if (!debug) {
-        await backupFile(startDir, backupDir, currEntry.name);
-        // renameAndMove(moveDir, song);
-        renameAndMove(moveDir, song, undefined, clear);
       }
     }
-    //  else {
-    //   logWithBreak(`Skipping (not a file): ${currEntry.name}`);
-    // }
   }
 
   console.log(`Total Count: ${count}`);
@@ -107,14 +119,6 @@ function processDownloadedMusic(song: DownloadedSong): DownloadedSong {
   song.checkFeat();
   song.removeAnd("artist", "album");
   song.lastCheck();
-
-  /* ALL TOGETHER NOW */
-  song = setFinalDownloadedSongName(song);
-
-  song.duplicate = checkIfDuplicate(song, musicCache);
-  if (song.duplicate) {
-    throw "Duplicate Song";
-  }
 
   return song;
 }

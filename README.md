@@ -5,7 +5,7 @@
 [![Deno](https://img.shields.io/badge/Deno-1.40+-000000?logo=deno&logoColor=white)](https://deno.land/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-TuneWrangler is a powerful, Deno-based tool for managing and organizing music files. It provides intelligent file renaming, playlist management, format conversion, and comprehensive logging for music enthusiasts, DJs, and audio professionals.
+TuneWrangler is a powerful, Deno-based tool for managing and organizing music files. It provides intelligent file renaming, playlist management, format conversion for compatibility with DJ software, and comprehensive logging for music enthusiasts, DJs, and audio professionals.
 
 ## ✨ Features
 

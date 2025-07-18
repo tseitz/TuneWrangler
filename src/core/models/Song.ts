@@ -363,8 +363,15 @@ export class DownloadedSong extends Song {
     super(filename, directory);
 
     if (this.getDashCount() === 0) {
-      console.log("Bad Request: No dashes in filename");
-      return;
+      this.checkRemix();
+      this.checkFeat();
+      // this.lastCheck();
+      this.removeAnd("artist", "album");
+      if (this.artist === "") {
+        throw "No artist found";
+      } else {
+        this.title = this.filename.slice(0, this.filename.lastIndexOf("."));
+      }
     }
     if (this.getDashCount() === 1) {
       this.artist = this.grabFirst();
