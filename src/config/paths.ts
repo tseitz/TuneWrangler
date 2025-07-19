@@ -44,7 +44,7 @@ export function getDefaultPaths(): PathConfig {
   if (platform.isMac) {
     const transferMusic = "/Users/tseitz/Dropbox/TransferMusic";
     return {
-      music: `${transferMusic}Music/`,
+      music: `${transferMusic}/Music/`,
       downloads: "/Users/tseitz/Downloads/",
       bandcamp: `${transferMusic}/Downloaded/bandcamp/`,
       youtube: `${transferMusic}/Youtube/`,

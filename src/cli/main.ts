@@ -18,6 +18,7 @@ import {
 } from "./commands/validate.ts";
 import { logs } from "./commands/logs.ts";
 import { performance } from "./commands/performance.ts";
+import { analyzeDj } from "./commands/analyze.ts";
 
 const VERSION = "1.0.0";
 
@@ -103,6 +104,17 @@ const commands: Record<string, Command> = {
       "tunewrangler performance --help",
     ],
     execute: performance,
+  },
+  "analyze-dj": {
+    name: "analyze-dj",
+    description: "Analyze DJ collection for artists with 3+ songs",
+    usage: "tunewrangler analyze-dj [options]",
+    examples: [
+      "tunewrangler analyze-dj",
+      "tunewrangler analyze-dj --limit 20",
+      "tunewrangler analyze-dj --output my-analysis.csv",
+    ],
+    execute: analyzeDj,
   },
 };
 
@@ -236,7 +248,7 @@ async function main(): Promise<void> {
   }
 
   // Validate configuration before running commands
-  if (commandName !== "validate" && commandName !== "logs") {
+  if (commandName !== "validate" && commandName !== "logs" && commandName !== "analyze-dj") {
     try {
       logger.debug("Validating configuration before running command");
       const isValid = await validateConfiguration();
