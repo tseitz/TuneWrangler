@@ -5,7 +5,9 @@
 [![Deno](https://img.shields.io/badge/Deno-1.40+-000000?logo=deno&logoColor=white)](https://deno.land/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-TuneWrangler is a powerful, Deno-based tool for managing and organizing music files. It provides intelligent file renaming, playlist management, format conversion for compatibility with DJ software, and comprehensive logging for music enthusiasts, DJs, and audio professionals.
+TuneWrangler is a powerful, Deno-based tool for managing and organizing music files. It provides intelligent file
+renaming, playlist management, format conversion for compatibility with DJ software, and comprehensive logging
+for music enthusiasts, DJs, and audio professionals.
 
 ## ✨ Features
 
@@ -227,10 +229,10 @@ deno compile --allow-read --allow-write --allow-run src/cli/main.ts
 
 ### Project Structure
 
-```
+```bash
 TuneWrangler/
 ├── src/
-│   ├── cli/                 # Command-line interface
+│   ├── cli/                # Command-line interface
 │   │   ├── main.ts         # Main CLI entry point
 │   │   └── commands/       # Individual commands
 │   ├── core/               # Core functionality
@@ -272,6 +274,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 ### Common Issues
 
 **Configuration validation fails:**
+
 ```bash
 
 ./tunewrangler validate
@@ -279,6 +282,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 ```
 
 **Permission errors:**
+
 ```bash
 
 # Ensure you have read/write permissions
@@ -286,6 +290,7 @@ chmod +rw /path/to/music/directory
 ```
 
 **File format not supported:**
+
 ```bash
 
 # Check supported formats

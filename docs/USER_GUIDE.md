@@ -1,6 +1,7 @@
 # TuneWrangler User Guide
 
-Welcome to TuneWrangler! This comprehensive guide will help you get started and make the most of your music file management experience.
+Welcome to TuneWrangler! This comprehensive guide will help you get started and make the most of your music file
+management experience.
 
 ## Table of Contents
 
@@ -24,6 +25,7 @@ Before using TuneWrangler, ensure you have:
 ### Installation
 
 1. **Install Deno** (if not already installed):
+
    ```bash
    # macOS/Linux
    curl -fsSL https://deno.land/install.sh | sh
@@ -33,6 +35,7 @@ Before using TuneWrangler, ensure you have:
    ```
 
 2. **Clone and setup TuneWrangler**:
+
    ```bash
    git clone https://github.com/yourusername/TuneWrangler.git
    cd TuneWrangler
@@ -41,6 +44,7 @@ Before using TuneWrangler, ensure you have:
    ```
 
 3. **Verify installation**:
+
    ```bash
    ./tunewrangler --version
    ```
@@ -48,16 +52,19 @@ Before using TuneWrangler, ensure you have:
 ### First Steps
 
 1. **Validate your configuration**:
+
    ```bash
    ./tunewrangler validate
    ```
 
 2. **Check the logs**:
+
    ```bash
    ./tunewrangler logs --tail
    ```
 
 3. **Test with a small directory**:
+
    ```bash
    ./tunewrangler rename-music --input "/path/to/test/music" --output "/path/to/output"
    ```
@@ -89,6 +96,7 @@ export TUNEWRANGLER_TRANSFER="/Users/username/Music/Transfer/"
 ### Platform-Specific Configuration
 
 #### macOS
+
 ```bash
 # Default paths on macOS
 export TUNEWRANGLER_MUSIC="$HOME/Music/"
@@ -97,6 +105,7 @@ export TUNEWRANGLER_DJ_MUSIC="$HOME/Documents/DJ/Collection/"
 ```
 
 #### Linux
+
 ```bash
 # Default paths on Linux
 export TUNEWRANGLER_MUSIC="$HOME/Music/"
@@ -105,6 +114,7 @@ export TUNEWRANGLER_DJ_MUSIC="$HOME/DJ/Collection/"
 ```
 
 #### Windows
+
 ```cmd
 # Default paths on Windows
 set TUNEWRANGLER_MUSIC=%USERPROFILE%\Music\
@@ -121,6 +131,7 @@ Always validate your configuration before processing files:
 ```
 
 This will check:
+
 - All configured paths exist
 - You have read/write permissions
 - Required directories are accessible
@@ -148,6 +159,7 @@ Rename music files to the standard "Artist - Title" format:
 #### Platform-Specific Files
 
 **Bandcamp Files**:
+
 ```bash
 # Remove Bandcamp-specific formatting
 ./tunewrangler rename-bandcamp \
@@ -156,6 +168,7 @@ Rename music files to the standard "Artist - Title" format:
 ```
 
 **iTunes Files**:
+
 ```bash
 # Preserve iTunes metadata
 ./tunewrangler rename-itunes \
@@ -164,6 +177,7 @@ Rename music files to the standard "Artist - Title" format:
 ```
 
 **Beatport Files**:
+
 ```bash
 # Handle Beatport naming conventions
 ./tunewrangler rename-beatport \
@@ -194,6 +208,7 @@ Convert audio files between different formats:
 ### Playlist Management
 
 #### Import Playlists
+
 ```bash
 # Import M3U playlist
 ./tunewrangler playlist \
@@ -203,6 +218,7 @@ Convert audio files between different formats:
 ```
 
 #### YouTube Integration
+
 ```bash
 # Add playlist to YouTube
 ./tunewrangler youtube \
@@ -238,6 +254,7 @@ done
 ### Logging and Monitoring
 
 #### View Logs
+
 ```bash
 # View recent logs
 ./tunewrangler logs --tail
@@ -250,6 +267,7 @@ done
 ```
 
 #### Verbose Mode
+
 ```bash
 # Enable detailed logging
 ./tunewrangler --verbose rename-music --input "/path/to/music"
@@ -261,6 +279,7 @@ done
 ### Custom Workflows
 
 #### DJ Workflow
+
 ```bash
 #!/bin/bash
 # Complete DJ music processing workflow
@@ -290,6 +309,7 @@ cp -r /Users/username/Downloads/DJ /Users/username/DJ/Backup/
 ```
 
 #### Music Library Organization
+
 ```bash
 #!/bin/bash
 # Organize entire music library
@@ -327,13 +347,16 @@ cp -r /Users/username/Downloads/DJ /Users/username/DJ/Backup/
 ### Common Issues
 
 #### Configuration Errors
+
 **Problem**: Configuration validation fails
+
 ```bash
 ./tunewrangler validate
 # Error: Path 'music' does not exist: /Users/username/Music/
 ```
 
-**Solution**: 
+**Solution**:
+
 1. Check if the directory exists
 2. Verify environment variables are set correctly
 3. Ensure you have read/write permissions
@@ -350,12 +373,15 @@ chmod +rw /Users/username/Music/
 ```
 
 #### Permission Errors
+
 **Problem**: Permission denied errors
+
 ```bash
 # Error: Permission denied when accessing /path/to/music
 ```
 
 **Solution**:
+
 ```bash
 # Check current permissions
 ls -la /path/to/music
@@ -369,20 +395,25 @@ chmod +rwx /path/to/music
 ```
 
 #### File Format Issues
+
 **Problem**: Unsupported file format
+
 ```bash
 # Error: Unsupported audio format: .wma
 ```
 
 **Solution**:
+
 1. Check supported formats: `./tunewrangler convert --help`
 2. Convert unsupported formats first
 3. Use FFmpeg for manual conversion if needed
 
 #### Log Analysis
+
 **Problem**: Operation failed but unclear why
 
 **Solution**:
+
 ```bash
 # Check recent logs
 ./tunewrangler logs --tail
@@ -435,6 +466,7 @@ chmod +rwx /path/to/music
 ### Example Workflows
 
 #### Daily Music Processing
+
 ```bash
 #!/bin/bash
 # Daily music processing workflow
@@ -458,6 +490,7 @@ fi
 ```
 
 #### Weekly Library Maintenance
+
 ```bash
 #!/bin/bash
 # Weekly library maintenance
@@ -488,4 +521,5 @@ echo "Weekly maintenance complete"
 
 ---
 
-**Need more help?** Check out the [Troubleshooting Guide](TROUBLESHOOTING.md) or [API Reference](API_REFERENCE.md) for detailed technical information. 
+**Need more help?** Check out the [Troubleshooting Guide](TROUBLESHOOTING.md) or [API Reference](API_REFERENCE.md) for
+detailed technical information.

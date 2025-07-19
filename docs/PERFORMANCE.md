@@ -20,6 +20,7 @@ The performance optimization system provides:
 Batch processing groups multiple files together for more efficient processing:
 
 ```typescript
+
 import { performanceOptimizer } from "../core/utils/performance.ts";
 
 const results = await performanceOptimizer.processFilesOptimized(
@@ -40,6 +41,7 @@ const results = await performanceOptimizer.processFilesOptimized(
 ```
 
 **Benefits:**
+
 - Reduces overhead from individual file operations
 - Better resource utilization
 - Progress tracking and reporting
@@ -66,6 +68,7 @@ if (cache.has("song_key")) {
 ```
 
 **Benefits:**
+
 - Faster repeated operations
 - Reduced file I/O
 - Automatic cleanup of old entries
@@ -93,6 +96,7 @@ memoryManager.setMemoryThreshold(0.85); // 85%
 ```
 
 **Benefits:**
+
 - Prevents out-of-memory errors
 - Automatic cleanup when memory usage is high
 - Configurable thresholds
@@ -121,6 +125,7 @@ await processor.processFileStream(
 ```
 
 **Benefits:**
+
 - Handles files larger than available memory
 - Consistent memory usage
 - Better for audio file processing
@@ -154,6 +159,7 @@ try {
 ```
 
 **Benefits:**
+
 - Identify slow operations
 - Track resource usage
 - Generate performance reports
@@ -169,7 +175,8 @@ tunewrangler performance --report
 ```
 
 **Output:**
-```
+
+```bash
 📊 Performance Report
 ===================
 Total Operations: 15
@@ -196,7 +203,8 @@ tunewrangler performance --monitor
 ```
 
 **Output:**
-```
+
+```bash
 👀 Active Operations Monitor
 ============================
 Active Operations (3):
@@ -221,7 +229,8 @@ tunewrangler performance --memory
 ```
 
 **Output:**
-```
+
+```bash
 🧠 Memory Monitoring
 ===================
 Memory Status: ✅ Healthy
@@ -237,7 +246,8 @@ tunewrangler performance --clear
 ```
 
 **Output:**
-```
+
+```bash
 🧹 Clearing performance data...
 ✅ Performance data cleared
 ```
@@ -255,6 +265,7 @@ deno run --allow-read --allow-write src/processors/renameMusicOptimized.ts --mov
 ```
 
 **Features:**
+
 - Batch processing with configurable batch size
 - LRU caching for metadata
 - Progress tracking
@@ -270,6 +281,7 @@ deno run --allow-read --allow-write src/processors/convertFlacsOptimized.ts --mo
 ```
 
 **Features:**
+
 - Streaming file processing
 - Lower concurrency for CPU-intensive operations
 - Conversion caching
@@ -284,6 +296,7 @@ deno run --allow-read --allow-write src/processors/renameBandcampOptimized.ts --
 ```
 
 **Features:**
+
 - Specialized caching for Bandcamp metadata
 - Optimized batch sizes for typical Bandcamp files
 - Enhanced error handling
@@ -462,4 +475,5 @@ const avgDuration = metrics.reduce((sum, m) => sum + (m.duration || 0), 0) / met
 console.log(`Average operation duration: ${avgDuration.toFixed(2)}ms`);
 ```
 
-This performance optimization system provides the tools needed to handle large music libraries efficiently while maintaining system stability and providing detailed insights into operation performance. 
+This performance optimization system provides the tools needed to handle large music libraries efficiently while
+maintaining system stability and providing detailed insights into operation performance.

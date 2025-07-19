@@ -103,7 +103,8 @@ tunewrangler convert
 
 ## Configuration
 
-The CLI automatically validates your configuration before running commands. If validation fails, you'll see an error message with details about what needs to be fixed.
+The CLI automatically validates your configuration before running commands. If validation fails, you'll see an error
+message with details about what needs to be fixed.
 
 ### Environment Variables
 

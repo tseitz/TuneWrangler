@@ -44,6 +44,7 @@ chmod +x examples/dj-workflow.sh
 The `daily-music-processing.sh` script automates the daily processing of new music downloads:
 
 **Features:**
+
 - Automatic backup of original files
 - File renaming and organization
 - FLAC to MP3 conversion
@@ -51,6 +52,7 @@ The `daily-music-processing.sh` script automates the daily processing of new mus
 - Cleanup of download directory
 
 **Usage:**
+
 ```bash
 # Run daily processing
 ./examples/daily-music-processing.sh
@@ -61,6 +63,7 @@ The `daily-music-processing.sh` script automates the daily processing of new mus
 
 **Configuration:**
 Edit the script to customize paths:
+
 ```bash
 MUSIC_DOWNLOADS="/Users/username/Downloads/Music"
 MUSIC_ORGANIZED="/Users/username/Music/Organized"
@@ -72,6 +75,7 @@ MUSIC_BACKUP="/Users/username/Music/Backup"
 The `dj-workflow.sh` script processes music specifically for DJ use:
 
 **Features:**
+
 - DJ-friendly file naming
 - High-quality MP3 conversion (320kbps)
 - Playlist processing
@@ -79,6 +83,7 @@ The `dj-workflow.sh` script processes music specifically for DJ use:
 - DJ software import preparation
 
 **Usage:**
+
 ```bash
 # Run DJ processing
 ./examples/dj-workflow.sh
@@ -89,6 +94,7 @@ The `dj-workflow.sh` script processes music specifically for DJ use:
 
 **Configuration:**
 Edit the script to customize DJ paths:
+
 ```bash
 DJ_DOWNLOADS="/Users/username/Downloads/DJ"
 DJ_COLLECTION="/Users/username/DJ/Collection"
@@ -102,6 +108,7 @@ DJ_PLAYLISTS="/Users/username/DJ/Playlists"
 The `env.example` file shows how to configure TuneWrangler for different scenarios:
 
 **Standard Setup:**
+
 ```bash
 TUNEWRANGLER_MUSIC=/Users/username/Music/
 TUNEWRANGLER_DOWNLOADS=/Users/username/Downloads/
@@ -109,12 +116,14 @@ TUNEWRANGLER_DJ_MUSIC=/Users/username/DJ/Collection/
 ```
 
 **External Drive Setup:**
+
 ```bash
 TUNEWRANGLER_MUSIC=/Volumes/ExternalDrive/Music/
 TUNEWRANGLER_DJ_MUSIC=/Volumes/ExternalDrive/DJ/Collection/
 ```
 
 **Network Storage Setup:**
+
 ```bash
 TUNEWRANGLER_MUSIC=/mnt/nas/Music/
 TUNEWRANGLER_DJ_MUSIC=/mnt/nas/DJ/Collection/
@@ -123,6 +132,7 @@ TUNEWRANGLER_DJ_MUSIC=/mnt/nas/DJ/Collection/
 ### Platform-Specific Examples
 
 **macOS:**
+
 ```bash
 TUNEWRANGLER_MUSIC=$HOME/Music/
 TUNEWRANGLER_DOWNLOADS=$HOME/Downloads/
@@ -130,6 +140,7 @@ TUNEWRANGLER_DJ_MUSIC=$HOME/Documents/DJ/Collection/
 ```
 
 **Linux:**
+
 ```bash
 TUNEWRANGLER_MUSIC=$HOME/Music/
 TUNEWRANGLER_DOWNLOADS=$HOME/Downloads/
@@ -137,6 +148,7 @@ TUNEWRANGLER_DJ_MUSIC=$HOME/DJ/Collection/
 ```
 
 **Windows:**
+
 ```cmd
 TUNEWRANGLER_MUSIC=%USERPROFILE%\Music\
 TUNEWRANGLER_DOWNLOADS=%USERPROFILE%\Downloads\
@@ -155,6 +167,7 @@ TUNEWRANGLER_DJ_MUSIC=%USERPROFILE%\DJ\Collection\
 ### Example Customizations
 
 **Add email notifications:**
+
 ```bash
 # Add to script
 send_notification() {
@@ -166,6 +179,7 @@ send_notification "Daily music processing completed successfully!"
 ```
 
 **Add Slack notifications:**
+
 ```bash
 # Add to script
 send_slack_notification() {
@@ -179,6 +193,7 @@ send_slack_notification "DJ processing completed: $FILE_COUNT files"
 ```
 
 **Add file validation:**
+
 ```bash
 # Add to script
 validate_audio_file() {
@@ -334,4 +349,4 @@ Have a great example workflow? Share it with the community:
 
 ---
 
-**Need help?** Check the [Troubleshooting Guide](../docs/TROUBLESHOOTING.md) or open an issue on GitHub. 
+**Need help?** Check the [Troubleshooting Guide](../docs/TROUBLESHOOTING.md) or open an issue on GitHub.

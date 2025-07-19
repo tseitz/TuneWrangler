@@ -1,17 +1,18 @@
 # TuneWrangler API Reference
 
-This document provides detailed API documentation for developers who want to extend TuneWrangler or integrate it into their applications.
+This document provides detailed API documentation for developers who want to extend TuneWrangler or integrate it into
+their applications.
 
 ## Table of Contents
 
 1. [Core Modules](#core-modules)
-2. [Configuration API](#configuration-api)
-3. [Error Handling](#error-handling)
-4. [Logging API](#logging-api)
-5. [Validation API](#validation-api)
-6. [Retry Mechanisms](#retry-mechanisms)
-7. [CLI Framework](#cli-framework)
-8. [Examples](#examples)
+1. [Error Handling](#error-handling)
+1. [Logging API](#logging-api)
+1. [Validation API](#validation-api)
+1. [Retry Mechanisms](#retry-mechanisms)
+1. [CLI Framework](#cli-framework)
+1. [Examples](#examples)
+1. [Best Practices](#best-practices)
 
 ## Core Modules
 
@@ -31,6 +32,7 @@ const downloadsDir = config.downloads;
 ```
 
 **Types:**
+
 ```typescript
 export interface PathConfig {
   music: string;
@@ -48,6 +50,7 @@ export interface PathConfig {
 ```
 
 **Functions:**
+
 - `loadConfig()`: Load configuration with environment variable overrides
 - `validatePaths(config: PathConfig)`: Validate all configured paths
 - `getDefaultPaths(platform: string)`: Get platform-specific default paths
@@ -77,6 +80,7 @@ try {
 ```
 
 **Error Classes:**
+
 - `TuneWranglerError`: Base error class
 - `FilePathError`: File path and access errors
 - `AudioProcessingError`: Audio file processing failures
@@ -123,6 +127,7 @@ logger.endOperation("file processing", { success: true });
 ```
 
 **Log Levels:**
+
 - `LogLevel.DEBUG` (0): Detailed debugging information
 - `LogLevel.INFO` (1): General information
 - `LogLevel.WARN` (2): Warning messages
@@ -130,6 +135,7 @@ logger.endOperation("file processing", { success: true });
 - `LogLevel.FATAL` (4): Critical errors
 
 **Configuration:**
+
 ```typescript
 interface LoggerConfig {
   level: LogLevel;
@@ -147,6 +153,7 @@ interface LoggerConfig {
 #### `src/core/utils/validation.ts`
 
 ```typescript
+
 import {
   validateFilePath,
   validateAudioFormat,
@@ -172,6 +179,7 @@ const rating = validateNumberRange(songRating, 1, 5, "rating");
 ```
 
 **Supported Audio Formats:**
+
 ```typescript
 enum SupportedAudioFormat {
   MP3 = "mp3",
@@ -218,6 +226,7 @@ const processed = await withAudioRetry(async () => {
 ```
 
 **Retry Options:**
+
 ```typescript
 interface RetryOptions {
   maxAttempts: number;
@@ -497,7 +506,7 @@ export class TuneWranglerIntegration {
 
 ## Best Practices
 
-### Error Handling
+### Error Handling Best Practices
 
 1. **Use specific error types**: Always use the most specific error class for your use case
 2. **Include context**: Provide meaningful context with errors
@@ -560,4 +569,4 @@ logger.endOperation("batch processing", { success: true, processed: processedCou
 
 ---
 
-For more information, see the [User Guide](USER_GUIDE.md) and [Troubleshooting Guide](TROUBLESHOOTING.md). 
+For more information, see the [User Guide](USER_GUIDE.md) and [Troubleshooting Guide](TROUBLESHOOTING.md).

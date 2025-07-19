@@ -1,6 +1,7 @@
 # TuneWrangler Core Utilities
 
-This directory contains the core utilities for TuneWrangler, including error handling, validation, retry mechanisms, and logging.
+This directory contains the core utilities for TuneWrangler, including error handling, validation, retry mechanisms, and
+logging.
 
 ## Logging System
 
@@ -122,7 +123,8 @@ Use the built-in `logs` command to manage log files:
 Log files are automatically created with the format: `tunewrangler-YYYY-MM-DD.log`
 
 **Text Format Example:**
-```
+
+```bash
 [2025-07-18T16:42:22.639Z] INFO: 🚀 Starting operation: TuneWrangler CLI
   Context: { args: [ "logs" ] }
 [2025-07-18T16:42:22.641Z] INFO: 🚀 Starting operation: logs command
@@ -130,6 +132,7 @@ Log files are automatically created with the format: `tunewrangler-YYYY-MM-DD.lo
 ```
 
 **JSON Format Example:**
+
 ```json
 {"timestamp":"2025-07-18T16:42:22.639Z","level":"INFO","message":"🚀 Starting operation: TuneWrangler CLI","context":{"args":["logs"]}}
 {"timestamp":"2025-07-18T16:42:22.641Z","level":"INFO","message":"🚀 Starting operation: logs command","context":{"flags":{"_":[],"tail":true,"help":false}}}
@@ -143,9 +146,11 @@ Log files are automatically created with the format: `tunewrangler-YYYY-MM-DD.lo
 
 ### Best Practices
 
-1. **Use Appropriate Levels**: Use DEBUG for development, INFO for normal operations, WARN for potential issues, ERROR for recoverable errors, FATAL for critical failures.
+1. **Use Appropriate Levels**: Use DEBUG for development, INFO for normal operations, WARN for potential issues,
+ERROR for recoverable errors, FATAL for critical failures.
 
 2. **Include Context**: Always include relevant context with your log messages:
+
    ```typescript
    logger.info("File processed", { 
      filename: "song.mp3", 
@@ -155,6 +160,7 @@ Log files are automatically created with the format: `tunewrangler-YYYY-MM-DD.lo
    ```
 
 3. **Log Errors Properly**: Always pass the error object to error logging:
+
    ```typescript
    try {
      // ... operation
@@ -204,15 +210,18 @@ setLogger(new CustomLogger());
 ### Troubleshooting
 
 **Logs not appearing:**
+
 - Check log level configuration
 - Verify console/file output is enabled
 - Check file permissions for log directory
 
 **Large log files:**
+
 - Adjust `maxFileSize` configuration
 - Reduce `maxFiles` count
 - Use appropriate log levels
 
 **Missing context:**
+
 - Ensure context objects are serializable
-- Check for circular references in context objects 
+- Check for circular references in context objects

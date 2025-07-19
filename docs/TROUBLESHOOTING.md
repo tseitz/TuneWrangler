@@ -54,12 +54,14 @@ top -l 1 | head -10
 ### Issue: "Command not found: tunewrangler"
 
 **Symptoms:**
+
 ```bash
 $ tunewrangler --version
 zsh: command not found: tunewrangler
 ```
 
 **Causes:**
+
 - TuneWrangler not installed
 - Installation script not run
 - PATH not updated
@@ -67,6 +69,7 @@ zsh: command not found: tunewrangler
 **Solutions:**
 
 1. **Reinstall TuneWrangler:**
+
    ```bash
    cd /path/to/TuneWrangler
    chmod +x install.sh
@@ -74,6 +77,7 @@ zsh: command not found: tunewrangler
    ```
 
 2. **Manual installation:**
+
    ```bash
    # Add to your shell profile (.bashrc, .zshrc, etc.)
    export PATH="/path/to/TuneWrangler:$PATH"
@@ -83,6 +87,7 @@ zsh: command not found: tunewrangler
    ```
 
 3. **Use direct path:**
+
    ```bash
    ./tunewrangler --version
    ```
@@ -90,6 +95,7 @@ zsh: command not found: tunewrangler
 ### Issue: Configuration Validation Fails
 
 **Symptoms:**
+
 ```bash
 $ ./tunewrangler validate
 ❌ Configuration validation failed:
@@ -99,11 +105,13 @@ $ ./tunewrangler validate
 **Solutions:**
 
 1. **Check if directories exist:**
+
    ```bash
    ls -la /Users/username/Music/
    ```
 
 2. **Create missing directories:**
+
    ```bash
    mkdir -p /Users/username/Music/
    mkdir -p /Users/username/Downloads/
@@ -111,6 +119,7 @@ $ ./tunewrangler validate
    ```
 
 3. **Set environment variables:**
+
    ```bash
    export TUNEWRANGLER_MUSIC="/Users/username/Music/"
    export TUNEWRANGLER_DOWNLOADS="/Users/username/Downloads/"
@@ -118,6 +127,7 @@ $ ./tunewrangler validate
    ```
 
 4. **Use custom paths:**
+
    ```bash
    # Create .env file
    echo "TUNEWRANGLER_MUSIC=/custom/music/path" > .env
@@ -127,6 +137,7 @@ $ ./tunewrangler validate
 ### Issue: Permission Denied Errors
 
 **Symptoms:**
+
 ```bash
 ❌ Error: Permission denied when accessing /path/to/music
 ```
@@ -134,11 +145,13 @@ $ ./tunewrangler validate
 **Solutions:**
 
 1. **Check current permissions:**
+
    ```bash
    ls -la /path/to/music
    ```
 
 2. **Fix file permissions:**
+
    ```bash
    # Fix directory permissions
    chmod +rwx /path/to/music
@@ -151,6 +164,7 @@ $ ./tunewrangler validate
    ```
 
 3. **Check ownership:**
+
    ```bash
    # Check who owns the files
    ls -la /path/to/music
@@ -160,6 +174,7 @@ $ ./tunewrangler validate
    ```
 
 4. **SELinux/AppArmor (Linux):**
+
    ```bash
    # Check SELinux status
    sestatus
@@ -171,6 +186,7 @@ $ ./tunewrangler validate
 ### Issue: Unsupported File Format
 
 **Symptoms:**
+
 ```bash
 ❌ Error: Unsupported audio format: .wma
 ```
@@ -178,17 +194,20 @@ $ ./tunewrangler validate
 **Solutions:**
 
 1. **Check supported formats:**
+
    ```bash
    ./tunewrangler convert --help
    ```
 
 2. **Convert unsupported formats first:**
+
    ```bash
    # Use FFmpeg to convert WMA to MP3
    ffmpeg -i "song.wma" "song.mp3"
    ```
 
 3. **Install additional codecs:**
+
    ```bash
    # macOS
    brew install ffmpeg
@@ -205,11 +224,13 @@ $ ./tunewrangler validate
 ### Configuration Errors
 
 #### "Path does not exist"
+
 ```bash
 ❌ Error: Path 'music' does not exist: /Users/username/Music/
 ```
 
 **Solution:**
+
 ```bash
 # Create the directory
 mkdir -p /Users/username/Music/
@@ -219,11 +240,13 @@ export TUNEWRANGLER_MUSIC="/existing/path/to/music/"
 ```
 
 #### "Permission denied"
+
 ```bash
 ❌ Error: Permission denied when accessing /path/to/music
 ```
 
 **Solution:**
+
 ```bash
 # Fix permissions
 chmod +rwx /path/to/music
@@ -237,11 +260,13 @@ sudo chown -R $USER:$USER /path/to/music
 ### File Processing Errors
 
 #### "File not found"
+
 ```bash
 ❌ Error: File not found: /path/to/file.mp3
 ```
 
 **Solution:**
+
 ```bash
 # Check if file exists
 ls -la /path/to/file.mp3
@@ -254,11 +279,13 @@ realpath /path/to/file.mp3
 ```
 
 #### "Invalid audio format"
+
 ```bash
 ❌ Error: Invalid audio format: .xyz
 ```
 
 **Solution:**
+
 ```bash
 # Check file extension
 file /path/to/file.xyz
@@ -273,11 +300,13 @@ ffmpeg -i "file.xyz" "file.mp3"
 ### Network Errors
 
 #### "Connection timeout"
+
 ```bash
 ❌ Error: Network timeout when accessing https://api.example.com
 ```
 
 **Solution:**
+
 ```bash
 # Check internet connection
 ping google.com
@@ -290,11 +319,13 @@ nslookup api.example.com
 ```
 
 #### "Authentication failed"
+
 ```bash
 ❌ Error: Authentication failed for YouTube API
 ```
 
 **Solution:**
+
 ```bash
 # Check API credentials
 echo $YOUTUBE_API_KEY
@@ -312,6 +343,7 @@ curl -H "Authorization: Bearer $YOUTUBE_API_KEY" \
 ### Slow Processing
 
 **Symptoms:**
+
 - File processing takes a very long time
 - System becomes unresponsive
 - High CPU/memory usage
@@ -319,6 +351,7 @@ curl -H "Authorization: Bearer $YOUTUBE_API_KEY" \
 **Solutions:**
 
 1. **Process in smaller batches:**
+
    ```bash
    # Instead of processing entire library
    ./tunewrangler rename-music --input "/large/music/library"
@@ -330,6 +363,7 @@ curl -H "Authorization: Bearer $YOUTUBE_API_KEY" \
    ```
 
 2. **Use SSD storage:**
+
    ```bash
    # Move processing to SSD
    ./tunewrangler rename-music \
@@ -338,6 +372,7 @@ curl -H "Authorization: Bearer $YOUTUBE_API_KEY" \
    ```
 
 3. **Limit concurrent operations:**
+
    ```bash
    # Process one directory at a time
    ./tunewrangler rename-music --input "/music1" --output "/output"
@@ -345,6 +380,7 @@ curl -H "Authorization: Bearer $YOUTUBE_API_KEY" \
    ```
 
 4. **Monitor system resources:**
+
    ```bash
    # Monitor CPU and memory
    top -l 1 | head -10
@@ -356,6 +392,7 @@ curl -H "Authorization: Bearer $YOUTUBE_API_KEY" \
 ### High Memory Usage
 
 **Symptoms:**
+
 - System becomes slow
 - Out of memory errors
 - Process killed by system
@@ -363,6 +400,7 @@ curl -H "Authorization: Bearer $YOUTUBE_API_KEY" \
 **Solutions:**
 
 1. **Reduce batch size:**
+
    ```bash
    # Process fewer files at once
    ./tunewrangler rename-music \
@@ -372,6 +410,7 @@ curl -H "Authorization: Bearer $YOUTUBE_API_KEY" \
    ```
 
 2. **Use streaming processing:**
+
    ```bash
    # Process files one at a time
    find /music -name "*.mp3" | while read file; do
@@ -380,6 +419,7 @@ curl -H "Authorization: Bearer $YOUTUBE_API_KEY" \
    ```
 
 3. **Monitor memory usage:**
+
    ```bash
    # Check memory usage
    ps aux | grep tunewrangler
@@ -393,6 +433,7 @@ curl -H "Authorization: Bearer $YOUTUBE_API_KEY" \
 ### Environment Variables Not Set
 
 **Symptoms:**
+
 ```bash
 $ echo $TUNEWRANGLER_MUSIC
 # Empty output
@@ -401,6 +442,7 @@ $ echo $TUNEWRANGLER_MUSIC
 **Solutions:**
 
 1. **Set environment variables:**
+
    ```bash
    # Set in current session
    export TUNEWRANGLER_MUSIC="/Users/username/Music/"
@@ -413,6 +455,7 @@ $ echo $TUNEWRANGLER_MUSIC
    ```
 
 2. **Create .env file:**
+
    ```bash
    # Create .env file in project directory
    cat > .env << EOF
@@ -423,6 +466,7 @@ $ echo $TUNEWRANGLER_MUSIC
    ```
 
 3. **Use absolute paths:**
+
    ```bash
    # Use absolute paths in commands
    ./tunewrangler rename-music \
@@ -435,6 +479,7 @@ $ echo $TUNEWRANGLER_MUSIC
 #### macOS Issues
 
 **Gatekeeper blocking execution:**
+
 ```bash
 # Remove quarantine attribute
 xattr -d com.apple.quarantine /path/to/tunewrangler
@@ -444,6 +489,7 @@ xattr -d com.apple.quarantine /path/to/tunewrangler
 ```
 
 **Permission issues with external drives:**
+
 ```bash
 # Check if drive is mounted with correct permissions
 mount | grep /Volumes
@@ -455,6 +501,7 @@ sudo mount -o rw,user /dev/disk2s1 /Volumes/Music
 #### Linux Issues
 
 **SELinux blocking access:**
+
 ```bash
 # Check SELinux status
 sestatus
@@ -467,6 +514,7 @@ sudo setsebool -P httpd_can_network_connect 1
 ```
 
 **AppArmor restrictions:**
+
 ```bash
 # Check AppArmor status
 sudo aa-status
@@ -478,6 +526,7 @@ sudo aa-disable tunewrangler
 #### Windows Issues
 
 **Path length limitations:**
+
 ```bash
 # Use shorter paths
 ./tunewrangler rename-music --input "C:\music" --output "C:\out"
@@ -487,6 +536,7 @@ sudo aa-disable tunewrangler
 ```
 
 **Antivirus interference:**
+
 ```bash
 # Add TuneWrangler to antivirus exclusions
 # Check antivirus logs for blocked operations
@@ -497,6 +547,7 @@ sudo aa-disable tunewrangler
 ### Corrupted Files
 
 **Symptoms:**
+
 ```bash
 ❌ Error: Failed to read audio file: /path/to/corrupted.mp3
 ```
@@ -504,6 +555,7 @@ sudo aa-disable tunewrangler
 **Solutions:**
 
 1. **Check file integrity:**
+
    ```bash
    # Check if file is readable
    file /path/to/corrupted.mp3
@@ -516,6 +568,7 @@ sudo aa-disable tunewrangler
    ```
 
 2. **Attempt recovery:**
+
    ```bash
    # Try to repair with FFmpeg
    ffmpeg -i /path/to/corrupted.mp3 -c copy /path/to/repaired.mp3
@@ -525,6 +578,7 @@ sudo aa-disable tunewrangler
    ```
 
 3. **Skip corrupted files:**
+
    ```bash
    # Use --skip-corrupted flag if available
    ./tunewrangler rename-music --input "/music" --skip-corrupted
@@ -533,6 +587,7 @@ sudo aa-disable tunewrangler
 ### Duplicate Files
 
 **Symptoms:**
+
 ```bash
 ⚠️  Warning: Duplicate file found: song_copy.mp3 (original: song.mp3)
 ```
@@ -540,6 +595,7 @@ sudo aa-disable tunewrangler
 **Solutions:**
 
 1. **Review duplicates:**
+
    ```bash
    # Check file differences
    diff song.mp3 song_copy.mp3
@@ -549,6 +605,7 @@ sudo aa-disable tunewrangler
    ```
 
 2. **Handle duplicates:**
+
    ```bash
    # Use --handle-duplicates flag
    ./tunewrangler rename-music --input "/music" --handle-duplicates skip
@@ -558,6 +615,7 @@ sudo aa-disable tunewrangler
    ```
 
 3. **Prevent duplicates:**
+
    ```bash
    # Use --check-duplicates flag
    ./tunewrangler rename-music --input "/music" --check-duplicates
@@ -566,6 +624,7 @@ sudo aa-disable tunewrangler
 ### Metadata Issues
 
 **Symptoms:**
+
 ```bash
 ❌ Error: Failed to read metadata from /path/to/file.mp3
 ```
@@ -573,6 +632,7 @@ sudo aa-disable tunewrangler
 **Solutions:**
 
 1. **Check metadata:**
+
    ```bash
    # Use ffprobe to check metadata
    ffprobe /path/to/file.mp3
@@ -582,12 +642,14 @@ sudo aa-disable tunewrangler
    ```
 
 2. **Repair metadata:**
+
    ```bash
    # Use FFmpeg to rewrite metadata
    ffmpeg -i /path/to/file.mp3 -c copy -metadata title="Song Title" /path/to/fixed.mp3
    ```
 
 3. **Skip metadata processing:**
+
    ```bash
    # Use --skip-metadata flag
    ./tunewrangler rename-music --input "/music" --skip-metadata
@@ -598,6 +660,7 @@ sudo aa-disable tunewrangler
 ### Understanding Log Messages
 
 **Log Levels:**
+
 - `DEBUG`: Detailed debugging information
 - `INFO`: General information about operations
 - `WARN`: Warning messages for potential issues
@@ -607,19 +670,22 @@ sudo aa-disable tunewrangler
 **Common Log Patterns:**
 
 1. **Operation Start/End:**
-   ```
+
+   ```bash
    [timestamp] INFO: 🚀 Starting operation: rename-music
    [timestamp] INFO: ✅ Completed operation: rename-music
    ```
 
 2. **File Processing:**
-   ```
+
+   ```bash
    [timestamp] DEBUG: 📁 Processing file: song.mp3
    [timestamp] INFO: ✅ Processed file: song.mp3 → song_renamed.mp3
    ```
 
 3. **Errors:**
-   ```
+
+   ```bash
    [timestamp] ERROR: ❌ Error processing file: song.mp3
    [timestamp] ERROR: Error: Permission denied
    ```
@@ -661,6 +727,7 @@ sudo aa-disable tunewrangler
 ### Self-Diagnosis Steps
 
 1. **Check the basics:**
+
    ```bash
    ./tunewrangler --version
    ./tunewrangler validate
@@ -668,11 +735,13 @@ sudo aa-disable tunewrangler
    ```
 
 2. **Enable verbose mode:**
+
    ```bash
    ./tunewrangler --verbose <command>
    ```
 
 3. **Check system resources:**
+
    ```bash
    df -h  # Disk space
    free -h  # Memory
@@ -680,6 +749,7 @@ sudo aa-disable tunewrangler
    ```
 
 4. **Test with minimal setup:**
+
    ```bash
    # Test with single file
    ./tunewrangler rename-music --input "/single/file.mp3" --output "/test"
@@ -753,4 +823,4 @@ When reporting an issue, include:
 
 ---
 
-**Still having trouble?** Check the [User Guide](USER_GUIDE.md) for more detailed instructions or open an issue on GitHub. 
+**Still having trouble?** Check the [User Guide](USER_GUIDE.md) for more detailed instructions or open an issue on GitHub.
