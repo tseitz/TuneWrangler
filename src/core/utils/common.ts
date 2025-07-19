@@ -15,32 +15,11 @@ export function getFolder(type: FolderLocation): string {
   try {
     const config = loadConfig();
 
-    switch (type) {
-      case "youtube":
-        return config.youtube;
-      case "downloaded":
-        return config.downloaded;
-      case "itunes":
-        return config.itunes;
-      case "music":
-        return config.music;
-      case "downloads":
-        return config.downloads;
-      case "djMusic":
-        return config.djMusic;
-      case "djPlaylists":
-        return config.djPlaylists;
-      case "djPlaylistImport":
-        return config.djPlaylistImport;
-      case "rename":
-        return config.rename;
-      case "backup":
-        return config.backup;
-      case "transfer":
-        return config.transfer;
-      default:
-        throw new ConfigurationError(`Unknown folder type: ${type}`, type);
+    if (type in config) {
+      return config[type];
     }
+
+    throw new ConfigurationError(`Unknown folder type: ${type}`, type);
   } catch (error) {
     if (error instanceof ConfigurationError) {
       throw error;
@@ -326,6 +305,7 @@ export function setFinalDownloadedSongName(song: DownloadedSong): DownloadedSong
 
 async function convertToMp3(song: Song, outputFile: string, artworkFile?: string) {
   try {
+    // First try with metadata copying (includes artwork)
     const convertCommand = new Deno.Command("ffmpeg", {
       args: [
         "-i",
@@ -352,11 +332,42 @@ async function convertToMp3(song: Song, outputFile: string, artworkFile?: string
     });
 
     const convertResult = await convertCommand.output();
-    if (!convertResult.success) {
-      throw new Error(`FFmpeg conversion failed: ${new TextDecoder().decode(convertResult.stderr)}`);
+    if (convertResult.success) {
+      console.log(`Conversion complete: ${outputFile}`);
+      return;
     }
 
-    console.log(`Conversion complete: ${outputFile}`);
+    // If that fails, try without copying metadata (skips corrupted artwork)
+    console.log("First conversion attempt failed, trying without metadata copy...");
+    const convertCommandNoMetadata = new Deno.Command("ffmpeg", {
+      args: [
+        "-i",
+        song.fullFilename,
+        "-c:a",
+        "libmp3lame",
+        "-b:a",
+        "320k",
+        "-id3v2_version",
+        "3",
+        "-metadata",
+        `title=${song.title}`,
+        "-metadata",
+        `artist=${song.artist}`,
+        "-metadata",
+        `album=${song.album}`,
+        "-metadata",
+        `album_artist=${song.artist}`,
+        "-y",
+        outputFile,
+      ],
+    });
+
+    const convertResultNoMetadata = await convertCommandNoMetadata.output();
+    if (!convertResultNoMetadata.success) {
+      throw new Error(`FFmpeg conversion failed: ${new TextDecoder().decode(convertResultNoMetadata.stderr)}`);
+    }
+
+    console.log(`Conversion complete (without artwork): ${outputFile}`);
   } catch (error) {
     console.error("An error occurred:", error);
     throw error;

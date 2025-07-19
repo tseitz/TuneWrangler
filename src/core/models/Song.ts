@@ -106,43 +106,48 @@ export class Song {
         .slice(/(\(|\[)[^\)]+ REMIX\W/gi.exec(filename)!.index + 1, / REMIX\W/gi.exec(filename)!.index)
         .trim();
       this.filename = filename.slice(0, filenameRegex!.index).trim().concat(this.extension);
-    } else if (/(\(|\[)[^\)]+ REFIX\)/gi.test(filename)) {
+    } else if (/(\(|\[)[^\)]+ REFIX\W/gi.test(filename)) {
       this.artist = filename
-        .slice(/(\(|\[)[^\)]+ REFIX\)/gi.exec(filename)!.index + 1, / REFIX/gi.exec(filename)!.index)
+        .slice(/(\(|\[)[^\)]+ REFIX\W/gi.exec(filename)!.index + 1, / REFIX/gi.exec(filename)!.index)
         .trim();
       this.filename = filename
-        .slice(0, /(\(|\[)[^\)]+ REFIX\)/gi.exec(filename)!.index)
+        .slice(0, /(\(|\[)[^\)]+ REFIX\W/gi.exec(filename)!.index)
         .trim()
         .concat(this.extension);
-    } else if (/(\(|\[)[^\)]+ FLIP(\)|\])/gi.test(filename)) {
+    } else if (/(\(|\[)[^\)]+ FLIP\W/gi.test(filename)) {
       this.artist = filename
-        .slice(/(\(|\[)[^\)]+ FLIP(\)|\])/gi.exec(filename)!.index + 1, / FLIP/gi.exec(filename)!.index)
+        .slice(/(\(|\[)[^\)]+ FLIP\W/gi.exec(filename)!.index + 1, / FLIP/gi.exec(filename)!.index)
         .trim();
       this.filename = filename
-        .slice(0, /(\(|\[)[^\)]+ FLIP(\)|\])/gi.exec(filename)!.index)
+        .slice(0, /(\(|\[)[^\)]+ FLIP\W/gi.exec(filename)!.index)
         .trim()
         .concat(this.extension);
-    } else if (/(\(|\[)[^\)]+ EDIT(\)|\])/gi.test(filename)) {
+    } else if (/(\(|\[)[^\)]+ EDIT\W/gi.test(filename)) {
       this.artist = filename
-        .slice(/(\(|\[)[^\)]+ EDIT(\)|\])/gi.exec(filename)!.index + 1, / EDIT/gi.exec(filename)!.index)
+        .slice(/(\(|\[)[^\)]+ EDIT\W/gi.exec(filename)!.index + 1, / EDIT/gi.exec(filename)!.index)
         .trim();
       this.filename = filename
-        .slice(0, /(\(|\[)[^\)]+ EDIT(\)|\])/gi.exec(filename)!.index)
+        .slice(0, /(\(|\[)[^\)]+ EDITv/gi.exec(filename)!.index)
         .trim()
         .concat(this.extension);
-    } else if (/(\(|\[)[^\)]+ BOOTLEG\)/gi.test(filename)) {
+    } else if (/(\(|\[)[^\)]+ BOOTLEG\W/gi.test(filename)) {
       this.artist = filename
-        .slice(/(\(|\[)[^\)]+ BOOTLEG\)/gi.exec(filename)!.index + 1, / BOOTLEG/gi.exec(filename)!.index)
+        .slice(/(\(|\[)[^\)]+ BOOTLEG\W/gi.exec(filename)!.index + 1, / BOOTLEG/gi.exec(filename)!.index)
         .trim();
       this.filename = filename
-        .slice(0, /(\(|\[)[^\)]+ BOOTLEG\)/gi.exec(filename)!.index)
+        .slice(0, /(\(|\[)[^\)]+ BOOTLEG\W/gi.exec(filename)!.index)
         .trim()
         .concat(this.extension);
-    } else if (/(\(|\[)[^\)]+ REBOOT\)/gi.test(filename)) {
+    } else if (/(\(|\[)[^\)]+ REBOOT\W/gi.test(filename)) {
       this.artist = filename
-        .slice(/(\(|\[)[^\)]+ REBOOT\)/gi.exec(filename)!.index + 1, / REBOOT/gi.exec(filename)!.index)
+        .slice(/(\(|\[)[^\)]+ REBOOT\W/gi.exec(filename)!.index + 1, / REBOOT/gi.exec(filename)!.index)
         .trim();
-      this.filename = filename.slice(0, /(\(|\[)[^\)]+ REBOOT\)/gi.exec(filename)!.index - 1).concat(this.extension);
+      this.filename = filename.slice(0, /(\(|\[)[^\)]+ REBOOT\W/gi.exec(filename)!.index - 1).concat(this.extension);
+    } else if (/(\(|\[)[^\)]+ DUB\W/gi.test(filename)) {
+      this.artist = filename
+        .slice(/(\(|\[)[^\)]+ DUB\W/gi.exec(filename)!.index + 1, / DUB/gi.exec(filename)!.index)
+        .trim();
+      this.filename = filename.slice(0, /(\(|\[)[^\)]+ DUB\W/gi.exec(filename)!.index - 1).concat(this.extension);
     }
 
     if (origArtist !== this.artist) {
@@ -293,13 +298,6 @@ export class Song {
     const artist = this.artist;
     const album = this.album;
 
-    if (this.filename.includes("Track of the Day- ")) {
-      this.album = this.artist;
-      this.artist = this.filename.slice(this.filename.lastIndexOf("- ") + 2, this.filename.indexOf('"')).trim();
-      this.title = this.filename.slice(this.filename.indexOf('"') + 1, this.filename.lastIndexOf('"')).trim();
-      this.dashCount = 2;
-    }
-
     if (
       /(\(|\[)/g.test(title) &&
       !title.toUpperCase().includes("VIP") &&
@@ -365,7 +363,7 @@ export class DownloadedSong extends Song {
     if (this.getDashCount() === 0) {
       this.checkRemix();
       this.checkFeat();
-      // this.lastCheck();
+      this.lastCheck();
       this.removeAnd("artist", "album");
       if (this.artist === "") {
         throw "No artist found";

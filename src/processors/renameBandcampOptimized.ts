@@ -8,7 +8,6 @@ import {
   cacheMusic,
   checkIfDuplicate,
   getFolder,
-  logWithBreak,
   renameAndMove,
   isProcessable,
   setFinalDownloadedSongName,
@@ -23,7 +22,7 @@ const logger = getLogger();
 let debug = true;
 let clear = false;
 
-const startDir = getFolder("downloaded");
+const startDir = getFolder("bandcamp");
 const cacheDir = getFolder("djMusic");
 const moveDir = getFolder("rename");
 const backupDir = getFolder("backup");
