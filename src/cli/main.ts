@@ -26,6 +26,10 @@ interface Command {
   name: string;
   description: string;
   usage: string;
+  flags?: {
+    name: string;
+    description: string;
+  }[];
   examples: string[];
   execute: (args: string[]) => Promise<void>;
 }
@@ -35,13 +39,42 @@ const commands: Record<string, Command> = {
     name: "rename-music",
     description: "Rename music files with proper artist - title format",
     usage: "tunewrangler rename-music [options]",
-    examples: ["tunewrangler rename-music", "tunewrangler rename-music --help"],
+    flags: [
+      {
+        name: "move",
+        description: "Move files to the rename directory",
+      },
+      {
+        name: "no-clear",
+        description: "Do not clear the backup directory",
+      },
+    ],
+    examples: [
+      "tunewrangler rename-music",
+      "tunewrangler rename-music --move",
+      "tunewrangler rename-music --no-clear",
+      "tunewrangler rename-music --help",
+    ],
     execute: renameMusic,
   },
   "rename-bandcamp": {
     name: "rename-bandcamp",
     description: "Rename Bandcamp music files",
     usage: "tunewrangler rename-bandcamp [options]",
+    flags: [
+      {
+        name: "move",
+        description: "Move files to the rename directory",
+      },
+      {
+        name: "no-clear",
+        description: "Do not clear the backup directory",
+      },
+      {
+        name: "ignore-dupes",
+        description: "Ignore duplicate files",
+      },
+    ],
     examples: ["tunewrangler rename-bandcamp", "tunewrangler rename-bandcamp --help"],
     execute: renameBandcamp,
   },
@@ -49,6 +82,12 @@ const commands: Record<string, Command> = {
     name: "rename-itunes",
     description: "Rename iTunes music files",
     usage: "tunewrangler rename-itunes [options]",
+    flags: [
+      {
+        name: "move",
+        description: "Move files to the rename directory",
+      },
+    ],
     examples: ["tunewrangler rename-itunes", "tunewrangler rename-itunes --help"],
     execute: renameItunes,
   },
@@ -56,6 +95,12 @@ const commands: Record<string, Command> = {
     name: "rename-beatport",
     description: "Rename Beatport music files",
     usage: "tunewrangler rename-beatport [options]",
+    flags: [
+      {
+        name: "move",
+        description: "Move files to the rename directory",
+      },
+    ],
     examples: ["tunewrangler rename-beatport", "tunewrangler rename-beatport --help"],
     execute: renameBeatport,
   },
@@ -63,6 +108,12 @@ const commands: Record<string, Command> = {
     name: "youtube",
     description: "Add M3U playlists to YouTube",
     usage: "tunewrangler youtube [options]",
+    flags: [
+      {
+        name: "move",
+        description: "Move files to the rename directory",
+      },
+    ],
     examples: ["tunewrangler youtube", "tunewrangler youtube --help"],
     execute: addM3uToYoutube,
   },
@@ -165,6 +216,9 @@ ${command.description}
 
 USAGE:
   ${command.usage}
+
+OPTIONS:
+${command.flags?.map((flag) => `  ${flag.name.padEnd(20)} ${flag.description}`).join("\n")}
 
 EXAMPLES:
 ${command.examples.map((example) => `  ${example}`).join("\n")}

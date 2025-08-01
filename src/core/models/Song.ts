@@ -108,7 +108,7 @@ export class Song {
       this.filename = filename.slice(0, filenameRegex!.index).trim().concat(this.extension);
     } else if (/(\(|\[)[^\)]+ REFIX\W/gi.test(filename)) {
       this.artist = filename
-        .slice(/(\(|\[)[^\)]+ REFIX\W/gi.exec(filename)!.index + 1, / REFIX/gi.exec(filename)!.index)
+        .slice(/(\(|\[)[^\)]+ REFIX\W/gi.exec(filename)!.index + 1, / REFIX\W/gi.exec(filename)!.index)
         .trim();
       this.filename = filename
         .slice(0, /(\(|\[)[^\)]+ REFIX\W/gi.exec(filename)!.index)
@@ -116,7 +116,7 @@ export class Song {
         .concat(this.extension);
     } else if (/(\(|\[)[^\)]+ FLIP\W/gi.test(filename)) {
       this.artist = filename
-        .slice(/(\(|\[)[^\)]+ FLIP\W/gi.exec(filename)!.index + 1, / FLIP/gi.exec(filename)!.index)
+        .slice(/(\(|\[)[^\)]+ FLIP\W/gi.exec(filename)!.index + 1, / FLIP\W/gi.exec(filename)!.index)
         .trim();
       this.filename = filename
         .slice(0, /(\(|\[)[^\)]+ FLIP\W/gi.exec(filename)!.index)
@@ -124,15 +124,15 @@ export class Song {
         .concat(this.extension);
     } else if (/(\(|\[)[^\)]+ EDIT\W/gi.test(filename)) {
       this.artist = filename
-        .slice(/(\(|\[)[^\)]+ EDIT\W/gi.exec(filename)!.index + 1, / EDIT/gi.exec(filename)!.index)
+        .slice(/(\(|\[)[^\)]+ EDIT\W/gi.exec(filename)!.index + 1, / EDIT\W/gi.exec(filename)!.index)
         .trim();
       this.filename = filename
-        .slice(0, /(\(|\[)[^\)]+ EDITv/gi.exec(filename)!.index)
+        .slice(0, /(\(|\[)[^\)]+ EDIT\W/gi.exec(filename)!.index)
         .trim()
         .concat(this.extension);
     } else if (/(\(|\[)[^\)]+ BOOTLEG\W/gi.test(filename)) {
       this.artist = filename
-        .slice(/(\(|\[)[^\)]+ BOOTLEG\W/gi.exec(filename)!.index + 1, / BOOTLEG/gi.exec(filename)!.index)
+        .slice(/(\(|\[)[^\)]+ BOOTLEG\W/gi.exec(filename)!.index + 1, / BOOTLEG\W/gi.exec(filename)!.index)
         .trim();
       this.filename = filename
         .slice(0, /(\(|\[)[^\)]+ BOOTLEG\W/gi.exec(filename)!.index)
@@ -140,12 +140,12 @@ export class Song {
         .concat(this.extension);
     } else if (/(\(|\[)[^\)]+ REBOOT\W/gi.test(filename)) {
       this.artist = filename
-        .slice(/(\(|\[)[^\)]+ REBOOT\W/gi.exec(filename)!.index + 1, / REBOOT/gi.exec(filename)!.index)
+        .slice(/(\(|\[)[^\)]+ REBOOT\W/gi.exec(filename)!.index + 1, / REBOOT\W/gi.exec(filename)!.index)
         .trim();
       this.filename = filename.slice(0, /(\(|\[)[^\)]+ REBOOT\W/gi.exec(filename)!.index - 1).concat(this.extension);
     } else if (/(\(|\[)[^\)]+ DUB\W/gi.test(filename)) {
       this.artist = filename
-        .slice(/(\(|\[)[^\)]+ DUB\W/gi.exec(filename)!.index + 1, / DUB/gi.exec(filename)!.index)
+        .slice(/(\(|\[)[^\)]+ DUB\W/gi.exec(filename)!.index + 1, / DUB\W/gi.exec(filename)!.index)
         .trim();
       this.filename = filename.slice(0, /(\(|\[)[^\)]+ DUB\W/gi.exec(filename)!.index - 1).concat(this.extension);
     }

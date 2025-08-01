@@ -1,7 +1,6 @@
 import { parse } from "https://deno.land/std@0.224.0/flags/mod.ts";
 import { analyzeDjCollection } from "../../processors/analyzeDjCollection.ts";
 import { getFolder } from "../../core/utils/common.ts";
-import { FolderLocation } from "../../core/models/types.ts";
 import { info, error } from "../../core/utils/logger.ts";
 
 export async function analyzeDj(args: string[]): Promise<void> {

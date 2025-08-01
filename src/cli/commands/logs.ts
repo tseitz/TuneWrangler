@@ -105,12 +105,6 @@ async function listLogFiles(): Promise<void> {
   }
 }
 
-async function showCurrentLogFile(): Promise<void> {
-  const date = new Date().toISOString().split("T")[0];
-  const fileName = `tunewrangler-${date}.log`;
-  await showLogFile(fileName);
-}
-
 async function showLogFile(fileName: string): Promise<void> {
   const logDir = "./logs";
   const filePath = join(logDir, fileName);

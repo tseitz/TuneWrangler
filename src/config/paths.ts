@@ -43,16 +43,17 @@ export function getDefaultPaths(): PathConfig {
 
   if (platform.isMac) {
     const transferMusic = "/Users/tseitz/Dropbox/TransferMusic";
+    const userDir = "/Users/tseitz";
     return {
-      music: `${transferMusic}/Music/`,
-      downloads: "/Users/tseitz/Downloads/",
+      music: `${userDir}/Music/`,
+      downloads: `${userDir}/Downloads/`,
       bandcamp: `${transferMusic}/Downloaded/bandcamp/`,
       youtube: `${transferMusic}/Youtube/`,
       downloaded: `${transferMusic}/Downloaded/`,
       itunes: `${transferMusic}/Downloaded/itunes/Music`,
-      djMusic: "/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Collection/",
-      djPlaylists: "/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Playlist Backups/",
-      djPlaylistImport: "/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Playlist Backups/Import/",
+      djMusic: `${userDir}/Dropbox/DJ/Dane Dubz DJ Music/Collection/`,
+      djPlaylists: `${userDir}/Dropbox/DJ/Dane Dubz DJ Music/Playlist Backups/`,
+      djPlaylistImport: `${userDir}/Dropbox/DJ/Dane Dubz DJ Music/Playlist Backups/Import/`,
       rename: `${transferMusic}/Renamed/`,
       backup: `${transferMusic}/bak/`,
       transfer: transferMusic,
