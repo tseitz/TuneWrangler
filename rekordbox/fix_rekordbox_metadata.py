@@ -92,17 +92,6 @@ class RekordboxMetadataFixer:
 
         self.dry_run = dry_run
 
-        # Supported audio file extensions
-        self.audio_extensions = {
-            ".mp3",
-            ".wav",
-            ".flac",
-            ".aiff",
-            ".m4a",
-            ".aac",
-            ".ogg",
-        }
-
     def normalize_string(self, text: str) -> str:
         """Normalize Unicode string for consistent comparison"""
         if not text:
@@ -141,10 +130,7 @@ class RekordboxMetadataFixer:
             return audio_files
 
         for file_path in self.collection_path.rglob("*"):
-            if (
-                file_path.is_file()
-                and file_path.suffix.lower() in self.audio_extensions
-            ):
+            if file_path.is_file() and file_path.name != ".DS_Store":
                 audio_files.append(file_path)
 
         logger.info(f"Found {len(audio_files)} audio files in collection")
@@ -485,7 +471,6 @@ class RekordboxMetadataFixer:
         processed_count = (
             updated_count + not_found_count + parse_error_count + skipped_count
         )
-        success_rate = (updated_count / total_files * 100) if total_files > 0 else 0
 
         return {
             "total_files": total_files,
@@ -494,7 +479,6 @@ class RekordboxMetadataFixer:
             "not_found_files": not_found_count,
             "parse_error_files": parse_error_count,
             "skipped_files": skipped_count,
-            "success_rate_percent": round(success_rate, 2),
             "dry_run": self.dry_run,
         }
 
@@ -509,28 +493,27 @@ class RekordboxMetadataFixer:
         print(f"Files not found in database: {stats['not_found_files']}")
         print(f"Files with parsing errors: {stats['parse_error_files']}")
         print(f"Files skipped: {stats['skipped_files']}")
-        print(f"Success rate: {stats['success_rate_percent']}%")
         print(f"Mode: {'DRY RUN' if stats['dry_run'] else 'LIVE'}")
         print("=" * 60)
 
     def process_collection(self, batch_mode: Optional[str] = None):
         """Main method to process the entire collection"""
         # Create backup before making changes (unless in dry run mode or skip-backup is specified)
-        # if not self.dry_run and not getattr(self, "skip_backup", False):
-        #     logger.info("Creating backup before making changes...")
-        #     backup_path = backup_rekordbox_db()
-        #     if backup_path:
-        #         logger.info(f"✓ Backup created successfully: {backup_path}")
-        #         logger.info("You can restore from this backup if needed.")
-        #     else:
-        #         logger.error(
-        #             "❌ Failed to create backup. Aborting to prevent data loss."
-        #         )
-        #         return
-        # elif self.dry_run:
-        #     logger.info("Dry run mode - no backup needed")
-        # elif getattr(self, "skip_backup", False):
-        #     logger.warning("⚠️  Skipping backup as requested (use with caution)")
+        if not self.dry_run and not getattr(self, "skip_backup", False):
+            logger.info("Creating backup before making changes...")
+            backup_path = backup_rekordbox_db()
+            if backup_path:
+                logger.info(f"✓ Backup created successfully: {backup_path}")
+                logger.info("You can restore from this backup if needed.")
+            else:
+                logger.error(
+                    "❌ Failed to create backup. Aborting to prevent data loss."
+                )
+                return
+        elif self.dry_run:
+            logger.info("Dry run mode - no backup needed")
+        elif getattr(self, "skip_backup", False):
+            logger.warning("⚠️  Skipping backup as requested (use with caution)")
 
         audio_files = self.get_audio_files()
         total_files = len(audio_files)
@@ -539,7 +522,7 @@ class RekordboxMetadataFixer:
             logger.warning("No audio files found in collection directory")
             return
 
-        logger.info(f"Found {total_files} audio files to process")
+        logger.info(f"Processing {total_files} audio files")
 
         updated_count = 0
         not_found_count = 0
@@ -627,10 +610,9 @@ class RekordboxMetadataFixer:
                     logger.info("Committed all database changes")
                 return  # Exit the method entirely
 
-        logger.info("Processing complete! Committing changes.")
         if not self.dry_run and updated_count > 0:
+            logger.info("Committing all database changes")
             self.db.commit()
-            logger.info("Committed all database changes")
 
         # Summary
         stats = self.generate_statistics(
@@ -649,7 +631,6 @@ class RekordboxMetadataFixer:
         logger.info(f"Files with parsing errors: {parse_error_count}")
         logger.info(f"Files skipped: {skipped_count}")
         logger.info(f"Total files processed: {total_files}")
-        logger.info(f"Success rate: {stats['success_rate_percent']}%")
 
     def cleanup(self):
         """Clean up resources and close database connection"""
