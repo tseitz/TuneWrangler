@@ -1,5 +1,3 @@
-import shutil
-import os
 import xml.etree.ElementTree as ET
 from pyrekordbox import Rekordbox6Database
 from pyrekordbox.db6.smartlist import SmartList
@@ -116,34 +114,25 @@ def remove_from_playlist(db, playlist, content):
     db.remove_from_playlist(playlist, song)
 
 
-def backup_rekordbox_md():
-    db_source = "/Users/tseitz/Library/Application Support/Pioneer"
-    db_destination = "/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Rekordbox DB Backup/Application Support"
-
-    lib_source = "/Users/tseitz/Library/Pioneer"
-    lib_destination = (
-        "/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Rekordbox DB Backup/Library"
-    )
-
-    if not os.path.exists(db_destination):
-        os.makedirs(db_destination)
-    else:
-        shutil.rmtree(db_destination)
-
-    if not os.path.exists(lib_destination):
-        os.makedirs(lib_destination)
-    else:
-        shutil.rmtree(lib_destination)
-
-    shutil.make_archive(
-        os.path.join(db_destination, "rekordbox_backup"), "zip", db_source
-    )
-    shutil.make_archive(
-        os.path.join(lib_destination, "rekordbox_backup"), "zip", lib_source
-    )
+# Import backup functions from the new backup module
+from rekordbox_backup import backup_rekordbox_db, restore_rekordbox_db, list_backups
 
 
 # folders = []
 
 if __name__ == "__main__":
+    # Example usage of backup functions
+    print("Rekordbox Database Management")
+    print("=" * 40)
+
+    # List existing backups
+    backups = list_backups()
+
+    # Uncomment the line below to create a new backup
+    # backup_path = backup_rekordbox_db()
+
+    # Uncomment the line below to restore from a backup
+    # restore_rekordbox_db("/path/to/your/backup.zip")
+
+    # Run the main playlist processing
     main()

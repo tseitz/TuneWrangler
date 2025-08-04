@@ -11,6 +11,19 @@
       "program": "${file}",
       "console": "integratedTerminal",
       "justMyCode": false
+    },
+    {
+      "name": "Python Debugger: fix_rekordbox_metadata.py",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/fix_rekordbox_metadata.py",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "args": [
+        "--preview",
+        "--preview-count",
+        "10"
+      ]
     }
   ]
 }

@@ -16,6 +16,7 @@
         { "name": "Ketamine", "operator": 1, "playlistType": "folder", "link": "ketamine.json" },
         { "name": "DnB", "operator": 1, "playlistType": "folder", "link": "dnb.json" },
         { "name": "Jungle", "operator": 1, "playlistType": "folder", "link": "jungle.json" },
+        { "name": "Late Night", "operator": 1, "playlistType": "folder", "link": "late-night.json" },
         { "name": "Beats", "operator": 1, "playlistType": "folder", "link": "beats.json" },
         { "name": "Vibes", "operator": 1, "playlistType": "folder", "link": "vibes.json" },
         { "name": "Heavy", "operator": 1, "playlistType": "folder", "link": "heavy.json" },
