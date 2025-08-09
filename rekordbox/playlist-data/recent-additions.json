@@ -1,0 +1,47 @@
+{
+  "data": [
+    {
+      "parent": "Recent Additions",
+      "mainConditions": [],
+      "negativeConditions": [],
+      "playlists": [
+        {
+          "name": "Last Month",
+          "operator": 1,
+          "dateCreated": {
+            "time_period": 1,
+            "time_unit": "month",
+            "operator": "IN_LAST"
+          }
+        },
+        {
+          "name": "Last 2 Months",
+          "operator": 1,
+          "dateCreated": {
+            "time_period": 2,
+            "time_unit": "month",
+            "operator": "IN_LAST"
+          }
+        },
+        {
+          "name": "Last 30 Days",
+          "operator": 1,
+          "dateCreated": {
+            "time_period": 30,
+            "time_unit": "day",
+            "operator": "IN_LAST"
+          }
+        },
+        {
+          "name": "Last 60 Days",
+          "operator": 1,
+          "dateCreated": {
+            "time_period": 60,
+            "time_unit": "day",
+            "operator": "IN_LAST"
+          }
+        }
+      ]
+    }
+  ]
+}
