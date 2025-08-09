@@ -1,3 +1,54 @@
+Metadata-Version: 2.4
+Name: rekordbox-smart-playlists
+Version: 1.0.0
+Summary: A tool for managing Rekordbox smart playlists from JSON configuration files
+Author-email: Your Name <your.email@example.com>
+Maintainer-email: Your Name <your.email@example.com>
+License: MIT
+Project-URL: Homepage, https://github.com/yourusername/rekordbox-smart-playlists
+Project-URL: Bug Reports, https://github.com/yourusername/rekordbox-smart-playlists/issues
+Project-URL: Source, https://github.com/yourusername/rekordbox-smart-playlists
+Project-URL: Documentation, https://rekordbox-smart-playlists.readthedocs.io/
+Keywords: rekordbox,dj,music,playlists,smart-playlists,pioneer
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: End Users/Desktop
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Multimedia :: Sound/Audio
+Classifier: Topic :: Multimedia :: Sound/Audio :: Analysis
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Utilities
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: pyrekordbox>=0.1.0
+Requires-Dist: sqlalchemy>=1.4.0
+Requires-Dist: toml>=0.10.2
+Requires-Dist: colorama>=0.4.4
+Requires-Dist: pathlib2>=2.3.0; python_version < "3.4"
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0; extra == "dev"
+Requires-Dist: pytest-cov>=2.0; extra == "dev"
+Requires-Dist: black>=21.0; extra == "dev"
+Requires-Dist: flake8>=3.8; extra == "dev"
+Requires-Dist: mypy>=0.910; extra == "dev"
+Requires-Dist: isort>=5.0; extra == "dev"
+Requires-Dist: pre-commit>=2.0; extra == "dev"
+Requires-Dist: types-toml>=0.10.0; extra == "dev"
+Provides-Extra: test
+Requires-Dist: pytest>=6.0; extra == "test"
+Requires-Dist: pytest-cov>=2.0; extra == "test"
+Requires-Dist: pytest-mock>=3.0; extra == "test"
+Provides-Extra: docs
+Requires-Dist: sphinx>=4.0; extra == "docs"
+Requires-Dist: sphinx-rtd-theme>=1.0; extra == "docs"
+Requires-Dist: myst-parser>=0.15; extra == "docs"
+
 # Rekordbox Smart Playlists
 
 A powerful tool for managing Rekordbox smart playlists from JSON configuration files. This tool provides comprehensive playlist management, backup/restore functionality, and metadata synchronization capabilities.
