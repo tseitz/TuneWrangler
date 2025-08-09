@@ -15,6 +15,16 @@
           }
         },
         {
+          "name": "Last Month Rotation",
+          "operator": 1,
+          "dateCreated": {
+            "time_period": 1,
+            "time_unit": "month",
+            "operator": "IN_LAST"
+          },
+          "contains": ["The Rotation"]
+        },
+        {
           "name": "Last 2 Months",
           "operator": 1,
           "dateCreated": {
@@ -22,6 +32,16 @@
             "time_unit": "month",
             "operator": "IN_LAST"
           }
+        },
+        {
+          "name": "Last 2 Months Rotation",
+          "operator": 1,
+          "dateCreated": {
+            "time_period": 2,
+            "time_unit": "month",
+            "operator": "IN_LAST"
+          },
+          "contains": ["The Rotation"]
         },
         {
           "name": "Last 30 Days",
@@ -33,6 +53,16 @@
           }
         },
         {
+          "name": "Last 30 Days Rotation",
+          "operator": 1,
+          "dateCreated": {
+            "time_period": 30,
+            "time_unit": "day",
+            "operator": "IN_LAST"
+          },
+          "contains": ["The Rotation"]
+        },
+        {
           "name": "Last 60 Days",
           "operator": 1,
           "dateCreated": {
@@ -40,6 +70,16 @@
             "time_unit": "day",
             "operator": "IN_LAST"
           }
+        },
+        {
+          "name": "Last 60 Days Rotation",
+          "operator": 1,
+          "dateCreated": {
+            "time_period": 60,
+            "time_unit": "day",
+            "operator": "IN_LAST"
+          },
+          "contains": ["The Rotation"]
         }
       ]
     }

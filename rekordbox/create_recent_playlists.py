@@ -21,20 +21,7 @@ Note: This uses the recent-additions.json configuration file.
 
 import json
 import sys
-import os
-import importlib.util
-
-# Add the current directory to Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-# Import from smart-playlists.py (hyphenated filename)
-spec = importlib.util.spec_from_file_location("smart_playlists", "smart-playlists.py")
-smart_playlists = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(smart_playlists)
-
-add_data_to_playlist = smart_playlists.add_data_to_playlist
-db = smart_playlists.db
-
+from smart_playlists import add_data_to_playlist, db
 from rekordbox_backup import backup_rekordbox_db
 
 
