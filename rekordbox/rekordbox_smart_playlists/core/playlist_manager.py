@@ -26,7 +26,7 @@ from ..utils.logging import (
     create_progress_logger,
 )
 from ..utils.validation import validate_playlist_config
-from .database import RekordboxDatabase, DatabaseError
+from .database import RekordboxDatabase
 from .config import Config
 
 logger = get_logger(__name__)
@@ -281,20 +281,23 @@ class PlaylistManager:
                 error_message="Playlist name is required",
             )
 
-        # Check if playlist already exists
-        if self.db.playlist_exists(playlist_name, parent_playlist.ID):
+        # Check if playlist already exists in this specific parent context
+        existing_playlist = self.db.get_playlist_by_name(playlist_name, parent_playlist.ID)
+        if existing_playlist is not None:
             logger.info(f"Playlist already exists: {playlist_name}")
             return PlaylistCreationResult(
                 success=True,
                 playlist_name=playlist_name,
                 skipped=True,
-                skip_reason="Playlist already exists",
+                skip_reason="Playlist already exists in this parent",
             )
 
         # Handle folder type playlists
         playlist_type = playlist_config.get("playlistType")
         if playlist_type == "folder":
-            return self._create_folder_playlist(playlist_config, parent_playlist)
+            return self._create_folder_playlist(
+                playlist_config, parent_playlist, main_conditions, negative_conditions
+            )
 
         # Create smart list with conditions
         smart_list = self._build_smart_list(playlist_config, main_conditions, negative_conditions)
@@ -323,7 +326,11 @@ class PlaylistManager:
             )
 
     def _create_folder_playlist(
-        self, playlist_config: Dict[str, Any], parent_playlist: Any
+        self,
+        playlist_config: Dict[str, Any],
+        parent_playlist: Any,
+        inherited_main_conditions: Set[str],
+        inherited_negative_conditions: Set[str],
     ) -> PlaylistCreationResult:
         """
         Create a folder-type playlist by processing linked configuration.
@@ -352,12 +359,12 @@ class PlaylistManager:
                 error_message="Folder playlist requires 'name' field",
             )
 
-        # First, create the folder under the current parent
-        folder_already_exists = self.db.playlist_exists(folder_name, parent_playlist.ID)
+        # First, get or create the folder under the current parent (like old system)
+        folder_playlist = self.db.get_playlist_by_name(folder_name, parent_playlist.ID)
+        folder_already_exists = folder_playlist is not None
+
         if folder_already_exists:
             logger.info(f"Folder already exists: {folder_name}")
-            # Get the existing folder to use as parent for linked playlists
-            folder_playlist = self.db.get_playlist_by_name(folder_name, parent_playlist.ID)
         else:
             # Create new folder
             folder_playlist = self.db.create_playlist_folder(folder_name, parent_playlist)
@@ -368,24 +375,43 @@ class PlaylistManager:
                     error_message=f"Failed to create folder: {folder_name}",
                 )
 
-        # Load linked configuration and process it with the folder as parent
+                # Load linked configuration and process it with the folder as parent (like old system)
         link_path = Path(self.config.playlist_data_path) / link
         try:
             # Load the linked file data
             with open(link_path, "r", encoding="utf-8") as f:
                 linked_config_data = json.load(f)
 
-            # Process each category in the linked file, using our folder as parent
+                # Process the linked data directly under our folder (matching old system logic)
+            # This is equivalent to add_data_to_playlist(data, parent_playlist_id, main_conditions)
             linked_results = []
-            for category_data in linked_config_data["data"]:
-                # Override the parent to be our folder instead of the one in the linked file
-                modified_category = category_data.copy()
-                modified_category["parent"] = ""  # No parent name, use the folder_playlist directly
 
-                category_result = self._create_category_playlists(
-                    modified_category, folder_playlist
-                )
-                linked_results.extend(category_result)
+            # Use the inherited conditions from the parent context
+            # These come from the category that contains this folder link
+            # e.g., when "My Set" category processes "Late Night" folder link,
+            # inherited_main_conditions contains ["My Set"]
+
+            for category_data in linked_config_data["data"]:
+                # Merge conditions: inherited + category + individual playlist
+                category_main_conditions = set(category_data.get("mainConditions", []))
+                category_negative_conditions = set(category_data.get("negativeConditions", []))
+
+                # Final conditions = inherited (My Set) + category (Late Night) + individual
+                final_main_conditions = inherited_main_conditions.copy()
+                final_main_conditions.update(category_main_conditions)
+
+                final_negative_conditions = inherited_negative_conditions.copy()
+                final_negative_conditions.update(category_negative_conditions)
+
+                # Process each playlist in this category
+                for playlist_data in category_data["playlists"]:
+                    result = self._create_single_playlist(
+                        playlist_data,
+                        folder_playlist,
+                        final_main_conditions,
+                        final_negative_conditions,
+                    )
+                    linked_results.append(result)
 
             success_count = len([r for r in linked_results if r.success])
 

@@ -134,6 +134,7 @@ The tool supports configuration files in JSON or TOML format. Configuration is l
    - `~/.config/rekordbox-smart-playlists/config.json`
 
 #### Example Configuration (config.json)
+
 ```json
 {
   "collection_path": "/Users/username/Music/Collection",

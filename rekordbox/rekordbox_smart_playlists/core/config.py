@@ -25,25 +25,19 @@ class Config:
 
     # Paths
     collection_path: str = field(
-        default_factory=lambda: os.path.expanduser("~/Music/Collection")
+        default_factory=lambda: os.path.expanduser("~/Dropbox/DJ/Dane Dubz DJ Music/Collection")
     )
     playlist_data_path: str = field(default_factory=lambda: "playlist-data")
     backup_base_path: str = field(
         default_factory=lambda: os.path.expanduser("~/Dropbox/DJ/Rekordbox DB Backup")
     )
-    pioneer_install_dir: str = field(
-        default_factory=lambda: "/Applications/rekordbox 6"
-    )
+    pioneer_install_dir: str = field(default_factory=lambda: "/Applications/rekordbox 6")
 
     # Database paths (auto-detected based on OS)
     pioneer_app_support: str = field(
-        default_factory=lambda: os.path.expanduser(
-            "~/Library/Application Support/Pioneer"
-        )
+        default_factory=lambda: os.path.expanduser("~/Library/Application Support/Pioneer")
     )
-    pioneer_library: str = field(
-        default_factory=lambda: os.path.expanduser("~/Library/Pioneer")
-    )
+    pioneer_library: str = field(default_factory=lambda: os.path.expanduser("~/Library/Pioneer"))
 
     # Playlist settings
     default_parent_playlist: str = "DaneDubz"
@@ -85,9 +79,7 @@ class Config:
             elif config_path.suffix.lower() == ".toml":
                 config_data = toml.load(config_path)
             else:
-                logger.error(
-                    f"Unsupported configuration file format: {config_path.suffix}"
-                )
+                logger.error(f"Unsupported configuration file format: {config_path.suffix}")
                 return cls()
 
             return cls.from_dict(config_data)
@@ -190,9 +182,7 @@ class Config:
         for path_name, path_value in required_paths.items():
             path_obj = Path(path_value)
             if not path_obj.exists():
-                logger.error(
-                    f"Required path does not exist: {path_name} = {path_value}"
-                )
+                logger.error(f"Required path does not exist: {path_name} = {path_value}")
                 is_valid = False
 
         # Validate numeric values
@@ -207,9 +197,7 @@ class Config:
         # Validate log level
         valid_log_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         if self.log_level.upper() not in valid_log_levels:
-            logger.error(
-                f"Invalid log level: {self.log_level}. Must be one of {valid_log_levels}"
-            )
+            logger.error(f"Invalid log level: {self.log_level}. Must be one of {valid_log_levels}")
             is_valid = False
 
         return is_valid
@@ -238,9 +226,7 @@ class Config:
                 with open(config_path, "w") as f:
                     toml.dump(config_data, f)
             else:
-                logger.error(
-                    f"Unsupported configuration file format: {config_path.suffix}"
-                )
+                logger.error(f"Unsupported configuration file format: {config_path.suffix}")
                 return False
 
             logger.info(f"Configuration saved to: {config_path}")
@@ -289,9 +275,7 @@ def load_config(
 
     # Validate final configuration
     if not config.validate():
-        logger.warning(
-            "Configuration validation failed, some features may not work correctly"
-        )
+        logger.warning("Configuration validation failed, some features may not work correctly")
 
     return config
 

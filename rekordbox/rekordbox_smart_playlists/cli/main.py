@@ -46,9 +46,7 @@ Examples:
         "--config", "-c", type=str, help="Path to configuration file (JSON or TOML)"
     )
 
-    parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose logging"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
 
     parser.add_argument(
         "--quiet",
@@ -63,16 +61,12 @@ Examples:
         help="Show what would be done without making changes",
     )
 
-    parser.add_argument(
-        "--log-file", type=str, help="Log to file in addition to console"
-    )
+    parser.add_argument("--log-file", type=str, help="Log to file in addition to console")
 
     parser.add_argument("--version", action="version", version="%(prog)s 1.0.0")
 
     # Subcommands
-    subparsers = parser.add_subparsers(
-        dest="command", help="Available commands", metavar="COMMAND"
-    )
+    subparsers = parser.add_subparsers(dest="command", help="Available commands", metavar="COMMAND")
 
     # Playlist commands
     playlist_parser = subparsers.add_parser(
@@ -157,12 +151,7 @@ def validate_args(args: argparse.Namespace) -> bool:
         True if arguments are valid, False otherwise
     """
     # Check for conflicting options
-    if (
-        hasattr(args, "verbose")
-        and hasattr(args, "quiet")
-        and args.verbose
-        and args.quiet
-    ):
+    if hasattr(args, "verbose") and hasattr(args, "quiet") and args.verbose and args.quiet:
         logger.error("Cannot use both --verbose and --quiet options")
         return False
 
