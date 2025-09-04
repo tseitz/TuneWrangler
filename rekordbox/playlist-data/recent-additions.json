@@ -6,44 +6,6 @@
       "negativeConditions": [],
       "playlists": [
         {
-          "name": "Last Month",
-          "operator": 1,
-          "dateCreated": {
-            "time_period": 1,
-            "time_unit": "month",
-            "operator": "IN_LAST"
-          }
-        },
-        {
-          "name": "Last Month Rotation",
-          "operator": 1,
-          "dateCreated": {
-            "time_period": 1,
-            "time_unit": "month",
-            "operator": "IN_LAST"
-          },
-          "contains": ["The Rotation"]
-        },
-        {
-          "name": "Last 2 Months",
-          "operator": 1,
-          "dateCreated": {
-            "time_period": 2,
-            "time_unit": "month",
-            "operator": "IN_LAST"
-          }
-        },
-        {
-          "name": "Last 2 Months Rotation",
-          "operator": 1,
-          "dateCreated": {
-            "time_period": 2,
-            "time_unit": "month",
-            "operator": "IN_LAST"
-          },
-          "contains": ["The Rotation"]
-        },
-        {
           "name": "Last 30 Days",
           "operator": 1,
           "dateCreated": {

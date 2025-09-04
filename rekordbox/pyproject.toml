@@ -40,7 +40,7 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "pyrekordbox>=0.1.0",
+    "pyrekordbox>=0.4.4",
     "sqlalchemy>=1.4.0",
     "toml>=0.10.2",
     "colorama>=0.4.4",

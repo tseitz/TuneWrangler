@@ -108,10 +108,7 @@ class PlaylistManager:
         # Validate configuration
         is_valid, errors = validate_playlist_config(config_data)
         if not is_valid:
-            error_msg = (
-                f"Invalid playlist configuration in {config_path}:\n"
-                + "\n".join(errors)
-            )
+            error_msg = f"Invalid playlist configuration in {config_path}:\n" + "\n".join(errors)
             raise PlaylistValidationError(error_msg)
 
         logger.info(f"Creating playlists from: {config_path.name}")
@@ -130,9 +127,7 @@ class PlaylistManager:
             List of playlist creation results
         """
         results = []
-        progress = create_progress_logger(
-            len(playlist_data), "Creating playlist categories"
-        )
+        progress = create_progress_logger(len(playlist_data), "Creating playlist categories")
 
         for i, category_data in enumerate(playlist_data):
             try:
@@ -225,9 +220,7 @@ class PlaylistManager:
         """
         if not parent_name:
             # Use default parent playlist
-            default_parent = self.db.get_playlist_by_name(
-                self.config.default_parent_playlist
-            )
+            default_parent = self.db.get_playlist_by_name(self.config.default_parent_playlist)
             if not default_parent:
                 log_error(
                     logger,
@@ -237,9 +230,7 @@ class PlaylistManager:
             return default_parent
 
         # Get default parent for hierarchy
-        default_parent = self.db.get_playlist_by_name(
-            self.config.default_parent_playlist
-        )
+        default_parent = self.db.get_playlist_by_name(self.config.default_parent_playlist)
         if not default_parent:
             log_error(
                 logger,
@@ -254,9 +245,7 @@ class PlaylistManager:
             return existing_folder
 
         # Create new folder
-        new_folder = self.db.create_playlist_folder(
-            parent_name, default_parent, sequence
-        )
+        new_folder = self.db.create_playlist_folder(parent_name, default_parent, sequence)
         if new_folder:
             log_success(logger, f"Created parent folder: {parent_name}")
         else:
@@ -306,9 +295,7 @@ class PlaylistManager:
             return self._create_folder_playlist(playlist_config, parent_playlist)
 
         # Create smart list with conditions
-        smart_list = self._build_smart_list(
-            playlist_config, main_conditions, negative_conditions
-        )
+        smart_list = self._build_smart_list(playlist_config, main_conditions, negative_conditions)
         if not smart_list:
             return PlaylistCreationResult(
                 success=False,
@@ -317,9 +304,7 @@ class PlaylistManager:
             )
 
         # Create the playlist
-        created_playlist = self.db.create_smart_playlist(
-            playlist_name, smart_list, parent_playlist
-        )
+        created_playlist = self.db.create_smart_playlist(playlist_name, smart_list, parent_playlist)
 
         if created_playlist:
             self._created_playlists.append(playlist_name)
@@ -349,31 +334,68 @@ class PlaylistManager:
             Playlist creation result
         """
         link = playlist_config.get("link")
+        folder_name = playlist_config.get("name", "")
+
         if not link:
             return PlaylistCreationResult(
                 success=False,
-                playlist_name=playlist_config.get("name", ""),
+                playlist_name=folder_name,
                 error_message="Folder playlist requires 'link' field",
             )
 
-        # Load linked configuration
+        if not folder_name:
+            return PlaylistCreationResult(
+                success=False,
+                playlist_name="",
+                error_message="Folder playlist requires 'name' field",
+            )
+
+        # First, create the folder under the current parent
+        if self.db.playlist_exists(folder_name, parent_playlist.ID):
+            logger.info(f"Folder already exists: {folder_name}")
+            # Get the existing folder to use as parent for linked playlists
+            folder_playlist = self.db.get_playlist_by_name(folder_name, parent_playlist.ID)
+        else:
+            # Create new folder
+            folder_playlist = self.db.create_playlist_folder(folder_name, parent_playlist)
+            if not folder_playlist:
+                return PlaylistCreationResult(
+                    success=False,
+                    playlist_name=folder_name,
+                    error_message=f"Failed to create folder: {folder_name}",
+                )
+
+        # Load linked configuration and process it with the folder as parent
         link_path = Path(self.config.playlist_data_path) / link
         try:
-            linked_results = self.create_playlists_from_file(link_path)
+            # Load the linked file data
+            with open(link_path, "r", encoding="utf-8") as f:
+                linked_config_data = json.load(f)
+
+            # Process each category in the linked file, using our folder as parent
+            linked_results = []
+            for category_data in linked_config_data["data"]:
+                # Override the parent to be our folder instead of the one in the linked file
+                modified_category = category_data.copy()
+                modified_category["parent"] = ""  # No parent name, use the folder_playlist directly
+
+                category_result = self._create_category_playlists(
+                    modified_category, folder_playlist
+                )
+                linked_results.extend(category_result)
+
             success_count = len([r for r in linked_results if r.success])
 
             return PlaylistCreationResult(
                 success=success_count > 0,
-                playlist_name=playlist_config.get("name", ""),
-                created_playlists=[
-                    r.playlist_name for r in linked_results if r.success
-                ],
+                playlist_name=folder_name,
+                created_playlists=[r.playlist_name for r in linked_results if r.success],
             )
 
         except Exception as e:
             return PlaylistCreationResult(
                 success=False,
-                playlist_name=playlist_config.get("name", ""),
+                playlist_name=folder_name,
                 error_message=f"Failed to process linked config {link}: {e}",
             )
 
@@ -397,9 +419,7 @@ class PlaylistManager:
         try:
             # Determine logical operator
             operator_value = playlist_config.get("operator", 1)
-            logical_operator = (
-                LogicalOperator.ALL if operator_value == 1 else LogicalOperator.ANY
-            )
+            logical_operator = LogicalOperator.ALL if operator_value == 1 else LogicalOperator.ANY
 
             smart_list = SmartList(logical_operator=logical_operator)
 
@@ -408,9 +428,7 @@ class PlaylistManager:
             all_conditions.update(playlist_config.get("contains", []))
 
             for condition in all_conditions:
-                if not self._add_tag_condition(
-                    smart_list, condition, Operator.CONTAINS
-                ):
+                if not self._add_tag_condition(smart_list, condition, Operator.CONTAINS):
                     logger.warning(f"Failed to add condition: {condition}")
 
             # Add negative conditions (only for ALL operator)
@@ -419,17 +437,13 @@ class PlaylistManager:
                 all_negative.update(playlist_config.get("doesNotContain", []))
 
                 for condition in all_negative:
-                    if not self._add_tag_condition(
-                        smart_list, condition, Operator.NOT_CONTAINS
-                    ):
+                    if not self._add_tag_condition(smart_list, condition, Operator.NOT_CONTAINS):
                         logger.warning(f"Failed to add negative condition: {condition}")
 
             # Add rating condition
             rating = playlist_config.get("rating")
             if rating and len(rating) == 2:
-                smart_list.add_condition(
-                    Property.RATING, Operator.IN_RANGE, rating[0], rating[1]
-                )
+                smart_list.add_condition(Property.RATING, Operator.IN_RANGE, rating[0], rating[1])
 
             # Add date created condition
             date_created = playlist_config.get("dateCreated")
@@ -442,9 +456,7 @@ class PlaylistManager:
             log_exception(logger, e, "building smart list")
             return None
 
-    def _add_tag_condition(
-        self, smart_list: SmartList, tag_name: str, operator: Operator
-    ) -> bool:
+    def _add_tag_condition(self, smart_list: SmartList, tag_name: str, operator: Operator) -> bool:
         """
         Add a tag condition to smart list.
 
@@ -462,9 +474,7 @@ class PlaylistManager:
                 log_error(logger, f"Tag not found: {tag_name}")
                 return False
 
-            smart_list.add_condition(
-                Property.MYTAG, operator, left_bitshift(int(tag.ID))
-            )
+            smart_list.add_condition(Property.MYTAG, operator, left_bitshift(int(tag.ID)))
 
             logger.debug(f"Added tag condition: {tag_name} ({operator.name})")
             return True
@@ -473,9 +483,7 @@ class PlaylistManager:
             log_exception(logger, e, f"adding tag condition {tag_name}")
             return False
 
-    def _add_date_condition(
-        self, smart_list: SmartList, date_config: Dict[str, Any]
-    ) -> bool:
+    def _add_date_condition(self, smart_list: SmartList, date_config: Dict[str, Any]) -> bool:
         """
         Add a date created condition to smart list.
 
@@ -491,26 +499,15 @@ class PlaylistManager:
             time_unit = date_config.get("time_unit", "months")
             operator = date_config.get("operator", "IN_LAST")
 
-            # Map time unit names
-            unit_mapping = {
-                "day": "days",
-                "week": "weeks",
-                "month": "months",
-                "year": "years",
-            }
-
-            mapped_unit = unit_mapping.get(time_unit, time_unit)
-            date_operator = (
-                Operator.IN_LAST if operator == "IN_LAST" else Operator.IN_LAST
-            )
+            # pyrekordbox expects singular forms - no mapping needed
+            mapped_unit = time_unit
+            date_operator = Operator.IN_LAST if operator == "IN_LAST" else Operator.IN_LAST
 
             smart_list.add_condition(
                 Property.DATE_CREATED, date_operator, str(time_period), unit=mapped_unit
             )
 
-            logger.debug(
-                f"Added date condition: {time_period} {mapped_unit} ({operator})"
-            )
+            logger.debug(f"Added date condition: {time_period} {mapped_unit} ({operator})")
             return True
 
         except Exception as e:
@@ -558,9 +555,7 @@ class PlaylistManager:
                 all_results.extend(file_results)
 
                 success_count = len([r for r in file_results if r.success])
-                progress.update(
-                    message=f"Processed {json_file.name} ({success_count} playlists)"
-                )
+                progress.update(message=f"Processed {json_file.name} ({success_count} playlists)")
 
             except Exception as e:
                 log_exception(logger, e, f"processing file {json_file.name}")
@@ -570,8 +565,6 @@ class PlaylistManager:
                 all_results.append(error_result)
 
         total_success = len([r for r in all_results if r.success])
-        progress.finish(
-            f"Processed {len(json_files)} files, created {total_success} playlists"
-        )
+        progress.finish(f"Processed {len(json_files)} files, created {total_success} playlists")
 
         return all_results

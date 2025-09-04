@@ -91,9 +91,7 @@ class PlaylistCommand(BaseCommand):
         validate_parser = subparsers.add_parser(
             "validate", help="Validate playlist configuration files"
         )
-        validate_parser.add_argument(
-            "--file", "-f", type=str, help="Validate specific JSON file"
-        )
+        validate_parser.add_argument("--file", "-f", type=str, help="Validate specific JSON file")
         validate_parser.add_argument(
             "--all",
             "-a",
@@ -109,7 +107,7 @@ class PlaylistCommand(BaseCommand):
             return False
 
         if args.playlist_action == "create":
-            if args.file and not Path(args.file).exists():
+            if args.file and not Path("playlist-data", args.file).exists():
                 logger.error(f"Playlist file not found: {args.file}")
                 return False
 
@@ -136,11 +134,7 @@ class PlaylistCommand(BaseCommand):
         logger.info("Creating playlists...")
 
         # Create backup if requested and not in dry run mode
-        if (
-            not args.skip_backup
-            and not self.config.dry_run
-            and self.config.backup_before_changes
-        ):
+        if not args.skip_backup and not self.config.dry_run and self.config.backup_before_changes:
             backup_manager = BackupManager(self.config)
             backup_path = backup_manager.create_backup("before_playlist_creation")
             if backup_path:
@@ -316,18 +310,14 @@ class BackupCommand(BaseCommand):
         )
 
         # Validate backup
-        validate_parser = subparsers.add_parser(
-            "validate", help="Validate backup file integrity"
-        )
+        validate_parser = subparsers.add_parser("validate", help="Validate backup file integrity")
         validate_parser.add_argument(
             "backup_path", type=str, help="Path to backup file to validate"
         )
 
         # Delete backup
         delete_parser = subparsers.add_parser("delete", help="Delete backup file")
-        delete_parser.add_argument(
-            "backup_path", type=str, help="Path to backup file to delete"
-        )
+        delete_parser.add_argument("backup_path", type=str, help="Path to backup file to delete")
         delete_parser.add_argument(
             "--force", action="store_true", help="Delete without confirmation"
         )
@@ -380,9 +370,7 @@ class BackupCommand(BaseCommand):
             log_exception(logger, e, f"backup {args.backup_action}")
             return 1
 
-    def _create_backup(
-        self, backup_manager: BackupManager, args: argparse.Namespace
-    ) -> int:
+    def _create_backup(self, backup_manager: BackupManager, args: argparse.Namespace) -> int:
         """Create a new backup."""
         if self.config.dry_run:
             logger.info("[DRY RUN] Would create backup")
@@ -399,9 +387,7 @@ class BackupCommand(BaseCommand):
             log_error(logger, "Failed to create backup")
             return 1
 
-    def _list_backups(
-        self, backup_manager: BackupManager, args: argparse.Namespace
-    ) -> int:
+    def _list_backups(self, backup_manager: BackupManager, args: argparse.Namespace) -> int:
         """List available backups."""
         if args.detailed:
             backup_manager.print_backup_summary()
@@ -423,9 +409,7 @@ class BackupCommand(BaseCommand):
 
         return 0
 
-    def _restore_backup(
-        self, backup_manager: BackupManager, args: argparse.Namespace
-    ) -> int:
+    def _restore_backup(self, backup_manager: BackupManager, args: argparse.Namespace) -> int:
         """Restore from backup."""
         if self.config.dry_run:
             logger.info(f"[DRY RUN] Would restore from backup: {args.backup_path}")
@@ -460,9 +444,7 @@ class BackupCommand(BaseCommand):
             log_error(logger, "Failed to restore backup")
             return 1
 
-    def _validate_backup(
-        self, backup_manager: BackupManager, args: argparse.Namespace
-    ) -> int:
+    def _validate_backup(self, backup_manager: BackupManager, args: argparse.Namespace) -> int:
         """Validate backup file."""
         backup_path = Path(args.backup_path)
 
@@ -473,9 +455,7 @@ class BackupCommand(BaseCommand):
             log_error(logger, f"Backup is invalid: {backup_path}")
             return 1
 
-    def _delete_backup(
-        self, backup_manager: BackupManager, args: argparse.Namespace
-    ) -> int:
+    def _delete_backup(self, backup_manager: BackupManager, args: argparse.Namespace) -> int:
         """Delete backup file."""
         backup_path = Path(args.backup_path)
 
@@ -496,16 +476,12 @@ class BackupCommand(BaseCommand):
             log_error(logger, f"Failed to delete backup: {backup_path}")
             return 1
 
-    def _cleanup_backups(
-        self, backup_manager: BackupManager, args: argparse.Namespace
-    ) -> int:
+    def _cleanup_backups(self, backup_manager: BackupManager, args: argparse.Namespace) -> int:
         """Clean up old backups."""
         backups = backup_manager.list_backups()
 
         if len(backups) <= args.keep:
-            logger.info(
-                f"No cleanup needed. Found {len(backups)} backups, keeping {args.keep}"
-            )
+            logger.info(f"No cleanup needed. Found {len(backups)} backups, keeping {args.keep}")
             return 0
 
         backups_to_delete = backups[args.keep :]

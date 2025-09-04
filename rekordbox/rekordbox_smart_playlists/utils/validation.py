@@ -194,9 +194,7 @@ def validate_playlist_category(category: Dict[str, Any], index: int) -> List[str
         else:
             for j, condition in enumerate(category["negativeConditions"]):
                 if not isinstance(condition, str):
-                    errors.append(
-                        f"{prefix}: 'negativeConditions[{j}]' must be a string"
-                    )
+                    errors.append(f"{prefix}: 'negativeConditions[{j}]' must be a string")
 
     # Validate playlists
     if "playlists" in category:
@@ -204,9 +202,7 @@ def validate_playlist_category(category: Dict[str, Any], index: int) -> List[str
             errors.append(f"{prefix}: 'playlists' must be a list")
         else:
             for j, playlist in enumerate(category["playlists"]):
-                playlist_errors = validate_playlist_item(
-                    playlist, f"{prefix}.playlists[{j}]"
-                )
+                playlist_errors = validate_playlist_item(playlist, f"{prefix}.playlists[{j}]")
                 errors.extend(playlist_errors)
 
     return errors
@@ -241,8 +237,8 @@ def validate_playlist_item(playlist: Dict[str, Any], prefix: str) -> List[str]:
     if "operator" in playlist:
         if not isinstance(playlist["operator"], int):
             errors.append(f"{prefix}: 'operator' must be an integer")
-        elif playlist["operator"] not in [1, 2]:  # 1=ALL, 2=ANY
-            errors.append(f"{prefix}: 'operator' must be 1 (ALL) or 2 (ANY)")
+        elif playlist["operator"] not in [1, 2, 5]:  # 1=ALL, 2=ANY, 5=RATING
+            errors.append(f"{prefix}: 'operator' must be 1 (ALL) or 2 (ANY) or 5 (RATING)")
 
     # Validate optional list fields
     list_fields = ["contains", "doesNotContain"]
@@ -276,26 +272,18 @@ def validate_playlist_item(playlist: Dict[str, Any], prefix: str) -> List[str]:
             required_date_fields = ["time_period", "time_unit", "operator"]
             for field in required_date_fields:
                 if field not in date_created:
-                    errors.append(
-                        f"{prefix}.dateCreated: Missing required field '{field}'"
-                    )
+                    errors.append(f"{prefix}.dateCreated: Missing required field '{field}'")
 
             if "time_period" in date_created:
                 if not isinstance(date_created["time_period"], int):
-                    errors.append(
-                        f"{prefix}.dateCreated: 'time_period' must be an integer"
-                    )
+                    errors.append(f"{prefix}.dateCreated: 'time_period' must be an integer")
                 elif date_created["time_period"] <= 0:
-                    errors.append(
-                        f"{prefix}.dateCreated: 'time_period' must be positive"
-                    )
+                    errors.append(f"{prefix}.dateCreated: 'time_period' must be positive")
 
             if "time_unit" in date_created:
                 valid_units = ["day", "week", "month", "year"]
                 if date_created["time_unit"] not in valid_units:
-                    errors.append(
-                        f"{prefix}.dateCreated: 'time_unit' must be one of {valid_units}"
-                    )
+                    errors.append(f"{prefix}.dateCreated: 'time_unit' must be one of {valid_units}")
 
     return errors
 
@@ -378,25 +366,19 @@ def validate_rekordbox_paths(config: Dict[str, Any]) -> Tuple[bool, List[str]]:
 
     for path_key, description in pioneer_paths.items():
         if path_key in config:
-            is_valid, error = validate_directory_path(
-                config[path_key], must_exist=False
-            )
+            is_valid, error = validate_directory_path(config[path_key], must_exist=False)
             if not is_valid:
                 errors.append(f"{description}: {error}")
 
     # Check collection path
     if "collection_path" in config:
-        is_valid, error = validate_directory_path(
-            config["collection_path"], must_exist=True
-        )
+        is_valid, error = validate_directory_path(config["collection_path"], must_exist=True)
         if not is_valid:
             errors.append(f"Collection path: {error}")
 
     # Check playlist data path
     if "playlist_data_path" in config:
-        is_valid, error = validate_directory_path(
-            config["playlist_data_path"], must_exist=True
-        )
+        is_valid, error = validate_directory_path(config["playlist_data_path"], must_exist=True)
         if not is_valid:
             errors.append(f"Playlist data path: {error}")
 
@@ -419,9 +401,7 @@ if __name__ == "__main__":
             {
                 "parent": "Test",
                 "mainConditions": ["House"],
-                "playlists": [
-                    {"name": "Test Playlist", "operator": 1, "contains": ["Deep House"]}
-                ],
+                "playlists": [{"name": "Test Playlist", "operator": 1, "contains": ["Deep House"]}],
             }
         ]
     }

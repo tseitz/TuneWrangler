@@ -5,16 +5,14 @@ Provides a clean interface to the Rekordbox database with proper error handling,
 logging, and connection management.
 """
 
-from typing import Optional, List, Any, Dict, Union
+from typing import Optional, List, Any, Union
 from pathlib import Path
-import logging
 from contextlib import contextmanager
 
 from pyrekordbox import Rekordbox6Database
 from pyrekordbox.db6.smartlist import SmartList
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-from ..utils.logging import get_logger, log_exception, log_success, log_error
+from ..utils.logging import get_logger, log_exception, log_success
 from .config import Config
 
 logger = get_logger(__name__)
@@ -70,9 +68,7 @@ class RekordboxDatabase:
         except Exception as e:
             self._is_connected = False
             log_exception(logger, e, "database connection")
-            raise DatabaseConnectionError(
-                f"Failed to connect to Rekordbox database: {e}"
-            ) from e
+            raise DatabaseConnectionError(f"Failed to connect to Rekordbox database: {e}") from e
 
     @property
     def is_connected(self) -> bool:
@@ -153,11 +149,7 @@ class RekordboxDatabase:
             Content item or None if not found
         """
         try:
-            return (
-                self.get_content(ID=content_id)[0]
-                if self.get_content(ID=content_id)
-                else None
-            )
+            return self.get_content(ID=content_id)[0] if self.get_content(ID=content_id) else None
         except (DatabaseQueryError, IndexError):
             return None
 
@@ -194,9 +186,7 @@ class RekordboxDatabase:
                         title = parts[-1].strip()  # Last part is title
 
                         # Search by artist and title
-                        content_list = self.get_content(
-                            ArtistName=artist_name, Title=title
-                        )
+                        content_list = self.get_content(ArtistName=artist_name, Title=title)
                         if content_list:
                             return content_list[0]
 
@@ -210,8 +200,7 @@ class RekordboxDatabase:
                                 and content.Title
                             ):
                                 if (
-                                    content.ArtistName.lower().strip()
-                                    == artist_name.lower()
+                                    content.ArtistName.lower().strip() == artist_name.lower()
                                     and content.Title.lower().strip() == title.lower()
                                 ):
                                     return content
@@ -246,9 +235,7 @@ class RekordboxDatabase:
             log_exception(logger, e, f"querying playlists with filters {filters}")
             raise DatabaseQueryError(f"Failed to query playlists: {e}") from e
 
-    def get_playlist_by_name(
-        self, name: str, parent_id: Optional[str] = None
-    ) -> Optional[Any]:
+    def get_playlist_by_name(self, name: str, parent_id: Optional[str] = None) -> Optional[Any]:
         """
         Get playlist by name with optional parent filter.
 
@@ -470,9 +457,7 @@ class RekordboxDatabase:
             try:
                 self.rollback()
             except Exception as rollback_error:
-                log_exception(
-                    logger, rollback_error, "rollback during exception handling"
-                )
+                log_exception(logger, rollback_error, "rollback during exception handling")
 
         self.close()
 

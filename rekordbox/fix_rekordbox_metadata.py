@@ -56,7 +56,7 @@ Configuration File:
 """
 
 from pathlib import Path
-from pyrekordbox import Rekordbox6Database  # type: ignore
+from pyrekordbox import Rekordbox6Database
 from typing import Optional, Tuple, List, Dict, Any
 import logging
 import argparse
@@ -67,9 +67,7 @@ import unicodedata
 from rekordbox_backup import backup_rekordbox_db, list_backups
 
 # Set up logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -91,6 +89,7 @@ class RekordboxMetadataFixer:
             raise RuntimeError(f"Failed to initialize Rekordbox database: {e}")
 
         self.dry_run = dry_run
+        self.skip_backup = False
 
     def normalize_string(self, text: str) -> str:
         """Normalize Unicode string for consistent comparison"""
@@ -136,7 +135,7 @@ class RekordboxMetadataFixer:
         logger.info(f"Found {len(audio_files)} audio files in collection")
         return audio_files
 
-    def preview_changes(self, max_files: int = 10):
+    def preview_changes(self, max_files: int = 10) -> None:
         """Preview what changes would be made (for testing)"""
         audio_files = self.get_audio_files()
 
@@ -182,7 +181,7 @@ class RekordboxMetadataFixer:
         if len(audio_files) > max_files:
             logger.info(f"... and {len(audio_files) - max_files} more files")
 
-    def find_content_by_filename(self, filename: str) -> Optional[object]:
+    def find_content_by_filename(self, filename: str) -> Optional[Any]:
         """Find content in Rekordbox database by filename"""
         try:
             # Try to find by exact filename match
@@ -194,9 +193,7 @@ class RekordboxMetadataFixer:
             parsed = self.parse_filename(filename)
             if parsed:
                 artist_name, title, _ = parsed
-                content = self.db.get_content(
-                    ArtistName=artist_name, Title=title
-                ).one_or_none()
+                content = self.db.get_content(ArtistName=artist_name, Title=title).one_or_none()
                 if content:
                     # self.update_database_filename(content, filename)
                     return content
@@ -208,8 +205,7 @@ class RekordboxMetadataFixer:
                         content.ArtistName
                         and self.normalize_string(content.ArtistName)
                         == self.normalize_string(artist_name)
-                        and self.normalize_string(content.Title)
-                        == self.normalize_string(title)
+                        and self.normalize_string(content.Title) == self.normalize_string(title)
                     ):
                         # self.update_database_filename(content, filename)
                         return content
@@ -265,7 +261,7 @@ class RekordboxMetadataFixer:
             else:
                 print("Invalid choice. Please enter 'd', 'f', 's', or 'e'.")
 
-    def update_filename_from_database(self, content, file_path: Path) -> bool:
+    def update_filename_from_database(self, content: Any, file_path: Path) -> bool:
         """Update filename based on database metadata"""
         try:
             db_artist = (
@@ -280,16 +276,12 @@ class RekordboxMetadataFixer:
             if db_album and db_album != "Unknown":
                 new_filename = f"{db_artist.strip()} - {db_album.strip()} - {db_title.strip()}{file_path.suffix}"
             else:
-                new_filename = (
-                    f"{db_artist.strip()} - {db_title.strip()}{file_path.suffix}"
-                )
+                new_filename = f"{db_artist.strip()} - {db_title.strip()}{file_path.suffix}"
 
             new_file_path = file_path.parent / new_filename
 
             if self.dry_run:
-                logger.info(
-                    f"[DRY RUN] Would rename {file_path.name} -> {new_filename}"
-                )
+                logger.info(f"[DRY RUN] Would rename {file_path.name} -> {new_filename}")
                 logger.info(
                     f"[DRY RUN] Would update database path: {content.FolderPath} -> {new_file_path}"
                 )
@@ -308,7 +300,7 @@ class RekordboxMetadataFixer:
             logger.error(f"Error renaming file {file_path.name}: {e}")
             return False
 
-    def update_database_filename(self, content, new_filename: str) -> bool:
+    def update_database_filename(self, content: Any, new_filename: str) -> bool:
         """Update the full path of a content item in the database"""
         try:
             if self.dry_run:
@@ -322,16 +314,14 @@ class RekordboxMetadataFixer:
                 content, new_filename, save=True, check_path=False, commit=False
             )
             content.OrgFolderPath = f"{str(self.collection_path)}/{new_filename}"
-            logger.info(
-                f"Updated database filename from {previous_filename} to {new_filename}"
-            )
+            logger.info(f"Updated database filename from {previous_filename} to {new_filename}")
             return True
 
         except Exception as e:
             logger.error(f"Error updating database path for {content.FileNameL}: {e}")
             return False
 
-    def get_or_create_artist(self, artist_name: str):
+    def get_or_create_artist(self, artist_name: str) -> Optional[Any]:
         """Get existing artist or create new one"""
         try:
             # First try to find existing artist by name
@@ -352,15 +342,13 @@ class RekordboxMetadataFixer:
             logger.error(f"Error getting/creating artist '{artist_name}': {e}")
             return None
 
-    def get_or_create_album(self, album_name: str):
+    def get_or_create_album(self, album_name: str) -> Optional[Any]:
         """Get existing album or create new one"""
         try:
             # First try to find existing album by name
             existing_albums = self.db.get_album(Name=album_name).all()
             if len(existing_albums) > 0:
-                logger.info(
-                    f"Found {len(existing_albums)} existing albums for {album_name}"
-                )
+                logger.info(f"Found {len(existing_albums)} existing albums for {album_name}")
                 return existing_albums[0]
 
             # If not found, create new album
@@ -377,8 +365,8 @@ class RekordboxMetadataFixer:
             return None
 
     def update_content_metadata(
-        self, content, artist: str, title: str, album: Optional[str] = None
-    ):
+        self, content: Any, artist: str, title: str, album: Optional[str] = None
+    ) -> None:
         """Update content metadata in the database"""
         try:
             # Log what we're about to update
@@ -403,9 +391,7 @@ class RekordboxMetadataFixer:
             if artist_obj:
                 content.Artist = artist_obj
             else:
-                logger.warning(
-                    f"Could not get/create artist '{artist}' for {content.FileNameL}"
-                )
+                logger.warning(f"Could not get/create artist '{artist}' for {content.FileNameL}")
 
             # Update title
             if hasattr(content, "Title"):
@@ -421,14 +407,12 @@ class RekordboxMetadataFixer:
                 if album_obj:
                     content.Album = album_obj
                 else:
-                    logger.warning(
-                        f"Could not get/create album '{album}' for {content.FileNameL}"
-                    )
+                    logger.warning(f"Could not get/create album '{album}' for {content.FileNameL}")
 
         except Exception as e:
             logger.error(f"Error updating metadata for {content.FileNameL}: {e}")
 
-    def update_filenames_from_database(self):
+    def update_filenames_from_database(self) -> None:
         """Update filenames to match database metadata"""
         audio_files = self.get_audio_files()
 
@@ -468,9 +452,7 @@ class RekordboxMetadataFixer:
         total_files: int,
     ) -> Dict[str, Any]:
         """Generate detailed statistics about the processing run"""
-        processed_count = (
-            updated_count + not_found_count + parse_error_count + skipped_count
-        )
+        processed_count = updated_count + not_found_count + parse_error_count + skipped_count
 
         return {
             "total_files": total_files,
@@ -482,7 +464,7 @@ class RekordboxMetadataFixer:
             "dry_run": self.dry_run,
         }
 
-    def print_summary(self, stats: Dict[str, Any]):
+    def print_summary(self, stats: Dict[str, Any]) -> None:
         """Print a formatted summary of the processing results"""
         print("\n" + "=" * 60)
         print("PROCESSING SUMMARY")
@@ -496,7 +478,7 @@ class RekordboxMetadataFixer:
         print(f"Mode: {'DRY RUN' if stats['dry_run'] else 'LIVE'}")
         print("=" * 60)
 
-    def process_collection(self, batch_mode: Optional[str] = None):
+    def process_collection(self, batch_mode: Optional[str] = None) -> None:
         """Main method to process the entire collection"""
         # Create backup before making changes (unless in dry run mode or skip-backup is specified)
         if not self.dry_run and not getattr(self, "skip_backup", False):
@@ -506,9 +488,7 @@ class RekordboxMetadataFixer:
                 logger.info(f"✓ Backup created successfully: {backup_path}")
                 logger.info("You can restore from this backup if needed.")
             else:
-                logger.error(
-                    "❌ Failed to create backup. Aborting to prevent data loss."
-                )
+                logger.error("❌ Failed to create backup. Aborting to prevent data loss.")
                 return
         elif self.dry_run:
             logger.info("Dry run mode - no backup needed")
@@ -533,8 +513,8 @@ class RekordboxMetadataFixer:
             filename = file_path.name
 
             # Show progress every 10 files
-            # if i % 10 == 0 or i == total_files:
-            #     logger.info(f"Progress: {i}/{total_files} files processed")
+            if i % 10 == 0 or i == total_files:
+                logger.info(f"Progress: {i}/{total_files} files processed")
 
             # Parse filename to extract metadata
             parsed = self.parse_filename(filename)
@@ -566,8 +546,7 @@ class RekordboxMetadataFixer:
                 and self.normalize_string(db_title) == self.normalize_string(file_title)
                 and (
                     file_album is None
-                    or self.normalize_string(db_album)
-                    == self.normalize_string(file_album)
+                    or self.normalize_string(db_album) == self.normalize_string(file_album)
                 )
             ):
                 # No changes needed
@@ -599,9 +578,7 @@ class RekordboxMetadataFixer:
                     updated_count += 1
             elif choice == "filename":
                 # Update database with filename metadata
-                self.update_content_metadata(
-                    content, file_artist, file_title, file_album
-                )
+                self.update_content_metadata(content, file_artist, file_title, file_album)
                 updated_count += 1
             elif choice == "end":
                 logger.info("Ending processing and committing all changes so far.")
@@ -632,7 +609,7 @@ class RekordboxMetadataFixer:
         logger.info(f"Files skipped: {skipped_count}")
         logger.info(f"Total files processed: {total_files}")
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up resources and close database connection"""
         try:
             if hasattr(self, "db"):
@@ -641,20 +618,18 @@ class RekordboxMetadataFixer:
         except Exception as e:
             logger.warning(f"Error closing database connection: {e}")
 
-    def __enter__(self):
+    def __enter__(self) -> "RekordboxMetadataFixer":
         """Context manager entry"""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit - cleanup resources"""
         self.cleanup()
 
 
-def main():
+def main() -> None:
     """Main function to run the metadata fixer"""
-    parser = argparse.ArgumentParser(
-        description="Fix Rekordbox metadata based on filename format"
-    )
+    parser = argparse.ArgumentParser(description="Fix Rekordbox metadata based on filename format")
     parser.add_argument(
         "--collection-path",
         default="/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Collection/",
@@ -665,9 +640,7 @@ def main():
         action="store_true",
         help="Show what would be updated without making changes",
     )
-    parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose logging"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
     parser.add_argument(
         "--preview",
         "-p",

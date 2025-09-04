@@ -26,7 +26,7 @@ Classifier: Topic :: Software Development :: Libraries :: Python Modules
 Classifier: Topic :: Utilities
 Requires-Python: >=3.8
 Description-Content-Type: text/markdown
-Requires-Dist: pyrekordbox>=0.1.0
+Requires-Dist: pyrekordbox>=0.4.4
 Requires-Dist: sqlalchemy>=1.4.0
 Requires-Dist: toml>=0.10.2
 Requires-Dist: colorama>=0.4.4

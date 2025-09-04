@@ -110,13 +110,14 @@ class BackupManager:
             Path to created backup file, or None if failed
         """
         try:
-            # Generate backup name
+            # Generate backup name with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             if backup_name is None:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 backup_name = f"rekordbox_backup_{timestamp}"
             else:
-                # Clean backup name
+                # Clean backup name and add timestamp
                 backup_name = backup_name.replace(".zip", "")
+                backup_name = f"{backup_name}_{timestamp}"
 
             logger.info(f"Creating Rekordbox backup: {backup_name}")
 
@@ -186,9 +187,7 @@ class BackupManager:
                 shutil.copytree(self.pioneer_library, library_backup)
                 log_success(logger, "Library backed up")
             else:
-                log_warning(
-                    logger, f"Library directory not found: {self.pioneer_library}"
-                )
+                log_warning(logger, f"Library directory not found: {self.pioneer_library}")
 
             # Create backup metadata
             self._create_backup_metadata(backup_dir, backup_name)
@@ -301,9 +300,7 @@ class BackupManager:
                 if safety_backup:
                     log_success(logger, f"Safety backup created: {safety_backup}")
                 else:
-                    log_warning(
-                        logger, "Failed to create safety backup, continuing anyway"
-                    )
+                    log_warning(logger, "Failed to create safety backup, continuing anyway")
 
             # Extract and restore
             with temporary_directory(prefix="rekordbox_restore_") as temp_dir:
@@ -344,9 +341,7 @@ class BackupManager:
             extract_dir: Directory containing extracted backup
         """
         # Find backup content directory
-        content_dirs = [
-            d for d in extract_dir.iterdir() if d.is_dir() and "content" in d.name
-        ]
+        content_dirs = [d for d in extract_dir.iterdir() if d.is_dir() and "content" in d.name]
         if not content_dirs:
             raise BackupError("Backup content directory not found")
 
@@ -397,9 +392,7 @@ class BackupManager:
 
                 # Check for required directories
                 file_list = zip_ref.namelist()
-                has_app_support = any(
-                    "Application Support" in name for name in file_list
-                )
+                has_app_support = any("Application Support" in name for name in file_list)
                 has_library = any("Library" in name for name in file_list)
 
                 if not (has_app_support or has_library):
@@ -435,7 +428,14 @@ class BackupManager:
         if not self.backup_base.exists():
             return []
 
+        # Look for both standard and custom backup names
         backup_files = list(self.backup_base.glob("rekordbox_backup_*.zip"))
+        backup_files.extend(self.backup_base.glob("*backup*.zip"))
+        backup_files.extend(self.backup_base.glob("before_*.zip"))
+        backup_files.extend(self.backup_base.glob("safety_*.zip"))
+
+        # Remove duplicates while preserving order
+        backup_files = list(dict.fromkeys(backup_files))
         backups = []
 
         for backup_file in backup_files:
@@ -541,9 +541,7 @@ class BackupManager:
         if summary["backups"]:
             print(f"\nRecent backups:")
             for i, backup in enumerate(summary["backups"][:5], 1):
-                print(
-                    f"  {i}. {backup.name} ({backup.size_mb:.1f} MB) - {backup.created_str}"
-                )
+                print(f"  {i}. {backup.name} ({backup.size_mb:.1f} MB) - {backup.created_str}")
 
 
 # Convenience functions for backward compatibility
