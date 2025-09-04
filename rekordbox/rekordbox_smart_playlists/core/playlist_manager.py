@@ -9,7 +9,6 @@ import json
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Union, Set
 from dataclasses import dataclass
-from enum import Enum
 
 from pyrekordbox.db6.smartlist import (
     SmartList,
@@ -52,9 +51,11 @@ class PlaylistCreationResult:
     success: bool
     playlist_name: str
     error_message: Optional[str] = None
+    skipped: bool = False
+    skip_reason: Optional[str] = None
     created_playlists: Optional[List[str]] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.created_playlists is None:
             self.created_playlists = []
 
@@ -286,7 +287,8 @@ class PlaylistManager:
             return PlaylistCreationResult(
                 success=True,
                 playlist_name=playlist_name,
-                error_message="Playlist already exists (skipped)",
+                skipped=True,
+                skip_reason="Playlist already exists",
             )
 
         # Handle folder type playlists
@@ -351,7 +353,8 @@ class PlaylistManager:
             )
 
         # First, create the folder under the current parent
-        if self.db.playlist_exists(folder_name, parent_playlist.ID):
+        folder_already_exists = self.db.playlist_exists(folder_name, parent_playlist.ID)
+        if folder_already_exists:
             logger.info(f"Folder already exists: {folder_name}")
             # Get the existing folder to use as parent for linked playlists
             folder_playlist = self.db.get_playlist_by_name(folder_name, parent_playlist.ID)
@@ -386,10 +389,19 @@ class PlaylistManager:
 
             success_count = len([r for r in linked_results if r.success])
 
+            # Determine if this folder operation was a skip or creation
+            folder_skipped = folder_already_exists and all(
+                r.skipped for r in linked_results if r.success
+            )
+
             return PlaylistCreationResult(
                 success=success_count > 0,
                 playlist_name=folder_name,
-                created_playlists=[r.playlist_name for r in linked_results if r.success],
+                skipped=folder_skipped,
+                skip_reason="Folder and all contents already exist" if folder_skipped else None,
+                created_playlists=[
+                    r.playlist_name for r in linked_results if r.success and not r.skipped
+                ],
             )
 
         except Exception as e:

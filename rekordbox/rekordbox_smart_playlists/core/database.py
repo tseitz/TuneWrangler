@@ -95,6 +95,7 @@ class RekordboxDatabase:
     def commit(self) -> None:
         """Commit database changes."""
         self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
         try:
             self._db.commit()
             log_success(logger, "Database changes committed")
@@ -105,6 +106,7 @@ class RekordboxDatabase:
     def rollback(self) -> None:
         """Rollback database changes."""
         self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
         try:
             self._db.rollback()
             logger.info("Database changes rolled back")
@@ -113,7 +115,7 @@ class RekordboxDatabase:
             raise DatabaseError(f"Failed to rollback changes: {e}") from e
 
     # Content operations
-    def get_content(self, **filters) -> List[Any]:
+    def get_content(self, **filters: Any) -> List[Any]:
         """
         Get content items with optional filters.
 
@@ -127,10 +129,11 @@ class RekordboxDatabase:
             DatabaseQueryError: If query fails
         """
         self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
         try:
             if filters:
                 query = self._db.get_content(**filters)
-                return query.all()
+                return list(query.all())
             else:
                 return list(self._db.get_content())
 
@@ -213,7 +216,7 @@ class RekordboxDatabase:
             return None
 
     # Playlist operations
-    def get_playlists(self, **filters) -> List[Any]:
+    def get_playlists(self, **filters: Any) -> List[Any]:
         """
         Get playlists with optional filters.
 
@@ -224,10 +227,11 @@ class RekordboxDatabase:
             List of playlist items
         """
         self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
         try:
             if filters:
                 query = self._db.get_playlist(**filters)
-                return query.all()
+                return list(query.all())
             else:
                 return list(self._db.get_playlist())
 
@@ -272,6 +276,7 @@ class RekordboxDatabase:
             Created folder object or None if failed
         """
         self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
         try:
             folder = self._db.create_playlist_folder(name, parent, sequence)
             logger.info(f"Created playlist folder: {name}")
@@ -301,6 +306,7 @@ class RekordboxDatabase:
             Created playlist object or None if failed
         """
         self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
         try:
             playlist = self._db.create_smart_playlist(
                 name, smart_list=smart_list, parent=parent, seq=sequence
@@ -326,7 +332,7 @@ class RekordboxDatabase:
         return self.get_playlist_by_name(name, parent_id) is not None
 
     # Tag operations
-    def get_tags(self, **filters) -> List[Any]:
+    def get_tags(self, **filters: Any) -> List[Any]:
         """
         Get tags with optional filters.
 
@@ -337,10 +343,11 @@ class RekordboxDatabase:
             List of tag items
         """
         self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
         try:
             if filters:
                 query = self._db.get_my_tag(**filters)
-                return query.all()
+                return list(query.all())
             else:
                 return list(self._db.get_my_tag())
 
@@ -381,13 +388,14 @@ class RekordboxDatabase:
             return None
 
     # Artist operations
-    def get_artists(self, **filters) -> List[Any]:
+    def get_artists(self, **filters: Any) -> List[Any]:
         """Get artists with optional filters."""
         self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
         try:
             if filters:
                 query = self._db.get_artist(**filters)
-                return query.all()
+                return list(query.all())
             else:
                 return list(self._db.get_artist())
         except Exception as e:
@@ -405,6 +413,7 @@ class RekordboxDatabase:
     def create_artist(self, name: str) -> Optional[Any]:
         """Create a new artist."""
         self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
         try:
             artist = self._db.add_artist(name)
             log_success(logger, f"Created artist: {name}")
@@ -414,13 +423,14 @@ class RekordboxDatabase:
             return None
 
     # Album operations
-    def get_albums(self, **filters) -> List[Any]:
+    def get_albums(self, **filters: Any) -> List[Any]:
         """Get albums with optional filters."""
         self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
         try:
             if filters:
                 query = self._db.get_album(**filters)
-                return query.all()
+                return list(query.all())
             else:
                 return list(self._db.get_album())
         except Exception as e:
@@ -438,6 +448,7 @@ class RekordboxDatabase:
     def create_album(self, name: str) -> Optional[Any]:
         """Create a new album."""
         self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
         try:
             album = self._db.add_album(name)
             log_success(logger, f"Created album: {name}")
@@ -447,11 +458,11 @@ class RekordboxDatabase:
             return None
 
     # Context manager support
-    def __enter__(self):
+    def __enter__(self) -> "RekordboxDatabase":
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit."""
         if exc_type is not None:
             try:
@@ -462,7 +473,7 @@ class RekordboxDatabase:
         self.close()
 
     @contextmanager
-    def transaction(self):
+    def transaction(self) -> Any:
         """Context manager for database transactions."""
         try:
             yield self
@@ -471,7 +482,7 @@ class RekordboxDatabase:
             self.rollback()
             raise
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Cleanup on deletion."""
         if hasattr(self, "_db") and self._db is not None:
             try:

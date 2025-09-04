@@ -167,10 +167,19 @@ class PlaylistCommand(BaseCommand):
                 # Print summary
                 successful = [r for r in results if r.success]
                 failed = [r for r in results if not r.success]
+                created = [r for r in successful if not r.skipped]
+                skipped = [r for r in successful if r.skipped]
 
                 print(f"\nPlaylist Creation Summary:")
-                print(f"Successful: {len(successful)}")
+                print(f"Created: {len(created)}")
+                print(f"Skipped: {len(skipped)}")
                 print(f"Failed: {len(failed)}")
+
+                if skipped:
+                    print(f"\nSkipped playlists:")
+                    for result in skipped:
+                        reason = result.skip_reason or "Already exists"
+                        print(f"  - {result.playlist_name}: {reason}")
 
                 if failed:
                     print(f"\nFailed playlists:")
