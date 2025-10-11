@@ -1,160 +1,136 @@
-# Rekordbox Smart Playlists
+# Rekordbox Smart Playlist Tools
 
-A powerful tool for managing Rekordbox smart playlists from JSON configuration files. This tool provides comprehensive playlist management, backup/restore functionality, and metadata synchronization capabilities.
+A collection of Python scripts for managing Rekordbox 6 databases, smart playlists, and metadata synchronization. These tools help DJs maintain organized music collections and create complex smart playlists from JSON configurations.
 
-## ✨ Features
+## 🎯 What This Project Does
 
-- **Smart Playlist Management**: Create complex smart playlists from JSON configurations
-- **Backup & Restore**: Comprehensive database backup with validation and restore capabilities  
-- **Metadata Synchronization**: Sync metadata between Rekordbox database and file names
-- **Unified CLI**: Single command-line interface for all operations
-- **Configuration Management**: Centralized configuration with multiple format support
-- **Robust Error Handling**: Comprehensive error handling and logging
-- **Dry Run Mode**: Preview changes before applying them
+This project provides several standalone Python scripts that help you:
+
+- **Create Smart Playlists**: Generate complex Rekordbox smart playlists from JSON configuration files
+- **Fix Metadata Issues**: Synchronize metadata between your Rekordbox database and filename formats
+- **Backup & Restore**: Safely backup and restore your Rekordbox database
+- **Manage Playlists**: Copy, modify, and organize your Rekordbox playlists programmatically
 
 ## 🚀 Quick Start
+
+### Prerequisites
+
+1. **Python 3.8+** installed
+2. **Rekordbox 6** installed and configured
+3. **macOS** (scripts are designed for macOS file paths)
 
 ### Installation
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/rekordbox-smart-playlists.git
-   cd rekordbox-smart-playlists
+   git clone https://github.com/yourusername/rekordbox-smart-playlist.git
+   cd rekordbox-smart-playlist
    ```
 
 2. **Install dependencies:**
    ```bash
-   # Install sqlcipher3 (required for Rekordbox database access)
-   source venv/bin/activate
-   git clone https://github.com/coleifer/sqlcipher3
-   cd sqlcipher3
-   SQLCIPHER_PATH=$(brew info sqlcipher | awk 'NR==4 {print $1; exit}'); C_INCLUDE_PATH="$SQLCIPHER_PATH"/include LIBRARY_PATH="$SQLCIPHER_PATH"/lib python setup.py build
-   SQLCIPHER_PATH=$(brew info sqlcipher | awk 'NR==4 {print $1; exit}'); C_INCLUDE_PATH="$SQLCIPHER_PATH"/include LIBRARY_PATH="$SQLCIPHER_PATH"/lib python setup.py install
-   cd ..
+   # Install pyrekordbox (may require additional setup)
+   pip install pyrekordbox
    
-   # Install the package
-   pip install -e .
+   # If you encounter issues with pyrekordbox, you may need sqlcipher3:
+   # See troubleshooting section below
    ```
 
-3. **Create configuration file:**
+3. **Verify your Rekordbox database location:**
    ```bash
-   # Run migration script to create example config
-   python migrate_to_new_structure.py
-   
-   # Copy and customize configuration
-   cp config.example.json config.json
-   # Edit config.json with your settings
+   # Default location (adjust if different):
+   # ~/Library/Pioneer/rekordbox6/master.db
    ```
 
-### Basic Usage
+## 📋 Available Scripts
+
+### 1. `fix_rekordbox_metadata.py` - Metadata Synchronization Tool
+
+**Purpose**: Fixes metadata discrepancies between your Rekordbox database and filename formats.
+
+**Problem it solves**: When you drag files into Rekordbox, sometimes the metadata doesn't get parsed correctly from the filename, resulting in titles like "[artist] - [title]" instead of just "title".
+
+#### Usage Examples
+
+**Interactive Mode (Recommended for first-time use):**
+```bash
+python fix_rekordbox_metadata.py
+```
+This will prompt you for each file that has metadata differences.
+
+**Preview what would be changed (safe to run):**
+```bash
+python fix_rekordbox_metadata.py --preview --dry-run
+```
+
+**Batch Mode - Use database metadata for all files:**
+```bash
+python fix_rekordbox_metadata.py --batch-database --dry-run
+```
+
+**Batch Mode - Use filename metadata for all files:**
+```bash
+python fix_rekordbox_metadata.py --batch-filename --dry-run
+```
+
+**Update filenames to match database metadata:**
+```bash
+python fix_rekordbox_metadata.py --update-filenames --dry-run
+```
+
+#### Command Line Options
 
 ```bash
-# Create all playlists from JSON files
-rekordbox-smart-playlists playlist create --all
+python fix_rekordbox_metadata.py [OPTIONS]
 
-# Create playlists from specific file
-rekordbox-smart-playlists playlist create --file house.json
-
-# Create backup before operations
-rekordbox-smart-playlists backup create
-
-# Fix metadata interactively
-rekordbox-smart-playlists metadata fix --interactive
-
-# Preview changes without applying them
-rekordbox-smart-playlists --dry-run playlist create --all
+Options:
+  --collection-path PATH     Path to your music collection
+                            (default: /Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Collection/)
+  --dry-run                 Show what would be updated without making changes
+  --preview, -p             Show preview of changes without processing
+  --preview-count N         Number of files to preview (default: 10)
+  --batch-database          Use database metadata as source of truth for all files
+  --batch-filename          Use filename metadata as source of truth for all files
+  --update-filenames        Update filenames to match database metadata
+  --skip-backup             Skip automatic backup before making changes (use with caution)
+  --list-backups            List available backups and exit
+  --config PATH             Path to a JSON configuration file
+  --verbose, -v             Enable verbose logging
+  --help, -h                Show help information
 ```
 
-## 📖 Documentation
+#### Filename Format Support
 
-### Command Line Interface
+The script expects filenames in these formats:
+- `[artist] - [title].mp3`
+- `[artist] - [album] - [title].mp3`
 
-The tool provides a unified CLI with the following main commands:
+#### Safety Features
 
-#### Playlist Commands
+- **Automatic Backups**: Creates backups before making changes
+- **Dry Run Mode**: Preview all changes before applying
+- **Interactive Mode**: Choose what to do for each file
+- **Backup Storage**: `/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Rekordbox DB Backup/`
+
+### 2. `smart-playlists.py` - Smart Playlist Creator
+
+**Purpose**: Creates Rekordbox smart playlists from JSON configuration files.
+
+#### Usage Examples
+
+**Create all playlists from JSON files:**
 ```bash
-# Create playlists
-rekordbox-smart-playlists playlist create --all              # From all JSON files
-rekordbox-smart-playlists playlist create --file house.json  # From specific file
-
-# List existing playlists
-rekordbox-smart-playlists playlist list                      # All playlists
-rekordbox-smart-playlists playlist list --smart-only         # Smart playlists only
-rekordbox-smart-playlists playlist list --filter "house"     # Filter by name
-
-# Validate configurations
-rekordbox-smart-playlists playlist validate --all            # Validate all configs
-rekordbox-smart-playlists playlist validate --file house.json # Validate specific file
+python smart-playlists.py
 ```
 
-#### Backup Commands
+**Create playlists from specific JSON file:**
 ```bash
-# Create backup
-rekordbox-smart-playlists backup create                      # Auto-named backup
-rekordbox-smart-playlists backup create --name "my-backup"   # Custom name
-
-# List backups
-rekordbox-smart-playlists backup list                        # Simple list
-rekordbox-smart-playlists backup list --detailed             # Detailed info
-
-# Restore from backup
-rekordbox-smart-playlists backup restore backup_20231201.zip # Restore backup
-rekordbox-smart-playlists backup restore --no-safety-backup  # Skip safety backup
-
-# Validate backup
-rekordbox-smart-playlists backup validate backup_20231201.zip
-
-# Clean up old backups
-rekordbox-smart-playlists backup cleanup --keep 5            # Keep 5 most recent
+python smart-playlists.py house.json
 ```
 
-#### Metadata Commands
-```bash
-# Fix metadata discrepancies
-rekordbox-smart-playlists metadata fix --interactive         # Interactive mode
-rekordbox-smart-playlists metadata fix --batch-database      # Use database as authority
-rekordbox-smart-playlists metadata fix --batch-filename      # Use filename as authority
+#### Configuration Format
 
-# Preview metadata changes
-rekordbox-smart-playlists metadata preview                   # Preview discrepancies
-rekordbox-smart-playlists metadata preview --max-files 50    # Limit preview
-
-# Validate filename formats
-rekordbox-smart-playlists metadata validate                  # Check filename formats
-```
-
-### Configuration
-
-The tool supports configuration files in JSON or TOML format. Configuration is loaded from:
-
-1. Command-line specified file (`--config config.json`)
-2. Default locations:
-   - `./config.json` or `./config.toml`
-   - `./.rekordbox-config.json` or `./.rekordbox-config.toml`
-   - `~/.config/rekordbox-smart-playlists/config.json`
-
-#### Example Configuration (config.json)
-
-```json
-{
-  "collection_path": "/Users/username/Music/Collection",
-  "playlist_data_path": "./playlist-data",
-  "backup_base_path": "/Users/username/Dropbox/DJ/Rekordbox DB Backup",
-  "pioneer_install_dir": "/Applications/rekordbox 6",
-  "default_parent_playlist": "DaneDubz",
-  "max_backups": 10,
-  "auto_backup": true,
-  "backup_before_changes": true,
-  "dry_run": false,
-  "verbose": false,
-  "log_level": "INFO",
-  "audio_extensions": [".mp3", ".wav", ".flac", ".aiff", ".m4a"]
-}
-```
-
-### Playlist Configuration Format
-
-Playlists are defined in JSON files with the following structure:
+Create JSON files in the `playlist-data/` directory with this structure:
 
 ```json
 {
@@ -174,15 +150,6 @@ Playlists are defined in JSON files with the following structure:
           "operator": 1,
           "contains": ["Party Hits"],
           "rating": ["4", "5"]
-        },
-        {
-          "name": "Recent Additions",
-          "operator": 1,
-          "dateCreated": {
-            "time_period": 30,
-            "time_unit": "day",
-            "operator": "IN_LAST"
-          }
         }
       ]
     }
@@ -190,104 +157,218 @@ Playlists are defined in JSON files with the following structure:
 }
 ```
 
-#### Playlist Configuration Fields
+### 3. `app.py` - Database Management Tool
 
-- **parent**: Name of parent folder (created if doesn't exist)
-- **mainConditions**: Tags that apply to all playlists in this category
-- **negativeConditions**: Tags to exclude from all playlists
-- **playlists**: Array of individual playlist configurations
-  - **name**: Playlist name
-  - **operator**: 1 (ALL) or 2 (ANY) - logical operator for conditions
-  - **contains**: Tags that must be present
-  - **doesNotContain**: Tags that must not be present
-  - **rating**: Rating range [min, max]
-  - **dateCreated**: Date-based filtering
-    - **time_period**: Number (1, 30, etc.)
-    - **time_unit**: "day", "week", "month", "year"
-    - **operator**: "IN_LAST"
+**Purpose**: Provides various Rekordbox database operations and utilities.
 
-## 🔧 Global Options
+#### Usage Examples
 
-All commands support these global options:
-
-- `--config/-c`: Specify configuration file
-- `--verbose/-v`: Enable verbose logging
-- `--quiet/-q`: Quiet mode (warnings and errors only)
-- `--dry-run`: Preview changes without applying them
-- `--log-file`: Log to file in addition to console
-- `--help/-h`: Show help information
-
-## 🔄 Migration from Old Structure
-
-If you're upgrading from the old structure, run the migration script:
-
+**Run the main playlist processing:**
 ```bash
-python migrate_to_new_structure.py
+python app.py
 ```
 
-This will:
-- Show you the new command equivalents
-- Create an example configuration file
-- Create backward compatibility shims for old scripts
+**Create a backup:**
+```python
+from rekordbox_backup import backup_rekordbox_db
+backup_path = backup_rekordbox_db()
+```
 
-### Migration Guide
+**List existing backups:**
+```python
+from rekordbox_backup import list_backups
+list_backups()
+```
 
-| Old Command | New Command |
-|-------------|-------------|
-| `python smart_playlists.py` | `rekordbox-smart-playlists playlist create --all` |
-| `python create_recent_playlists.py` | `rekordbox-smart-playlists playlist create --file recent-additions.json` |
-| `python fix_rekordbox_metadata.py` | `rekordbox-smart-playlists metadata fix --interactive` |
-| `from rekordbox_backup import backup_rekordbox_db` | `rekordbox-smart-playlists backup create` |
+### 4. `rekordbox_backup.py` - Backup & Restore Tool
 
-## 🛡️ Safety Features
+**Purpose**: Comprehensive backup and restore functionality for Rekordbox databases.
 
-- **Automatic Backups**: Creates backups before making changes (configurable)
-- **Dry Run Mode**: Preview all changes before applying
-- **Backup Validation**: Validates backup integrity after creation
-- **Safety Backups**: Creates additional backup before restore operations
-- **Transaction Support**: Database operations are wrapped in transactions
-- **Comprehensive Logging**: Detailed logging for troubleshooting
+#### Usage Examples
+
+**Create a backup:**
+```bash
+python -c "from rekordbox_backup import backup_rekordbox_db; backup_rekordbox_db()"
+```
+
+**List available backups:**
+```bash
+python -c "from rekordbox_backup import list_backups; list_backups()"
+```
+
+**Restore from backup:**
+```bash
+python -c "from rekordbox_backup import restore_rekordbox_db; restore_rekordbox_db('/path/to/backup.zip')"
+```
+
+## 🛠️ Getting Help
+
+### For Each Script
+
+**Get help for any script:**
+```bash
+python script_name.py --help
+```
+
+**Examples:**
+```bash
+python fix_rekordbox_metadata.py --help
+python smart-playlists.py --help
+```
+
+### Common Issues & Solutions
+
+#### 1. **pyrekordbox Installation Issues**
+
+If you get errors installing pyrekordbox, you may need to install sqlcipher3 first:
+
+```bash
+# Install sqlcipher3 (macOS with Homebrew)
+brew install sqlcipher
+
+# Clone and install sqlcipher3 Python package
+git clone https://github.com/coleifer/sqlcipher3
+cd sqlcipher3
+SQLCIPHER_PATH=$(brew info sqlcipher | awk 'NR==4 {print $1; exit}')
+C_INCLUDE_PATH="$SQLCIPHER_PATH"/include LIBRARY_PATH="$SQLCIPHER_PATH"/lib python setup.py build
+C_INCLUDE_PATH="$SQLCIPHER_PATH"/include LIBRARY_PATH="$SQLCIPHER_PATH"/lib python setup.py install
+cd ..
+
+# Then install pyrekordbox
+pip install pyrekordbox
+```
+
+#### 2. **Database Connection Errors**
+
+**Problem**: "Failed to initialize Rekordbox database"
+
+**Solutions**:
+- Ensure Rekordbox is **closed** before running scripts
+- Check database location: `~/Library/Pioneer/rekordbox6/master.db`
+- Verify you have read/write permissions to the database file
+
+#### 3. **Permission Errors**
+
+**Problem**: "Permission denied" when accessing files or database
+
+**Solutions**:
+- Check file permissions on your music collection directory
+- Ensure write permissions to backup directory
+- Run with appropriate user permissions
+
+#### 4. **Metadata Not Found Errors**
+
+**Problem**: "Could not find content in database for: filename.mp3"
+
+**Solutions**:
+- Ensure the file exists in your Rekordbox collection
+- Check that the filename matches exactly (case-sensitive)
+- Try importing the file into Rekordbox first
+
+#### 5. **Filename Format Issues**
+
+**Problem**: "Could not parse filename format"
+
+**Solutions**:
+- Ensure filenames follow the expected format: `[artist] - [title].ext`
+- Check for special characters that might break parsing
+- Use `--preview` to see which files have parsing issues
+
+### Debugging Tips
+
+**Enable verbose logging:**
+```bash
+python fix_rekordbox_metadata.py --verbose --dry-run
+```
+
+**Preview changes before applying:**
+```bash
+python fix_rekordbox_metadata.py --preview --dry-run
+```
+
+**Check what files would be processed:**
+```bash
+python fix_rekordbox_metadata.py --preview --preview-count 50
+```
 
 ## 📁 Project Structure
 
 ```
-rekordbox-smart-playlists/
-├── rekordbox_smart_playlists/          # Main package
-│   ├── __init__.py
-│   ├── core/                           # Core functionality
-│   │   ├── __init__.py
-│   │   ├── config.py                   # Configuration management
-│   │   ├── database.py                 # Database operations
-│   │   ├── playlist_manager.py         # Playlist creation/management
-│   │   ├── backup_manager.py           # Backup/restore operations
-│   │   └── metadata_fixer.py           # Metadata synchronization
-│   ├── utils/                          # Utility modules
-│   │   ├── __init__.py
-│   │   ├── logging.py                  # Logging utilities
-│   │   ├── file_utils.py               # File operations
-│   │   └── validation.py               # Validation functions
-│   └── cli/                            # Command-line interface
-│       ├── __init__.py
-│       ├── main.py                     # CLI entry point
-│       └── commands.py                 # Command implementations
+rekordbox-smart-playlist/
+├── fix_rekordbox_metadata.py          # Main metadata synchronization script
+├── smart-playlists.py                  # Smart playlist creation script
+├── app.py                              # Database management utilities
+├── rekordbox_backup.py                 # Backup and restore functionality
 ├── playlist-data/                      # JSON configuration files
+│   ├── house.json
+│   ├── dnb.json
+│   ├── dub.json
+│   └── ...
 ├── examples/                           # Example files
+│   └── example-smart-playlist.xml
 ├── pyproject.toml                      # Project configuration
-├── README.md                           # This file
-└── migrate_to_new_structure.py         # Migration script
+└── README.md                           # This file
 ```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+You can set these environment variables to customize behavior:
+
+```bash
+export REKORDBOX_COLLECTION_PATH="/path/to/your/music"
+export REKORDBOX_BACKUP_PATH="/path/to/backups"
+export REKORDBOX_DRY_RUN="true"  # Set to "false" for live mode
+```
+
+### Configuration File
+
+Create a `config.json` file to customize settings:
+
+```json
+{
+  "collection_path": "/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Collection/",
+  "dry_run": true,
+  "skip_backup": false,
+  "audio_extensions": [".mp3", ".wav", ".flac", ".aiff", ".m4a", ".aac", ".ogg"],
+  "progress_interval": 10
+}
+```
+
+Then use it with:
+```bash
+python fix_rekordbox_metadata.py --config config.json
+```
+
+## 🛡️ Safety Features
+
+- **Automatic Backups**: Scripts create backups before making changes
+- **Dry Run Mode**: Preview all changes before applying them
+- **Interactive Mode**: Choose what to do for each file
+- **Backup Validation**: Validates backup integrity after creation
+- **Transaction Support**: Database operations are wrapped in transactions
+- **Comprehensive Logging**: Detailed logging for troubleshooting
+
+## 🚨 Important Notes
+
+1. **Always close Rekordbox** before running any scripts
+2. **Start with `--dry-run`** to preview changes
+3. **Backups are automatically created** before making changes
+4. **Test with a small subset** of files first
+5. **Keep your Rekordbox database backed up** regularly
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests if applicable
+4. Test thoroughly with `--dry-run`
 5. Submit a pull request
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
 ## 🙏 Acknowledgments
 
@@ -295,28 +376,12 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Pioneer DJ for creating Rekordbox
 - The DJ community for inspiration and feedback
 
-## 🐛 Troubleshooting
+## 📞 Support
 
-### Common Issues
+If you encounter issues:
 
-1. **Database Connection Errors**
-   - Ensure Rekordbox is closed before running the tool
-   - Check that sqlcipher3 is properly installed
-   - Verify Pioneer directories exist in configuration
-
-2. **Permission Errors**
-   - Ensure write permissions to backup directory
-   - Check collection path permissions
-
-3. **Tag Not Found Errors**
-   - Verify tag names match exactly (case-sensitive)
-   - Check that tags exist in your Rekordbox database
-
-### Getting Help
-
-- Check the `--help` option for any command
-- Enable verbose logging with `--verbose`
-- Use `--dry-run` to preview changes
-- Check log files for detailed error information
-
-For more help, please open an issue on GitHub.
+1. Check the troubleshooting section above
+2. Use `--help` for command-specific help
+3. Enable `--verbose` logging for detailed output
+4. Use `--dry-run` to preview changes safely
+5. Open an issue on GitHub with detailed error information

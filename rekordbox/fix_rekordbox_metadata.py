@@ -156,8 +156,12 @@ class RekordboxMetadataFixer:
                         if hasattr(content, "Artist") and content.Artist
                         else "Unknown"
                     )
-                    current_title = getattr(content, "Title", "Unknown").strip()
-                    current_album = getattr(content, "AlbumName", "Unknown").strip()
+                    current_title = getattr(content, "Title", "Unknown")
+                    if current_title:
+                        current_title = current_title.strip()
+                    current_album = getattr(content, "AlbumName", "Unknown")
+                    if current_album:
+                        current_album = current_album.strip()
 
                     logger.info(f"{i+1}. {filename}")
                     logger.info(
@@ -375,14 +379,18 @@ class RekordboxMetadataFixer:
                 if hasattr(content, "Artist") and content.Artist
                 else "Unknown"
             )
-            current_title = getattr(content, "Title", "Unknown").strip()
+            current_title = getattr(content, "Title", "Unknown")
+            if current_title:
+                current_title = current_title.strip()
 
             if self.dry_run:
                 logger.info(f"[DRY RUN] Would update {content.FileNameL}:")
                 logger.info(f"  Artist: '{current_artist}' -> '{artist}'")
                 logger.info(f"  Title: '{current_title}' -> '{title}'")
                 if album:
-                    current_album = getattr(content, "Album", "Unknown").strip()
+                    current_album = getattr(content, "Album", "Unknown")
+                    if current_album:
+                        current_album = current_album.strip()
                     logger.info(f"  Album: '{current_album}' -> '{album}'")
                 return
 
