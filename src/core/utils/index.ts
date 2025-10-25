@@ -5,6 +5,7 @@ export * from "./validation.ts";
 export * from "./retry.ts";
 export * from "./logger.ts";
 export * from "./performance.ts";
+export * from "./unicode.ts";
 
 // Re-export types for convenience
 export type {

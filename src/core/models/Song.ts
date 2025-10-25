@@ -1,4 +1,5 @@
 import * as path from "https://deno.land/std@0.157.0/path/mod.ts";
+import { normalizeUnicode, normalizeFilename } from "../utils/unicode.ts";
 
 export class Song {
   artist = "";
@@ -62,7 +63,11 @@ export class Song {
   removeBadCharacters(): Song {
     const origFilename = this.filename;
 
-    // Unicode
+    // First, normalize all Unicode characters to ASCII equivalents
+    this.filename = normalizeFilename(this.filename);
+
+    // Specific Unicode character replacements for music files
+    // These are in addition to the comprehensive normalization
     this.filename = this.filename.replace(/\u3010/g, "["); // 【
     this.filename = this.filename.replace(/\u3011/g, "] "); // 】
     this.filename = this.filename.replace(/\u2768/g, "["); // ❨
@@ -71,14 +76,8 @@ export class Song {
     this.filename = this.filename.replace(/\u2771/g, "]"); // ❱
     this.filename = this.filename.replace(/\u2716/g, "x"); // ✖
     this.filename = this.filename.replace(/\u2718/g, "x"); // ✘
-    this.filename = this.filename.replace(/\u00D8/g, "O"); // Ø
-    this.filename = this.filename.replace(/\u00f8/g, "o"); // ø
-    this.filename = this.filename.replace(/[\u201C-\u201D]/g, '"');
 
-    this.filename = this.filename.replace(/\u2014/g, "-"); // —
-    this.dashCount = this.getDashCount();
-
-    // Name fixes
+    // Music-specific name fixes
     this.filename = this.filename.replace(/ʟᴜᴄᴀ ʟᴜsʜ/g, "LUCA LUSH");
     this.filename = this.filename.replace("Re-Sauce", "Remix");
     this.filename = this.filename.replace("Re-Crank", "Remix");
@@ -87,7 +86,33 @@ export class Song {
     this.filename = this.filename.replace(/free download/gi, "");
     this.filename = this.filename.replace(/featuring/gi, "feat.");
 
+    // Update dash count after all transformations
+    this.dashCount = this.getDashCount();
+
     if (origFilename !== this.filename) {
+      this.changed = true;
+    }
+
+    return this;
+  }
+
+  /**
+   * Normalizes Unicode characters in artist, album, and title fields.
+   * This method should be called after parsing the filename to ensure
+   * all metadata fields use ASCII equivalents.
+   */
+  normalizeMetadata(): Song {
+    const origArtist = this.artist;
+    const origAlbum = this.album;
+    const origTitle = this.title;
+
+    // Normalize Unicode characters in all metadata fields
+    this.artist = normalizeUnicode(this.artist);
+    this.album = normalizeUnicode(this.album);
+    this.title = normalizeUnicode(this.title);
+
+    // Mark as changed if any field was modified
+    if (origArtist !== this.artist || origAlbum !== this.album || origTitle !== this.title) {
       this.changed = true;
     }
 
