@@ -12,6 +12,7 @@
         { "name": "Underplayed", "operator": 1, "contains": ["Underplayed"] },
         { "name": "Not Overplayed", "operator": 1, "doesNotContain": ["Overplayed"] },
         { "name": "Not Dirty", "operator": 1, "doesNotContain": ["Dirty"] },
+        { "name": "Transition", "operator": 1, "contains": ["Transition"] },
         { "name": "Beginning", "operator": 1, "contains": ["Beginning"] },
         { "name": "Middle", "operator": 1, "contains": ["Middle"] },
         { "name": "End", "operator": 1, "contains": ["End"] },

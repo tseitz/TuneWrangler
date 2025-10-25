@@ -13,6 +13,7 @@
         { "name": "Underplayed", "operator": 1, "contains": ["Underplayed"] },
         { "name": "Not Overplayed", "operator": 1, "doesNotContain": ["Overplayed"] },
         { "name": "Chiller", "operator": 5, "rating": ["1", "3"] },
+        { "name": "Transition", "operator": 1, "contains": ["Transition"] },
         { "name": "Beginning", "operator": 1, "contains": ["Beginning"] },
         { "name": "Middle", "operator": 1, "contains": ["Middle"] },
         { "name": "End", "operator": 1, "contains": ["End"] },

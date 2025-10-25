@@ -16,6 +16,7 @@
         { "name": "Triplets", "operator": 1, "contains": ["Dub Triplet Type"] },
         { "name": "Grime", "operator": 1, "contains": ["Dub Grime"] },
         { "name": "Vocals", "operator": 1, "contains": ["Dub Vocals"] },
+        { "name": "Transition", "operator": 1, "contains": ["Transition"] },
         { "name": "Trippy/Interesting", "operator": 1, "contains": ["Dub Trippy/Interesting"] },
         { "name": "Dub That's Not Dub", "operator": 1, "contains": ["Dub That's Not Dub"] },
         { "name": "Dark Spooky", "operator": 1, "contains": ["Dub Dark Spooky"] },

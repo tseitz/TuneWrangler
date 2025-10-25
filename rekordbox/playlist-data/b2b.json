@@ -13,6 +13,7 @@
         { "name": "Weird", "operator": 1, "contains": ["Weird"] },
         { "name": "Vibes", "operator": 1, "contains": ["Vibes"] },
         { "name": "Breaky", "operator": 1, "contains": ["Breaky"] },
+        { "name": "Transition", "operator": 1, "contains": ["Transition"] },
         { "name": "Beginning", "operator": 1, "contains": ["Beginning"] },
         { "name": "Middle", "operator": 1, "contains": ["Middle"] },
         { "name": "End", "operator": 1, "contains": ["End"] },
