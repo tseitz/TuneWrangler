@@ -1,9 +1,8 @@
 {
   "data": [
     {
-      "parent": "DFT OTR",
-      "mainConditions": ["Dancefest Mix"],
-      "negativeConditions": [],
+      "parent": "My Show",
+      "mainConditions": ["My Show"],
       "playlists": [
         { "name": "Openers", "operator": 1, "contains": ["Openers"] },
         { "name": "Dub Beginning", "operator": 1, "contains": ["Dub", "Beginning"] },
