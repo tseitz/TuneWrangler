@@ -76,6 +76,7 @@ class PlaylistManager:
         self.db = database
         self.config = config
         self._created_playlists: List[str] = []
+        self._skip_parents: Set[str] = set()
 
     def create_playlists_from_file(
         self, config_file: Union[str, Path]
@@ -166,6 +167,17 @@ class PlaylistManager:
         """
         results = []
         parent_name = category_data.get("parent", "")
+
+        # Skip this category if the user declined to delete the existing folder
+        if parent_name in self._skip_parents:
+            logger.info(f"Skipping '{parent_name}' (user chose not to delete existing folder)")
+            return [PlaylistCreationResult(
+                success=True,
+                playlist_name=parent_name,
+                skipped=True,
+                skip_reason="User chose to keep existing folder",
+            )]
+
         main_conditions = set(category_data.get("mainConditions", []))
         negative_conditions = set(category_data.get("negativeConditions", []))
 
@@ -179,8 +191,9 @@ class PlaylistManager:
             )
             return [error_result]
 
-        # Create individual playlists
-        playlists_config = category_data.get("playlists", [])
+        # Resolve base playlists and merge with category playlists
+        base_playlists = self._resolve_base_playlists(category_data)
+        playlists_config = base_playlists + category_data.get("playlists", [])
         for playlist_config in playlists_config:
             try:
                 result = self._create_single_playlist(
@@ -403,8 +416,12 @@ class PlaylistManager:
                 final_negative_conditions = inherited_negative_conditions.copy()
                 final_negative_conditions.update(category_negative_conditions)
 
+                # Resolve base playlists and merge with category playlists
+                base_playlists = self._resolve_base_playlists(category_data)
+                all_playlists = base_playlists + category_data.get("playlists", [])
+
                 # Process each playlist in this category
-                for playlist_data in category_data["playlists"]:
+                for playlist_data in all_playlists:
                     result = self._create_single_playlist(
                         playlist_data,
                         folder_playlist,
@@ -436,6 +453,41 @@ class PlaylistManager:
                 playlist_name=folder_name,
                 error_message=f"Failed to process linked config {link}: {e}",
             )
+
+    def _resolve_base_playlists(self, category_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Resolve base playlists from a referenced base file.
+
+        If the category_data contains a "base" field, load the referenced JSON file
+        and return its playlists. These are prepended to the category's own playlists
+        to avoid duplication across texture files.
+
+        Args:
+            category_data: Category configuration that may contain a "base" field
+
+        Returns:
+            List of playlist configurations from the base file, or empty list
+        """
+        base_ref = category_data.get("base")
+        if not base_ref:
+            return []
+
+        base_path = Path(self.config.playlist_data_path) / base_ref
+        try:
+            with open(base_path, "r", encoding="utf-8") as f:
+                base_data = json.load(f)
+            playlists = base_data.get("data", {}).get("playlists", [])
+            logger.debug(f"Loaded {len(playlists)} base playlists from: {base_ref}")
+            return playlists
+        except FileNotFoundError:
+            log_error(logger, f"Base playlist file not found: {base_path}")
+            return []
+        except json.JSONDecodeError as e:
+            log_error(logger, f"Invalid JSON in base file {base_path}: {e}")
+            return []
+        except Exception as e:
+            log_exception(logger, e, f"loading base playlists from {base_ref}")
+            return []
 
     def _build_smart_list(
         self,
@@ -551,6 +603,87 @@ class PlaylistManager:
         except Exception as e:
             log_exception(logger, e, "adding date condition")
             return False
+
+    def find_existing_root_folders(
+        self, config_file: Optional[Union[str, Path]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Find root folders from config file(s) that already exist in the database.
+
+        Scans the JSON configuration to extract the top-level 'parent' names,
+        then checks if each one already exists as a playlist folder in Rekordbox.
+
+        Args:
+            config_file: Specific config file to check, or None to check all files
+                         in the playlist data directory.
+
+        Returns:
+            List of dicts with 'name', 'playlist' (the db object), and 'child_count'.
+        """
+        existing = []
+
+        # Collect all config files to scan
+        if config_file:
+            config_path = Path(config_file)
+            if not config_path.is_absolute():
+                config_path = Path(self.config.playlist_data_path) / config_path
+            files_to_scan = [config_path] if config_path.exists() else []
+        else:
+            playlist_dir = Path(self.config.playlist_data_path)
+            files_to_scan = sorted(playlist_dir.glob("*.json"))
+
+        # Extract parent names from each file
+        seen_parents: Set[str] = set()
+        for json_file in files_to_scan:
+            if json_file.name.startswith("."):
+                continue
+            try:
+                with open(json_file, "r", encoding="utf-8") as f:
+                    config_data = json.load(f)
+
+                data = config_data.get("data", [])
+                if not isinstance(data, list):
+                    continue
+
+                for category in data:
+                    parent_name = category.get("parent", "")
+                    if parent_name and parent_name not in seen_parents:
+                        seen_parents.add(parent_name)
+            except (json.JSONDecodeError, KeyError, TypeError):
+                continue
+
+        # Check which parents exist in the database
+        default_parent = self.db.get_playlist_by_name(self.config.default_parent_playlist)
+        if not default_parent:
+            return []
+
+        for parent_name in sorted(seen_parents):
+            playlist = self.db.get_playlist_by_name(parent_name, default_parent.ID)
+            if playlist:
+                child_count = self.db.count_playlist_children_recursive(playlist)
+                existing.append({
+                    "name": parent_name,
+                    "playlist": playlist,
+                    "child_count": child_count,
+                })
+
+        return existing
+
+    def delete_root_folder(self, playlist: Any) -> int:
+        """
+        Delete a root folder and all its contents.
+
+        Args:
+            playlist: The playlist folder object to delete recursively.
+
+        Returns:
+            Number of playlists/folders deleted.
+        """
+        name = playlist.Name
+        deleted = self.db.delete_playlist_recursive(playlist)
+        if deleted > 0:
+            log_success(logger, f"Deleted '{name}' and {deleted - 1} child playlists")
+        return deleted
 
     def get_created_playlists(self) -> List[str]:
         """Get list of playlists created in this session."""

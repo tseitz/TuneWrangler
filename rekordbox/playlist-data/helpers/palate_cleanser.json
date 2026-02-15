@@ -1,0 +1,18 @@
+{
+  "data": [
+    {
+      "parent": "PALATE CLEANSER",
+      "mainConditions": ["PALATE CLEANSER"],
+      "negativeConditions": ["Archive"],
+      "base": "helpers/_base.json",
+      "playlists": [
+        { "name": "DEEP", "operator": 1, "contains": ["DEEP (The Head)"] },
+        { "name": "GROOVY", "operator": 1, "contains": ["GROOVY (The Pocket)"] },
+        { "name": "HEAVY", "operator": 1, "contains": ["HEAVY (The Face)"] },
+        { "name": "ORGANIC", "operator": 1, "contains": ["ORGANIC (The Soul)"] },
+        { "name": "VOCALS", "operator": 1, "contains": ["VOCALS"] },
+        { "name": "WEIRD", "operator": 1, "contains": ["WEIRD (The Brain)"] }
+      ]
+    }
+  ]
+}

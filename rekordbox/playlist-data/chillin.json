@@ -5,22 +5,13 @@
       "mainConditions": ["Chillin"],
       "negativeConditions": ["Archive"],
       "playlists": [
-        { "name": "Openers", "operator": 1, "contains": ["Openers"] },
-        { "name": "Party Hits", "operator": 1, "contains": ["Party Hits"] },
-        { "name": "Dub", "operator": 1, "playlistType": "folder", "link": "dub.json" },
-        { "name": "Breaky", "operator": 1, "playlistType": "folder", "link": "breaky.json" },
-        { "name": "Weird", "operator": 1, "playlistType": "folder", "link": "weird.json" },
-        { "name": "DnB", "operator": 1, "playlistType": "folder", "link": "dnb.json" },
-        { "name": "Beats", "operator": 1, "playlistType": "folder", "link": "beats.json" },
-        { "name": "Vibes", "operator": 1, "playlistType": "folder", "link": "vibes.json" },
-        { "name": "LR Friends", "operator": 1, "playlistType": "folder", "link": "lr-friends.json" },
-        { "name": "Feels", "operator": 1, "playlistType": "folder", "link": "feels.json" },
-        { "name": "Chiller", "operator": 5, "rating": ["1", "3"] },
-        { "name": "Heavier", "operator": 5, "rating": ["4", "5"] },
-        { "name": "Not Dirty", "operator": 1, "doesNotContain": ["Dirty"] },
-        { "name": "Crispy Speakers", "operator": 1, "playlistType": "folder", "link": "crispy-speakers.json" },
-        { "name": "Closers", "operator": 1, "contains": ["Closers"] },
-        { "name": "All", "operator": 1, "contains": [] }
+        { "name": "GROOVY (The Pocket)", "operator": 1, "playlistType": "folder", "link": "helpers/groovy.json" },
+        { "name": "DEEP (The Head)", "operator": 1, "playlistType": "folder", "link": "helpers/deep.json" },
+        { "name": "HEAVY (The Face)", "operator": 1, "playlistType": "folder", "link": "helpers/heavy.json" },
+        { "name": "ORGANIC (The Soul)", "operator": 1, "playlistType": "folder", "link": "helpers/organic.json" },
+        { "name": "WEIRD (The Brain)", "operator": 1, "playlistType": "folder", "link": "helpers/weird.json" },
+        { "name": "VOCALS", "operator": 1, "playlistType": "folder", "link": "helpers/vocal.json" },
+        { "name": "PALATE CLEANSER", "operator": 1, "playlistType": "folder", "link": "helpers/palate_cleanser.json" }
       ]
     }
   ]

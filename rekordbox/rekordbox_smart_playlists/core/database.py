@@ -331,6 +331,85 @@ class RekordboxDatabase:
         """
         return self.get_playlist_by_name(name, parent_id) is not None
 
+    def get_children_playlists(self, parent_id: str) -> List[Any]:
+        """
+        Get all direct child playlists/folders of a parent.
+
+        Args:
+            parent_id: Parent playlist ID
+
+        Returns:
+            List of child playlist objects
+        """
+        try:
+            return self.get_playlists(ParentID=parent_id)
+        except DatabaseQueryError:
+            return []
+
+    def delete_playlist(self, playlist: Any) -> bool:
+        """
+        Delete a single playlist from the database.
+
+        Args:
+            playlist: Playlist object to delete
+
+        Returns:
+            True if deleted successfully, False otherwise
+        """
+        self.ensure_connected()
+        assert self._db is not None
+        try:
+            self._db.delete(playlist)
+            logger.debug(f"Deleted playlist: {playlist.Name} (ID: {playlist.ID})")
+            return True
+        except Exception as e:
+            log_exception(logger, e, f"deleting playlist {playlist.Name}")
+            return False
+
+    def delete_playlist_recursive(self, playlist: Any) -> int:
+        """
+        Recursively delete a playlist folder and all its contents.
+
+        Walks the tree depth-first, deleting children before parents.
+
+        Args:
+            playlist: Playlist folder object to delete
+
+        Returns:
+            Total number of playlists/folders deleted
+        """
+        deleted_count = 0
+
+        # Get all direct children
+        children = self.get_children_playlists(playlist.ID)
+
+        for child in children:
+            # Recurse into sub-folders
+            deleted_count += self.delete_playlist_recursive(child)
+
+        # Delete this playlist/folder itself
+        if self.delete_playlist(playlist):
+            deleted_count += 1
+
+        return deleted_count
+
+    def count_playlist_children_recursive(self, playlist: Any) -> int:
+        """
+        Count all playlists/folders nested under a parent, recursively.
+
+        Args:
+            playlist: Playlist folder object
+
+        Returns:
+            Total count of all nested children (not including the parent itself)
+        """
+        count = 0
+        children = self.get_children_playlists(playlist.ID)
+        for child in children:
+            count += 1
+            count += self.count_playlist_children_recursive(child)
+        return count
+
     # Tag operations
     def get_tags(self, **filters: Any) -> List[Any]:
         """

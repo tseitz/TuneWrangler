@@ -1,17 +1,117 @@
 # Rekordbox Smart Playlist Tools
 
-A collection of Python scripts for managing Rekordbox 6 databases, smart playlists, and metadata synchronization. These tools help DJs maintain organized music collections and create complex smart playlists from JSON configurations.
+A collection of Python tools for managing Rekordbox 6 databases, smart playlists, and metadata synchronization. Built for DJs who want to organize large, genre-diverse libraries and generate smart playlists from simple JSON configurations.
 
-## 🎯 What This Project Does
-
-This project provides several standalone Python scripts that help you:
+## What This Project Does
 
 - **Create Smart Playlists**: Generate complex Rekordbox smart playlists from JSON configuration files
 - **Fix Metadata Issues**: Synchronize metadata between your Rekordbox database and filename formats
 - **Backup & Restore**: Safely backup and restore your Rekordbox database
 - **Manage Playlists**: Copy, modify, and organize your Rekordbox playlists programmatically
 
-## 🚀 Quick Start
+## Playlist Organization Methodology
+
+This project implements a **Situation-first, Texture-second** playlist architecture designed for DJs who play across multiple genres and need to find the right track quickly -- whether on a laptop with full Rekordbox filtering or on a CDJ/XDJ with only folder navigation.
+
+### The Problem
+
+Organizing a diverse library by genre first (Dub, DnB, House, etc.) leads to an explosion of playlists. If you have 10 genres and 15 attributes (energy levels, openers, closers, styles), you end up with 150+ playlists. Scrolling through deep folder trees on a CDJ mid-set is slow and stressful.
+
+### The Solution: Three-Layer Hierarchy
+
+```
+Situation  ->  Sonic Texture  ->  Genre / Cross-Texture
+```
+
+#### Layer 1: Situation (When are you playing?)
+
+The top-level folders answer "what kind of set is this?" Each situation is a Rekordbox tag that you apply to tracks. Every track can belong to multiple situations.
+
+| Situation | Description |
+|---|---|
+| Daytime | Outdoor festivals, day parties |
+| Nighttime | Club sets, evening events |
+| Late Night | Dark rooms, 2am+ |
+| Sunrise | Morning sets, comedown |
+| Afterparty | Low-key, intimate |
+| Chillin | Background music, lounge |
+| Silent Disco | Headphone sets |
+| Morningtime Vibes | Warm, easy listening |
+| Pool Party | Fun, upbeat, crowd-friendly |
+
+Additional root playlists like **My Set**, **The Rotation**, **Missy**, and **B2B** follow the same pattern for gig-specific or collaborative prep.
+
+#### Layer 2: Sonic Texture (What does it sound like?)
+
+Inside each situation, tracks are organized by *how they sound*, not what genre they are. This creates a consistent mental model across all situations -- "Playlist 2 is always for heads-down hypnotic music" regardless of whether you're playing Dub or DnB.
+
+| Texture | Tag | Description |
+|---|---|---|
+| GROOVY (The Pocket) | Swing, shuffle, broken beats, syncopation |
+| DEEP (The Head) | Minimal, spacious, dark, hypnotic |
+| HEAVY (The Face) | Aggressive, distorted, high energy, "bass face" |
+| ORGANIC (The Soul) | Melodic, warm, emotional, acoustic samples |
+| WEIRD (The Brain) | Experimental, psychedelic, unexpected |
+| VOCALS | Lyrical focus, rap, grime, vocal-led |
+| PALATE CLEANSER | Transitions, palette shifts, breathers |
+
+#### Layer 3: Genre & Cross-Texture (Drill down)
+
+Inside each texture, you get two types of sub-playlists:
+
+1. **Genre playlists** (inherited from `_base.json`): All, Beats, DnB, Dub, Feels, House, Jungle, Riddim, UKG, Vibes, etc.
+2. **Cross-texture playlists** (flat, single tag): DEEP, GROOVY, HEAVY, etc. -- for finding tracks that live at the intersection of two textures.
+
+### Navigation Example
+
+```
+Daytime
+  -> DEEP (The Head)                    [Daytime + DEEP]
+       -> All                           [Daytime + DEEP -- all genres]
+       -> Dub                           [Daytime + DEEP + Dub]
+       -> DnB                           [Daytime + DEEP + DnB]
+       -> House                         [Daytime + DEEP + House]
+       -> ...
+       -> GROOVY                        [Daytime + DEEP + GROOVY]
+       -> HEAVY                         [Daytime + DEEP + HEAVY]
+       -> ...
+       -> PALATE CLEANSER               [Daytime + DEEP + PALATE CLEANSER]
+            -> All                      [Daytime + DEEP + PALATE CLEANSER]
+            -> Dub                      [Daytime + DEEP + PALATE CLEANSER + Dub]
+            -> ...
+```
+
+### How Conditions Stack
+
+Every playlist's filter is the **AND** of all tags from every level of the hierarchy:
+
+- **Situation** tag (e.g., `Daytime`) -- from the root JSON's `mainConditions`
+- **Texture** tag (e.g., `DEEP (The Head)`) -- from the helper JSON's `mainConditions`
+- **Genre/Cross-texture** tag (e.g., `Dub`) -- from the individual playlist's `contains`
+
+This means a track must be tagged with **all three** to appear in `Daytime -> DEEP -> Dub`.
+
+### Hardware Considerations
+
+This structure is optimized for both laptop and standalone hardware:
+
+- **Laptop (Rekordbox)**: Use the Track Filter panel and My Tag combinations for ad-hoc filtering beyond the playlist structure.
+- **CDJ-3000**: Use the Track Filter to combine ratings and sorting within any playlist.
+- **XDJ-RR / CDJ-2000NXS2**: Rely on the folder structure for navigation. Sort by Rating (energy) or Date Added within any playlist. The structure is kept shallow (3 levels max) to minimize scrolling.
+
+### Ratings as Energy
+
+Across all playlists, the 1-5 star rating represents **energy level**, not quality:
+
+- 1 star: Low energy, warmup, ambient
+- 2 stars: Building, chill but moving
+- 3 stars: Cruising, mid-energy
+- 4 stars: Peak time, driving
+- 5 stars: Maximum energy, headliner moment
+
+On any CDJ, you can sort a playlist by Rating to instantly separate warmup tracks from peak-time bangers.
+
+## Quick Start
 
 ### Prerequisites
 
@@ -29,198 +129,213 @@ This project provides several standalone Python scripts that help you:
 
 2. **Install dependencies:**
    ```bash
-   # Install pyrekordbox (may require additional setup)
    pip install pyrekordbox
-   
-   # If you encounter issues with pyrekordbox, you may need sqlcipher3:
-   # See troubleshooting section below
    ```
 
 3. **Verify your Rekordbox database location:**
    ```bash
-   # Default location (adjust if different):
+   # Default location:
    # ~/Library/Pioneer/rekordbox6/master.db
    ```
 
-## 📋 Available Scripts
+## Usage
 
-### 1. `fix_rekordbox_metadata.py` - Metadata Synchronization Tool
+### CLI Commands
 
-**Purpose**: Fixes metadata discrepancies between your Rekordbox database and filename formats.
-
-**Problem it solves**: When you drag files into Rekordbox, sometimes the metadata doesn't get parsed correctly from the filename, resulting in titles like "[artist] - [title]" instead of just "title".
-
-#### Usage Examples
-
-**Interactive Mode (Recommended for first-time use):**
+**Create all playlists (dry run first):**
 ```bash
-python fix_rekordbox_metadata.py
-```
-This will prompt you for each file that has metadata differences.
-
-**Preview what would be changed (safe to run):**
-```bash
-python fix_rekordbox_metadata.py --preview --dry-run
+rekordbox-smart-playlists --dry-run --verbose playlist create --all
 ```
 
-**Batch Mode - Use database metadata for all files:**
+**Create playlists from a specific file:**
 ```bash
-python fix_rekordbox_metadata.py --batch-database --dry-run
+rekordbox-smart-playlists --dry-run playlist create --file daytime.json
 ```
 
-**Batch Mode - Use filename metadata for all files:**
+**Create playlists for real (commits to database):**
 ```bash
-python fix_rekordbox_metadata.py --batch-filename --dry-run
+rekordbox-smart-playlists playlist create --all
 ```
 
-**Update filenames to match database metadata:**
+**Validate configuration files:**
 ```bash
-python fix_rekordbox_metadata.py --update-filenames --dry-run
+rekordbox-smart-playlists playlist validate --all
 ```
 
-#### Command Line Options
-
+**List existing playlists:**
 ```bash
-python fix_rekordbox_metadata.py [OPTIONS]
-
-Options:
-  --collection-path PATH     Path to your music collection
-                            (default: /Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Collection/)
-  --dry-run                 Show what would be updated without making changes
-  --preview, -p             Show preview of changes without processing
-  --preview-count N         Number of files to preview (default: 10)
-  --batch-database          Use database metadata as source of truth for all files
-  --batch-filename          Use filename metadata as source of truth for all files
-  --update-filenames        Update filenames to match database metadata
-  --skip-backup             Skip automatic backup before making changes (use with caution)
-  --list-backups            List available backups and exit
-  --config PATH             Path to a JSON configuration file
-  --verbose, -v             Enable verbose logging
-  --help, -h                Show help information
+rekordbox-smart-playlists playlist list
 ```
 
-#### Filename Format Support
+### Legacy Scripts
 
-The script expects filenames in these formats:
-- `[artist] - [title].mp3`
-- `[artist] - [album] - [title].mp3`
-
-#### Safety Features
-
-- **Automatic Backups**: Creates backups before making changes
-- **Dry Run Mode**: Preview all changes before applying
-- **Interactive Mode**: Choose what to do for each file
-- **Backup Storage**: `/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Rekordbox DB Backup/`
-
-### 2. `smart-playlists.py` - Smart Playlist Creator
-
-**Purpose**: Creates Rekordbox smart playlists from JSON configuration files.
-
-#### Usage Examples
-
-**Create all playlists from JSON files:**
 ```bash
+# Create smart playlists (legacy entry point)
 python smart-playlists.py
+
+# Fix metadata
+python fix_rekordbox_metadata.py --preview --dry-run
+
+# Backup database
+python rekordbox_backup.py
 ```
 
-**Create playlists from specific JSON file:**
-```bash
-python smart-playlists.py house.json
+## JSON Configuration Format
+
+### Project Structure
+
+```
+playlist-data/
+  helpers/
+    _base.json             # Shared genre playlists (inherited by all textures)
+    groovy.json            # GROOVY texture definition
+    deep.json              # DEEP texture definition
+    heavy.json             # HEAVY texture definition
+    organic.json           # ORGANIC texture definition
+    weird.json             # WEIRD texture definition
+    vocal.json             # VOCALS texture definition
+    palate_cleanser.json   # PALATE CLEANSER texture definition
+  daytime.json             # Situation: Daytime
+  nighttime.json           # Situation: Nighttime
+  late-night.json          # Situation: Late Night
+  sunrise.json             # Situation: Sunrise
+  afterparty.json          # Situation: Afterparty
+  chillin.json             # Situation: Chillin
+  silent-disco.json        # Situation: Silent Disco
+  morningtime-vibes.json   # Situation: Morningtime Vibes
+  pool-party.json          # Situation: Pool Party
+  my-set.json              # Root: My Set
+  rotation.json            # Root: The Rotation
+  missy.json               # Root: Missy
+  b2b.json                 # Root: B2B
+  old/                     # Archived previous playlist definitions
 ```
 
-#### Configuration Format
+### Situation File (Root Level)
 
-Create JSON files in the `playlist-data/` directory with this structure:
+Each situation file defines a top-level folder that links to the shared texture helpers. The `mainConditions` tag filters everything below it.
 
 ```json
 {
   "data": [
     {
-      "parent": "House",
-      "mainConditions": ["House"],
+      "parent": "Daytime",
+      "mainConditions": ["Daytime"],
       "negativeConditions": ["Archive"],
       "playlists": [
-        {
-          "name": "Deep House",
-          "operator": 1,
-          "contains": ["Deep House"]
-        },
-        {
-          "name": "Party Hits",
-          "operator": 1,
-          "contains": ["Party Hits"],
-          "rating": ["4", "5"]
-        }
+        { "name": "GROOVY (The Pocket)", "operator": 1, "playlistType": "folder", "link": "helpers/groovy.json" },
+        { "name": "DEEP (The Head)", "operator": 1, "playlistType": "folder", "link": "helpers/deep.json" },
+        { "name": "HEAVY (The Face)", "operator": 1, "playlistType": "folder", "link": "helpers/heavy.json" },
+        { "name": "ORGANIC (The Soul)", "operator": 1, "playlistType": "folder", "link": "helpers/organic.json" },
+        { "name": "WEIRD (The Brain)", "operator": 1, "playlistType": "folder", "link": "helpers/weird.json" },
+        { "name": "VOCALS", "operator": 1, "playlistType": "folder", "link": "helpers/vocal.json" },
+        { "name": "PALATE CLEANSER", "operator": 1, "playlistType": "folder", "link": "helpers/palate_cleanser.json" }
       ]
     }
   ]
 }
 ```
 
-### 3. `app.py` - Database Management Tool
+### Texture File (Helper)
 
-**Purpose**: Provides various Rekordbox database operations and utilities.
+Each texture file uses the `base` field to inherit shared genre playlists from `_base.json`, then adds cross-texture flat playlists. This keeps the JSON DRY -- genres are defined once.
 
-#### Usage Examples
+```json
+{
+  "data": [
+    {
+      "parent": "GROOVY (The Pocket)",
+      "mainConditions": ["GROOVY (The Pocket)"],
+      "negativeConditions": ["Archive"],
+      "base": "helpers/_base.json",
+      "playlists": [
+        { "name": "DEEP", "operator": 1, "contains": ["DEEP (The Head)"] },
+        { "name": "HEAVY", "operator": 1, "contains": ["HEAVY (The Face)"] },
+        { "name": "ORGANIC", "operator": 1, "contains": ["ORGANIC (The Soul)"] },
+        { "name": "VOCALS", "operator": 1, "contains": ["VOCALS"] },
+        { "name": "WEIRD", "operator": 1, "contains": ["WEIRD (The Brain)"] },
+        { "name": "PALATE CLEANSER", "operator": 1, "playlistType": "folder", "link": "helpers/palate_cleanser.json" }
+      ]
+    }
+  ]
+}
+```
 
-**Run the main playlist processing:**
+### Base File
+
+The base file defines playlists that are shared across all textures. It uses a dict-style `data` field (not an array) since it's only used for inheritance.
+
+```json
+{
+  "data": {
+    "playlists": [
+      { "name": "All", "operator": 1, "contains": [] },
+      { "name": "Beats", "operator": 1, "contains": ["Beats"] },
+      { "name": "DnB", "operator": 1, "contains": ["DnB"] },
+      { "name": "Dub", "operator": 1, "contains": ["Dub"] }
+    ]
+  }
+}
+```
+
+### JSON Field Reference
+
+| Field | Type | Description |
+|---|---|---|
+| `parent` | string | Folder name in Rekordbox |
+| `mainConditions` | string[] | Tags ANDed into every playlist in this category |
+| `negativeConditions` | string[] | Tags excluded (NOT CONTAINS) from every playlist |
+| `base` | string | Path to a base JSON file whose playlists are prepended (relative to `playlist-data/`) |
+| `playlists` | object[] | Array of playlist definitions |
+| `playlists[].name` | string | Playlist name in Rekordbox |
+| `playlists[].operator` | int | `1` = ALL (AND), `2` = ANY (OR), `5` = Rating range |
+| `playlists[].contains` | string[] | Tags to require (ANDed with mainConditions) |
+| `playlists[].doesNotContain` | string[] | Tags to exclude |
+| `playlists[].rating` | string[] | Rating range `["min", "max"]` (e.g., `["4", "5"]`) |
+| `playlists[].playlistType` | string | Set to `"folder"` to create a folder linking to another JSON |
+| `playlists[].link` | string | Path to linked JSON file (relative to `playlist-data/`) |
+| `playlists[].dateCreated` | object | Date filter with `time_period`, `time_unit`, `operator` |
+
+## Configuration
+
+### Environment Variables
+
 ```bash
-python app.py
+export REKORDBOX_COLLECTION_PATH="/path/to/your/music"
+export REKORDBOX_BACKUP_PATH="/path/to/backups"
+export REKORDBOX_DRY_RUN="true"
 ```
 
-**Create a backup:**
-```python
-from rekordbox_backup import backup_rekordbox_db
-backup_path = backup_rekordbox_db()
+### Configuration File
+
+Create a `config.json` or `config.toml`:
+
+```json
+{
+  "collection_path": "/path/to/your/music/collection",
+  "playlist_data_path": "playlist-data",
+  "dry_run": true,
+  "backup_before_changes": true
+}
 ```
 
-**List existing backups:**
-```python
-from rekordbox_backup import list_backups
-list_backups()
-```
+## Safety Features
 
-### 4. `rekordbox_backup.py` - Backup & Restore Tool
+- **Automatic Backups**: Creates backups before making changes
+- **Dry Run Mode**: Preview all changes with `--dry-run` before committing
+- **Transaction Support**: Database operations are wrapped in transactions -- nothing is committed until all playlists are created successfully
+- **Validation**: Run `playlist validate --all` to check your JSON files for errors before creating playlists
 
-**Purpose**: Comprehensive backup and restore functionality for Rekordbox databases.
+## Important Notes
 
-#### Usage Examples
+1. **Always close Rekordbox** before running any scripts
+2. **Start with `--dry-run`** to preview changes
+3. **Backups are automatically created** before making changes
+4. **Test with a single file** (`--file daytime.json`) before running `--all`
 
-**Create a backup:**
-```bash
-python -c "from rekordbox_backup import backup_rekordbox_db; backup_rekordbox_db()"
-```
+## Troubleshooting
 
-**List available backups:**
-```bash
-python -c "from rekordbox_backup import list_backups; list_backups()"
-```
-
-**Restore from backup:**
-```bash
-python -c "from rekordbox_backup import restore_rekordbox_db; restore_rekordbox_db('/path/to/backup.zip')"
-```
-
-## 🛠️ Getting Help
-
-### For Each Script
-
-**Get help for any script:**
-```bash
-python script_name.py --help
-```
-
-**Examples:**
-```bash
-python fix_rekordbox_metadata.py --help
-python smart-playlists.py --help
-```
-
-### Common Issues & Solutions
-
-#### 1. **pyrekordbox Installation Issues**
-
-If you get errors installing pyrekordbox, you may need to install sqlcipher3 first:
+### pyrekordbox Installation Issues
 
 ```bash
 # Install sqlcipher3 (macOS with Homebrew)
@@ -233,155 +348,26 @@ SQLCIPHER_PATH=$(brew info sqlcipher | awk 'NR==4 {print $1; exit}')
 C_INCLUDE_PATH="$SQLCIPHER_PATH"/include LIBRARY_PATH="$SQLCIPHER_PATH"/lib python setup.py build
 C_INCLUDE_PATH="$SQLCIPHER_PATH"/include LIBRARY_PATH="$SQLCIPHER_PATH"/lib python setup.py install
 cd ..
-
-# Then install pyrekordbox
 pip install pyrekordbox
 ```
 
-#### 2. **Database Connection Errors**
+### Database Connection Errors
 
-**Problem**: "Failed to initialize Rekordbox database"
-
-**Solutions**:
 - Ensure Rekordbox is **closed** before running scripts
 - Check database location: `~/Library/Pioneer/rekordbox6/master.db`
-- Verify you have read/write permissions to the database file
+- Verify read/write permissions to the database file
 
-#### 3. **Permission Errors**
-
-**Problem**: "Permission denied" when accessing files or database
-
-**Solutions**:
-- Check file permissions on your music collection directory
-- Ensure write permissions to backup directory
-- Run with appropriate user permissions
-
-#### 4. **Metadata Not Found Errors**
-
-**Problem**: "Could not find content in database for: filename.mp3"
-
-**Solutions**:
-- Ensure the file exists in your Rekordbox collection
-- Check that the filename matches exactly (case-sensitive)
-- Try importing the file into Rekordbox first
-
-#### 5. **Filename Format Issues**
-
-**Problem**: "Could not parse filename format"
-
-**Solutions**:
-- Ensure filenames follow the expected format: `[artist] - [title].ext`
-- Check for special characters that might break parsing
-- Use `--preview` to see which files have parsing issues
-
-### Debugging Tips
-
-**Enable verbose logging:**
-```bash
-python fix_rekordbox_metadata.py --verbose --dry-run
-```
-
-**Preview changes before applying:**
-```bash
-python fix_rekordbox_metadata.py --preview --dry-run
-```
-
-**Check what files would be processed:**
-```bash
-python fix_rekordbox_metadata.py --preview --preview-count 50
-```
-
-## 📁 Project Structure
-
-```
-rekordbox-smart-playlist/
-├── fix_rekordbox_metadata.py          # Main metadata synchronization script
-├── smart-playlists.py                  # Smart playlist creation script
-├── app.py                              # Database management utilities
-├── rekordbox_backup.py                 # Backup and restore functionality
-├── playlist-data/                      # JSON configuration files
-│   ├── house.json
-│   ├── dnb.json
-│   ├── dub.json
-│   └── ...
-├── examples/                           # Example files
-│   └── example-smart-playlist.xml
-├── pyproject.toml                      # Project configuration
-└── README.md                           # This file
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-You can set these environment variables to customize behavior:
+### Debugging
 
 ```bash
-export REKORDBOX_COLLECTION_PATH="/path/to/your/music"
-export REKORDBOX_BACKUP_PATH="/path/to/backups"
-export REKORDBOX_DRY_RUN="true"  # Set to "false" for live mode
+# Verbose dry run of a single file
+rekordbox-smart-playlists --dry-run --verbose playlist create --file daytime.json
+
+# Validate all configs
+rekordbox-smart-playlists playlist validate --all
 ```
 
-### Configuration File
-
-Create a `config.json` file to customize settings:
-
-```json
-{
-  "collection_path": "/Users/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Collection/",
-  "dry_run": true,
-  "skip_backup": false,
-  "audio_extensions": [".mp3", ".wav", ".flac", ".aiff", ".m4a", ".aac", ".ogg"],
-  "progress_interval": 10
-}
-```
-
-Then use it with:
-```bash
-python fix_rekordbox_metadata.py --config config.json
-```
-
-## 🛡️ Safety Features
-
-- **Automatic Backups**: Scripts create backups before making changes
-- **Dry Run Mode**: Preview all changes before applying them
-- **Interactive Mode**: Choose what to do for each file
-- **Backup Validation**: Validates backup integrity after creation
-- **Transaction Support**: Database operations are wrapped in transactions
-- **Comprehensive Logging**: Detailed logging for troubleshooting
-
-## 🚨 Important Notes
-
-1. **Always close Rekordbox** before running any scripts
-2. **Start with `--dry-run`** to preview changes
-3. **Backups are automatically created** before making changes
-4. **Test with a small subset** of files first
-5. **Keep your Rekordbox database backed up** regularly
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly with `--dry-run`
-5. Submit a pull request
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [pyrekordbox](https://github.com/dylanljones/pyrekordbox) for Rekordbox database access
 - Pioneer DJ for creating Rekordbox
-- The DJ community for inspiration and feedback
-
-## 📞 Support
-
-If you encounter issues:
-
-1. Check the troubleshooting section above
-2. Use `--help` for command-specific help
-3. Enable `--verbose` logging for detailed output
-4. Use `--dry-run` to preview changes safely
-5. Open an issue on GitHub with detailed error information

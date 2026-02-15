@@ -147,6 +147,34 @@ class PlaylistCommand(BaseCommand):
             with RekordboxDatabase(self.config) as db:
                 playlist_manager = PlaylistManager(db, self.config)
 
+                # Check for existing root folders and prompt for deletion
+                config_file_arg = args.file if args.file else None
+                existing_roots = playlist_manager.find_existing_root_folders(config_file_arg)
+
+                if existing_roots:
+                    print(f"\nFound {len(existing_roots)} existing root folder(s):")
+                    for root in existing_roots:
+                        child_str = f"{root['child_count']} child playlist(s)" if root['child_count'] else "empty"
+                        print(f"  - {root['name']} ({child_str})")
+                    print()
+
+                    if self.config.dry_run:
+                        print("[DRY RUN] Would prompt to delete existing folders before recreating.\n")
+                    else:
+                        for root in existing_roots:
+                            child_count = root['child_count']
+                            child_info = f" and {child_count} child playlist(s)" if child_count else ""
+                            response = input(
+                                f"Delete '{root['name']}'{child_info}? (y/N): "
+                            )
+                            if response.lower() in ["y", "yes"]:
+                                deleted = playlist_manager.delete_root_folder(root['playlist'])
+                                print(f"  Deleted {deleted} playlist(s).")
+                            else:
+                                playlist_manager._skip_parents.add(root['name'])
+                                print(f"  Skipping '{root['name']}' entirely.")
+                        print()
+
                 if args.file:
                     # Create from specific file
                     config_file = Path(args.file)

@@ -144,8 +144,18 @@ def validate_playlist_config(playlist_data: Dict[str, Any]) -> Tuple[bool, List[
         return False, errors
 
     data = playlist_data["data"]
+
+    # Support both list format (standard playlists) and dict format (base files like _base.json)
+    if isinstance(data, dict):
+        # Base file format: {"data": {"playlists": [...]}}
+        if "playlists" in data:
+            return True, []
+        else:
+            errors.append("Dict-style 'data' must contain a 'playlists' field")
+            return False, errors
+
     if not isinstance(data, list):
-        errors.append("'data' field must be a list")
+        errors.append("'data' field must be a list or a dict")
         return False, errors
 
     # Validate each playlist category
@@ -170,8 +180,13 @@ def validate_playlist_category(category: Dict[str, Any], index: int) -> List[str
     errors = []
     prefix = f"Category {index}"
 
+    # Validate optional 'base' field
+    if "base" in category:
+        if not isinstance(category["base"], str):
+            errors.append(f"{prefix}: 'base' must be a string path")
+
     # Required fields
-    required_fields = ["parent", "mainConditions", "playlists"]
+    required_fields = ["parent", "playlists"]
     for field in required_fields:
         if field not in category:
             errors.append(f"{prefix}: Missing required field '{field}'")

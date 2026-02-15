@@ -1,0 +1,22 @@
+{
+  "data": {
+    "playlists": [
+      { "name": "All", "operator": 1, "contains": [] },
+      { "name": "Openers", "operator": 1, "contains": ["Openers"] },
+      { "name": "Beginning", "operator": 1, "contains": ["Beginning"] },
+      { "name": "Middle", "operator": 1, "contains": ["Middle"] },
+      { "name": "End", "operator": 1, "contains": ["End"] },
+      { "name": "Beats", "operator": 1, "contains": ["Beats"] },
+      { "name": "DnB", "operator": 1, "contains": ["DnB"] },
+      { "name": "Dub", "operator": 1, "contains": ["Dub"] },
+      { "name": "Feels", "operator": 1, "contains": ["Feels"] },
+      { "name": "House", "operator": 1, "contains": ["House"] },
+      { "name": "Jungle", "operator": 1, "contains": ["Jungle"] },
+      { "name": "Melters", "operator": 1, "contains": ["Melters"] },
+      { "name": "Riddim", "operator": 1, "contains": ["Riddim"] },
+      { "name": "UKG", "operator": 1, "contains": ["UKG"] },
+      { "name": "Vibes", "operator": 1, "contains": ["Vibes"] },
+      { "name": "Closers", "operator": 1, "contains": ["Closers"] }
+    ]
+  }
+}

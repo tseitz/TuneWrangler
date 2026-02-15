@@ -5,18 +5,13 @@
       "mainConditions": ["Pool Party"],
       "negativeConditions": ["Archive"],
       "playlists": [
-        { "name": "Openers", "operator": 1, "contains": ["Openers"] },
-        { "name": "Breaky", "operator": 1, "contains": ["Breaky"] },
-        { "name": "House", "operator": 1, "contains": ["House"] },
-        { "name": "Party Hits", "operator": 1, "contains": ["Party Hits"] },
-        { "name": "Underplayed", "operator": 1, "contains": ["Underplayed"] },
-        { "name": "Not Overplayed", "operator": 1, "doesNotContain": ["Overplayed"] },
-        { "name": "Not Dirty", "operator": 1, "doesNotContain": ["Dirty"] },
-        { "name": "Beginning", "operator": 1, "contains": ["Beginning"] },
-        { "name": "Middle", "operator": 1, "contains": ["Middle"] },
-        { "name": "End", "operator": 1, "contains": ["End"] },
-        { "name": "Closers", "operator": 1, "contains": ["Closers"] },
-        { "name": "All", "operator": 1, "contains": [] }
+        { "name": "GROOVY (The Pocket)", "operator": 1, "playlistType": "folder", "link": "helpers/groovy.json" },
+        { "name": "DEEP (The Head)", "operator": 1, "playlistType": "folder", "link": "helpers/deep.json" },
+        { "name": "HEAVY (The Face)", "operator": 1, "playlistType": "folder", "link": "helpers/heavy.json" },
+        { "name": "ORGANIC (The Soul)", "operator": 1, "playlistType": "folder", "link": "helpers/organic.json" },
+        { "name": "WEIRD (The Brain)", "operator": 1, "playlistType": "folder", "link": "helpers/weird.json" },
+        { "name": "VOCALS", "operator": 1, "playlistType": "folder", "link": "helpers/vocal.json" },
+        { "name": "PALATE CLEANSER", "operator": 1, "playlistType": "folder", "link": "helpers/palate_cleanser.json" }
       ]
     }
   ]
