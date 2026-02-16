@@ -1,0 +1,14 @@
+{
+  "data": [
+    {
+      "parent": "Go Through",
+      "mainConditions": [],
+      "negativeConditions": [],
+      "playlists": [
+        { "name": "Bad Quality", "operator": 1, "contains": ["Bad Quality"] },
+        { "name": "Bad Grid", "operator": 1, "contains": ["Bad Grid"] },
+        { "name": "Jayden", "operator": 1, "contains": ["Jayden"] }
+      ]
+    }
+  ]
+}

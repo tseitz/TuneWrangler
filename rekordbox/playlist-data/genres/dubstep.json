@@ -1,0 +1,11 @@
+{
+  "data": [
+    {
+      "parent": "Dubstep",
+      "mainConditions": ["Dubstep"],
+      "negativeConditions": ["Archive"],
+      "base": "genres/_base.json",
+      "playlists": []
+    }
+  ]
+}

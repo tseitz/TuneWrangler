@@ -1,0 +1,11 @@
+{
+  "data": [
+    {
+      "parent": "UKG",
+      "mainConditions": ["UKG"],
+      "negativeConditions": ["Archive"],
+      "base": "genres/_base.json",
+      "playlists": []
+    }
+  ]
+}

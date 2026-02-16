@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "parent": "DnB",
+      "mainConditions": ["DnB"],
+      "negativeConditions": ["Archive"],
+      "base": "genres/_base.json",
+      "playlists": [
+        { "name": "DnB Jump Up", "operator": 1, "contains": ["DnB Jump Up"] },
+        { "name": "DnB Rollers", "operator": 1, "contains": ["DnB Rollers"] },
+        { "name": "DnB Liquid", "operator": 1, "contains": ["DnB Liquid"] },
+        { "name": "DnB Dancefloor", "operator": 1, "contains": ["DnB Dancefloor"] }
+      ]
+    }
+  ]
+}

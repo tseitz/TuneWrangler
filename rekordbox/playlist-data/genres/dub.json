@@ -1,0 +1,18 @@
+{
+  "data": [
+    {
+      "parent": "Dub",
+      "mainConditions": ["Dub"],
+      "negativeConditions": ["Archive"],
+      "base": "genres/_base.json",
+      "playlists": [
+        { "name": "Dub Doubles", "operator": 1, "contains": ["Dub Doubles"] },
+        { "name": "Dub Wobblers", "operator": 1, "contains": ["Dub Wobblers"] },
+        { "name": "Dub Sound System", "operator": 1, "contains": ["Dub Sound System"] },
+        { "name": "Dub Slimzee", "operator": 1, "contains": ["Dub Slimzee"] },
+        { "name": "Dub Trippy/Interesting", "operator": 1, "contains": ["Dub Trippy/Interesting"] },
+        { "name": "Dub Reggae", "operator": 1, "contains": ["Dub Reggae"] }
+      ]
+    }
+  ]
+}

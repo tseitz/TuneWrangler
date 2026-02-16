@@ -6,6 +6,7 @@ Provides high-level operations for playlist creation with proper error handling 
 """
 
 import json
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Union, Set
 from dataclasses import dataclass
@@ -30,6 +31,14 @@ from .database import RekordboxDatabase
 from .config import Config
 
 logger = get_logger(__name__)
+
+
+class ExistingPlaylistStrategy(Enum):
+    """Strategy for handling playlists that already exist."""
+
+    OVERWRITE_ALL = "overwrite"
+    SKIP_ALL = "skip"
+    PROMPT_EACH = "prompt"
 
 
 class PlaylistCreationError(Exception):
@@ -75,6 +84,7 @@ class PlaylistManager:
         """
         self.db = database
         self.config = config
+        self.existing_strategy = ExistingPlaylistStrategy.PROMPT_EACH
         self._created_playlists: List[str] = []
         self._skip_parents: Set[str] = set()
         self._tag_cache: Dict[str, Any] = {}
@@ -90,13 +100,14 @@ class PlaylistManager:
             log_exception(logger, e, "loading tag cache")
 
     def create_playlists_from_file(
-        self, config_file: Union[str, Path]
+        self, config_file: Union[str, Path], start_sequence: Optional[int] = None
     ) -> List[PlaylistCreationResult]:
         """
         Create playlists from a JSON configuration file.
 
         Args:
             config_file: Path to JSON configuration file
+            start_sequence: Optional starting sequence number for ordering
 
         Returns:
             List of playlist creation results
@@ -125,16 +136,19 @@ class PlaylistManager:
             raise PlaylistValidationError(error_msg)
 
         logger.info(f"Creating playlists from: {config_path.name}")
-        return self.create_playlists_from_data(config_data["data"])
+        return self.create_playlists_from_data(config_data["data"], start_sequence=start_sequence)
 
     def create_playlists_from_data(
-        self, playlist_data: List[Dict[str, Any]]
+        self,
+        playlist_data: List[Dict[str, Any]],
+        start_sequence: Optional[int] = None,
     ) -> List[PlaylistCreationResult]:
         """
         Create playlists from configuration data.
 
         Args:
             playlist_data: List of playlist category configurations
+            start_sequence: Optional starting sequence number for ordering
 
         Returns:
             List of playlist creation results
@@ -144,7 +158,8 @@ class PlaylistManager:
 
         for i, category_data in enumerate(playlist_data):
             try:
-                category_results = self._create_category_playlists(category_data, i + 1)
+                sequence = (start_sequence + i) if start_sequence is not None else (i + 1)
+                category_results = self._create_category_playlists(category_data, sequence)
                 results.extend(category_results)
 
                 progress.update(
@@ -310,13 +325,33 @@ class PlaylistManager:
         # Check if playlist already exists in this specific parent context
         existing_playlist = self.db.get_playlist_by_name(playlist_name, parent_playlist.ID)
         if existing_playlist is not None:
-            logger.info(f"Playlist already exists: {playlist_name}")
-            return PlaylistCreationResult(
-                success=True,
-                playlist_name=playlist_name,
-                skipped=True,
-                skip_reason="Playlist already exists in this parent",
-            )
+            parent_name = getattr(parent_playlist, "Name", "Unknown")
+
+            if self.existing_strategy == ExistingPlaylistStrategy.SKIP_ALL:
+                logger.info(f"Skipping existing playlist: {playlist_name}")
+                return PlaylistCreationResult(
+                    success=True,
+                    playlist_name=playlist_name,
+                    skipped=True,
+                    skip_reason="Playlist already exists (strategy: skip all)",
+                )
+            elif self.existing_strategy == ExistingPlaylistStrategy.PROMPT_EACH:
+                response = input(
+                    f"Playlist '{playlist_name}' already exists in '{parent_name}'. "
+                    f"Overwrite or skip? (o/S): "
+                )
+                if response.lower() not in ["o", "overwrite"]:
+                    logger.info(f"User chose to skip: {playlist_name}")
+                    return PlaylistCreationResult(
+                        success=True,
+                        playlist_name=playlist_name,
+                        skipped=True,
+                        skip_reason="User chose to skip existing playlist",
+                    )
+
+            # OVERWRITE_ALL or user chose to overwrite in PROMPT_EACH
+            logger.info(f"Overwriting existing playlist: {playlist_name}")
+            self.db.delete_playlist(existing_playlist)
 
         # Handle folder type playlists
         playlist_type = playlist_config.get("playlistType")
@@ -385,13 +420,43 @@ class PlaylistManager:
                 error_message="Folder playlist requires 'name' field",
             )
 
-        # First, get or create the folder under the current parent (like old system)
+        # First, get or create the folder under the current parent
         folder_playlist = self.db.get_playlist_by_name(folder_name, parent_playlist.ID)
         folder_already_exists = folder_playlist is not None
 
         if folder_already_exists:
-            logger.info(f"Folder already exists: {folder_name}")
-        else:
+            child_count = self.db.count_playlist_children_recursive(folder_playlist)
+            parent_name = getattr(parent_playlist, "Name", "Unknown")
+
+            if self.existing_strategy == ExistingPlaylistStrategy.SKIP_ALL:
+                logger.info(f"Skipping existing folder: {folder_name}")
+                return PlaylistCreationResult(
+                    success=True,
+                    playlist_name=folder_name,
+                    skipped=True,
+                    skip_reason="Folder already exists (strategy: skip all)",
+                )
+            elif self.existing_strategy == ExistingPlaylistStrategy.PROMPT_EACH:
+                child_str = f"{child_count} child playlist(s)" if child_count else "empty"
+                response = input(
+                    f"Folder '{folder_name}' already exists in '{parent_name}' ({child_str}). "
+                    f"Overwrite or skip? (o/S): "
+                )
+                if response.lower() not in ["o", "overwrite"]:
+                    logger.info(f"User chose to skip folder: {folder_name}")
+                    return PlaylistCreationResult(
+                        success=True,
+                        playlist_name=folder_name,
+                        skipped=True,
+                        skip_reason="User chose to skip existing folder",
+                    )
+
+            # OVERWRITE_ALL or user chose to overwrite in PROMPT_EACH
+            logger.info(f"Overwriting existing folder: {folder_name}")
+            self.db.delete_playlist_recursive(folder_playlist)
+            folder_playlist = None
+
+        if folder_playlist is None:
             # Create new folder
             folder_playlist = self.db.create_playlist_folder(folder_name, parent_playlist)
             if not folder_playlist:
@@ -648,7 +713,7 @@ class PlaylistManager:
         # Extract parent names from each file
         seen_parents: Set[str] = set()
         for json_file in files_to_scan:
-            if json_file.name.startswith("."):
+            if json_file.name.startswith(".") or json_file.name.startswith("_"):
                 continue
             try:
                 with open(json_file, "r", encoding="utf-8") as f:
@@ -708,11 +773,71 @@ class PlaylistManager:
         """Clear the list of created playlists."""
         self._created_playlists.clear()
 
+    def _load_file_order(self, directory: Path) -> Optional[Dict[str, Any]]:
+        """
+        Load file ordering configuration from _order.json.
+
+        Args:
+            directory: Directory to look for _order.json in
+
+        Returns:
+            Order configuration dict or None if not found
+        """
+        order_file = directory / "_order.json"
+        if not order_file.exists():
+            return None
+
+        try:
+            with open(order_file, "r", encoding="utf-8") as f:
+                order_config = json.load(f)
+            logger.debug(f"Loaded file ordering from: {order_file}")
+            return order_config
+        except (json.JSONDecodeError, Exception) as e:
+            logger.warning(f"Failed to load order config {order_file}: {e}")
+            return None
+
+    def _sort_files_by_order(
+        self, json_files: List[Path], order_config: Optional[Dict[str, Any]]
+    ) -> List[Path]:
+        """
+        Sort JSON files according to _order.json configuration.
+
+        Files listed in "first" come first in that order, then remaining files
+        alphabetically, then files listed in "last" in that order.
+
+        Args:
+            json_files: List of JSON file paths
+            order_config: Order configuration from _order.json
+
+        Returns:
+            Sorted list of file paths
+        """
+        if not order_config:
+            return sorted(json_files)
+
+        first_names = order_config.get("first", [])
+        last_names = order_config.get("last", [])
+        pinned_names = set(first_names + last_names)
+
+        file_map = {f.name: f for f in json_files}
+
+        first_files = [file_map[name] for name in first_names if name in file_map]
+        last_files = [file_map[name] for name in last_names if name in file_map]
+        middle_files = sorted(
+            [f for f in json_files if f.name not in pinned_names],
+        )
+
+        return first_files + middle_files + last_files
+
     def create_playlists_from_directory(
         self, directory: Union[str, Path]
     ) -> List[PlaylistCreationResult]:
         """
         Create playlists from all JSON files in a directory.
+
+        Respects _order.json for file processing order if present.
+        Files listed in "first" are processed first, then remaining files
+        alphabetically, then files listed in "last".
 
         Args:
             directory: Directory containing JSON configuration files
@@ -724,21 +849,33 @@ class PlaylistManager:
         if not dir_path.exists():
             raise PlaylistCreationError(f"Directory not found: {dir_path}")
 
-        json_files = list(dir_path.glob("*.json"))
+        json_files = [
+            f for f in dir_path.glob("*.json")
+            if not f.name.startswith(".") and not f.name.startswith("_")
+        ]
         if not json_files:
             logger.warning(f"No JSON files found in: {dir_path}")
             return []
 
+        order_config = self._load_file_order(dir_path)
+        sorted_files = self._sort_files_by_order(json_files, order_config)
+
         all_results = []
-        progress = create_progress_logger(len(json_files), "Processing playlist files")
+        progress = create_progress_logger(len(sorted_files), "Processing playlist files")
+        global_sequence = 1
 
-        for json_file in sorted(json_files):
+        for json_file in sorted_files:
             try:
-                if json_file.name.startswith("."):
-                    continue  # Skip hidden files
-
-                file_results = self.create_playlists_from_file(json_file)
+                file_results = self.create_playlists_from_file(
+                    json_file, start_sequence=global_sequence
+                )
                 all_results.extend(file_results)
+
+                # Count how many root categories this file contributed
+                with open(json_file, "r", encoding="utf-8") as f:
+                    file_data = json.load(f)
+                category_count = len(file_data.get("data", []))
+                global_sequence += max(category_count, 1)
 
                 success_count = len([r for r in file_results if r.success])
                 progress.update(message=f"Processed {json_file.name} ({success_count} playlists)")
@@ -749,8 +886,9 @@ class PlaylistManager:
                     success=False, playlist_name=json_file.name, error_message=str(e)
                 )
                 all_results.append(error_result)
+                global_sequence += 1
 
         total_success = len([r for r in all_results if r.success])
-        progress.finish(f"Processed {len(json_files)} files, created {total_success} playlists")
+        progress.finish(f"Processed {len(sorted_files)} files, created {total_success} playlists")
 
         return all_results

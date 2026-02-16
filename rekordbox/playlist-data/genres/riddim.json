@@ -1,0 +1,11 @@
+{
+  "data": [
+    {
+      "parent": "Riddim",
+      "mainConditions": ["Riddim"],
+      "negativeConditions": ["Archive"],
+      "base": "genres/_base.json",
+      "playlists": []
+    }
+  ]
+}

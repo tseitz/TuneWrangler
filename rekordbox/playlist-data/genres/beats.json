@@ -1,0 +1,11 @@
+{
+  "data": [
+    {
+      "parent": "Beats",
+      "mainConditions": ["Beats"],
+      "negativeConditions": ["Archive"],
+      "base": "genres/_base.json",
+      "playlists": []
+    }
+  ]
+}

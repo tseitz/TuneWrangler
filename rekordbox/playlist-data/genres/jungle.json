@@ -1,0 +1,11 @@
+{
+  "data": [
+    {
+      "parent": "Jungle",
+      "mainConditions": ["Jungle"],
+      "negativeConditions": ["Archive"],
+      "base": "genres/_base.json",
+      "playlists": []
+    }
+  ]
+}
