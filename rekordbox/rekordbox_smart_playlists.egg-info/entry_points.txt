@@ -1,3 +1,0 @@
-[console_scripts]
-rekordbox-smart-playlists = rekordbox_smart_playlists.cli.main:cli_main
-rsp = rekordbox_smart_playlists.cli.main:cli_main

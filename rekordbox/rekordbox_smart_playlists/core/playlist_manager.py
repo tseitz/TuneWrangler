@@ -77,6 +77,17 @@ class PlaylistManager:
         self.config = config
         self._created_playlists: List[str] = []
         self._skip_parents: Set[str] = set()
+        self._tag_cache: Dict[str, Any] = {}
+        self._load_tag_cache()
+
+    def _load_tag_cache(self) -> None:
+        """Load all tags into memory for fast lookup during playlist creation."""
+        try:
+            all_tags = self.db.get_tags()
+            self._tag_cache = {tag.Name: tag for tag in all_tags}
+            logger.info(f"Loaded {len(self._tag_cache)} tags into cache")
+        except Exception as e:
+            log_exception(logger, e, "loading tag cache")
 
     def create_playlists_from_file(
         self, config_file: Union[str, Path]
@@ -171,12 +182,14 @@ class PlaylistManager:
         # Skip this category if the user declined to delete the existing folder
         if parent_name in self._skip_parents:
             logger.info(f"Skipping '{parent_name}' (user chose not to delete existing folder)")
-            return [PlaylistCreationResult(
-                success=True,
-                playlist_name=parent_name,
-                skipped=True,
-                skip_reason="User chose to keep existing folder",
-            )]
+            return [
+                PlaylistCreationResult(
+                    success=True,
+                    playlist_name=parent_name,
+                    skipped=True,
+                    skip_reason="User chose to keep existing folder",
+                )
+            ]
 
         main_conditions = set(category_data.get("mainConditions", []))
         negative_conditions = set(category_data.get("negativeConditions", []))
@@ -388,15 +401,12 @@ class PlaylistManager:
                     error_message=f"Failed to create folder: {folder_name}",
                 )
 
-                # Load linked configuration and process it with the folder as parent (like old system)
+        # Load linked configuration and process it with the folder as parent
         link_path = Path(self.config.playlist_data_path) / link
         try:
-            # Load the linked file data
             with open(link_path, "r", encoding="utf-8") as f:
                 linked_config_data = json.load(f)
 
-                # Process the linked data directly under our folder (matching old system logic)
-            # This is equivalent to add_data_to_playlist(data, parent_playlist_id, main_conditions)
             linked_results = []
 
             # Use the inherited conditions from the parent context
@@ -476,7 +486,7 @@ class PlaylistManager:
         try:
             with open(base_path, "r", encoding="utf-8") as f:
                 base_data = json.load(f)
-            playlists = base_data.get("data", {}).get("playlists", [])
+            playlists: List[Dict[str, Any]] = base_data.get("data", {}).get("playlists", [])
             logger.debug(f"Loaded {len(playlists)} base playlists from: {base_ref}")
             return playlists
         except FileNotFoundError:
@@ -548,7 +558,7 @@ class PlaylistManager:
 
     def _add_tag_condition(self, smart_list: SmartList, tag_name: str, operator: Operator) -> bool:
         """
-        Add a tag condition to smart list.
+        Add a tag condition to smart list using the pre-loaded tag cache.
 
         Args:
             smart_list: SmartList to add condition to
@@ -559,7 +569,7 @@ class PlaylistManager:
             True if condition was added successfully, False otherwise
         """
         try:
-            tag = self.db.get_tag_by_name(tag_name)
+            tag = self._tag_cache.get(tag_name)
             if not tag:
                 log_error(logger, f"Tag not found: {tag_name}")
                 return False
@@ -589,9 +599,12 @@ class PlaylistManager:
             time_unit = date_config.get("time_unit", "months")
             operator = date_config.get("operator", "IN_LAST")
 
-            # pyrekordbox expects singular forms - no mapping needed
             mapped_unit = time_unit
-            date_operator = Operator.IN_LAST if operator == "IN_LAST" else Operator.IN_LAST
+            date_operator_map = {
+                "IN_LAST": Operator.IN_LAST,
+                "NOT_IN_LAST": Operator.NOT_IN_LAST,
+            }
+            date_operator = date_operator_map.get(operator, Operator.IN_LAST)
 
             smart_list.add_condition(
                 Property.DATE_CREATED, date_operator, str(time_period), unit=mapped_unit
@@ -661,11 +674,13 @@ class PlaylistManager:
             playlist = self.db.get_playlist_by_name(parent_name, default_parent.ID)
             if playlist:
                 child_count = self.db.count_playlist_children_recursive(playlist)
-                existing.append({
-                    "name": parent_name,
-                    "playlist": playlist,
-                    "child_count": child_count,
-                })
+                existing.append(
+                    {
+                        "name": parent_name,
+                        "playlist": playlist,
+                        "child_count": child_count,
+                    }
+                )
 
         return existing
 

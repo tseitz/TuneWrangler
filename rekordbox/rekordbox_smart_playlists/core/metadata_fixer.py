@@ -106,6 +106,7 @@ class MetadataFixer:
             List of metadata fix results
         """
         logger.info("Starting interactive metadata fixing...")
+        self.db.preload_content_cache()
 
         # Create backup if not in dry run mode
         if not self.config.dry_run and self.config.backup_before_changes:
@@ -191,6 +192,7 @@ class MetadataFixer:
             List of metadata fix results
         """
         logger.info(f"Starting batch metadata fixing (source: {source.value})...")
+        self.db.preload_content_cache()
 
         # Create backup if not in dry run mode
         if not self.config.dry_run and self.config.backup_before_changes:
@@ -264,6 +266,7 @@ class MetadataFixer:
             List of metadata comparisons
         """
         logger.info(f"Previewing metadata discrepancies (max {max_files} files)...")
+        self.db.preload_content_cache()
 
         audio_files = self._get_audio_files()
         comparisons = []
@@ -564,15 +567,13 @@ class MetadataFixer:
                 content = comparison.content_object
                 if content:
                     try:
-                        # Update database filename reference
-                        if hasattr(self.db._db, "update_content_filename"):
-                            self.db._db.update_content_filename(
-                                content,
-                                new_filename,
-                                save=True,
-                                check_path=False,
-                                commit=False,
-                            )
+                        self.db.update_content_filename(
+                            content,
+                            new_filename,
+                            save=True,
+                            check_path=False,
+                            commit=False,
+                        )
                         log_success(
                             logger, f"Renamed {comparison.filename} -> {new_filename}"
                         )

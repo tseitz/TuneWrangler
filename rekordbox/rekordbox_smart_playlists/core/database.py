@@ -54,6 +54,7 @@ class RekordboxDatabase:
         self.config = config or Config()
         self._db: Optional[Rekordbox6Database] = None
         self._is_connected = False
+        self._content_cache: Optional[dict] = None
 
         self._connect()
 
@@ -152,13 +153,45 @@ class RekordboxDatabase:
             Content item or None if not found
         """
         try:
-            return self.get_content(ID=content_id)[0] if self.get_content(ID=content_id) else None
+            results = self.get_content(ID=content_id)
+            return results[0] if results else None
         except (DatabaseQueryError, IndexError):
             return None
+
+    def preload_content_cache(self) -> None:
+        """
+        Pre-load all content into an in-memory cache for fast lookups.
+
+        Call this before batch operations (e.g. metadata fixing) to avoid
+        repeatedly fetching the entire library on every cache-miss.
+        """
+        try:
+            all_content = self.get_content()
+            self._content_cache = {}
+            for content in all_content:
+                artist = ""
+                title = ""
+                if hasattr(content, "ArtistName") and content.ArtistName:
+                    artist = content.ArtistName.lower().strip()
+                if hasattr(content, "Title") and content.Title:
+                    title = content.Title.lower().strip()
+                if artist and title:
+                    self._content_cache[(artist, title)] = content
+            logger.info(f"Pre-loaded {len(self._content_cache)} content items into cache")
+        except Exception as e:
+            log_exception(logger, e, "pre-loading content cache")
+            self._content_cache = None
+
+    def clear_content_cache(self) -> None:
+        """Clear the pre-loaded content cache to free memory."""
+        self._content_cache = None
 
     def find_content_by_filename(self, filename: str) -> Optional[Any]:
         """
         Find content by filename with fallback strategies.
+
+        Uses the pre-loaded content cache for case-insensitive lookups when
+        available (see ``preload_content_cache``).
 
         Args:
             filename: Filename to search for
@@ -193,20 +226,27 @@ class RekordboxDatabase:
                         if content_list:
                             return content_list[0]
 
-                        # Fallback: case-insensitive search
-                        all_content = self.get_content()
-                        for content in all_content:
-                            if (
-                                hasattr(content, "ArtistName")
-                                and content.ArtistName
-                                and hasattr(content, "Title")
-                                and content.Title
-                            ):
+                        # Fallback: case-insensitive search using cache when available
+                        if self._content_cache is not None:
+                            key = (artist_name.lower(), title.lower())
+                            cached = self._content_cache.get(key)
+                            if cached:
+                                return cached
+                        else:
+                            all_content = self.get_content()
+                            for content in all_content:
                                 if (
-                                    content.ArtistName.lower().strip() == artist_name.lower()
-                                    and content.Title.lower().strip() == title.lower()
+                                    hasattr(content, "ArtistName")
+                                    and content.ArtistName
+                                    and hasattr(content, "Title")
+                                    and content.Title
                                 ):
-                                    return content
+                                    if (
+                                        content.ArtistName.lower().strip()
+                                        == artist_name.lower()
+                                        and content.Title.lower().strip() == title.lower()
+                                    ):
+                                        return content
 
             logger.debug(f"Content not found for filename: {filename}")
             return None
@@ -535,6 +575,40 @@ class RekordboxDatabase:
         except Exception as e:
             log_exception(logger, e, f"creating album {name}")
             return None
+
+    # Content update operations
+    def update_content_filename(
+        self,
+        content: Any,
+        new_filename: str,
+        save: bool = True,
+        check_path: bool = False,
+        commit: bool = False,
+    ) -> bool:
+        """
+        Update the filename of a content item in the database.
+
+        Args:
+            content: Content object to update
+            new_filename: New filename to set
+            save: Whether to save immediately
+            check_path: Whether to validate the file path exists
+            commit: Whether to commit the transaction
+
+        Returns:
+            True if update was successful, False otherwise
+        """
+        self.ensure_connected()
+        assert self._db is not None
+        try:
+            self._db.update_content_filename(
+                content, new_filename, save=save, check_path=check_path, commit=commit
+            )
+            logger.debug(f"Updated content filename to: {new_filename}")
+            return True
+        except Exception as e:
+            log_exception(logger, e, f"updating content filename to {new_filename}")
+            return False
 
     # Context manager support
     def __enter__(self) -> "RekordboxDatabase":

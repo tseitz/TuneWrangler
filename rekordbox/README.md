@@ -167,19 +167,6 @@ rekordbox-smart-playlists playlist validate --all
 rekordbox-smart-playlists playlist list
 ```
 
-### Legacy Scripts
-
-```bash
-# Create smart playlists (legacy entry point)
-python smart-playlists.py
-
-# Fix metadata
-python fix_rekordbox_metadata.py --preview --dry-run
-
-# Backup database
-python rekordbox_backup.py
-```
-
 ## JSON Configuration Format
 
 ### Project Structure
@@ -338,22 +325,31 @@ Create a `config.json` or `config.toml`:
 ### pyrekordbox Installation Issues
 
 ```bash
-# Install sqlcipher3 (macOS with Homebrew)
+# 1. Install the sqlcipher C library (macOS with Homebrew)
 brew install sqlcipher
 
-# Clone and install sqlcipher3 Python package
+# 2. Install the Python bindings -- pip should find the Homebrew sqlcipher automatically
+SQLCIPHER_PATH=$(brew --prefix sqlcipher)
+C_INCLUDE_PATH="$SQLCIPHER_PATH/include" LIBRARY_PATH="$SQLCIPHER_PATH/lib" pip install sqlcipher3
+
+# 3. Install pyrekordbox
+pip install pyrekordbox
+```
+
+If `pip install sqlcipher3` fails, you can fall back to building from source:
+
+```bash
 git clone https://github.com/coleifer/sqlcipher3
 cd sqlcipher3
-SQLCIPHER_PATH=$(brew info sqlcipher | awk 'NR==4 {print $1; exit}')
-C_INCLUDE_PATH="$SQLCIPHER_PATH"/include LIBRARY_PATH="$SQLCIPHER_PATH"/lib python setup.py build
-C_INCLUDE_PATH="$SQLCIPHER_PATH"/include LIBRARY_PATH="$SQLCIPHER_PATH"/lib python setup.py install
+SQLCIPHER_PATH=$(brew --prefix sqlcipher)
+C_INCLUDE_PATH="$SQLCIPHER_PATH/include" LIBRARY_PATH="$SQLCIPHER_PATH/lib" python setup.py build
+C_INCLUDE_PATH="$SQLCIPHER_PATH/include" LIBRARY_PATH="$SQLCIPHER_PATH/lib" python setup.py install
 cd ..
-pip install pyrekordbox
 ```
 
 ### Database Connection Errors
 
-- Ensure Rekordbox is **closed** before running scripts
+- Ensure Rekordbox is **closed** before running any commands
 - Check database location: `~/Library/Pioneer/rekordbox6/master.db`
 - Verify read/write permissions to the database file
 
