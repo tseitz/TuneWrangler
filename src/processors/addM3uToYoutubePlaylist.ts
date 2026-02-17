@@ -4,8 +4,7 @@ Adds items from an m3u file to a youtube playlist
 Requires:
 - getYoutubeAuth to be ran first to get token
 */
-import { YouTube } from "https:/deno.land/x/youtube@v0.3.0/mod.ts";
-import { readLines } from "https://deno.land/std@0.167.0/io/buffer.ts";
+import { YouTube } from "youtube";
 
 import { getFolder } from "../core/utils/common.ts";
 
@@ -15,11 +14,13 @@ const yt = new YouTube(Deno.env.get("YOUTUBE_API_KEY") || "", "");
 
 const djDir = getFolder("djMusic");
 
-const f = await Deno.open("/Users/tseitz/code/projects/TuneWrangler/FileAnalysis/fix-list.txt");
+const fixListContent = await Deno.readTextFile(
+  "/Users/tseitz/code/projects/TuneWrangler/FileAnalysis/fix-list.txt",
+);
 
 const badMatches: string[] = [];
 
-for await (const l of readLines(f)) {
+for (const l of fixListContent.split("\n").filter(Boolean)) {
   console.log("****************");
   console.log("Processing:", l);
   const song = new LocalSong(l, djDir);

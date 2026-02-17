@@ -1,7 +1,7 @@
 // TODO: needs to be fixed. requires a deno package that reads bitrate
 // currently don't know how to get bitrate using deno, so this is standard js and node
 
-import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
+import * as fs from "@std/fs";
 import { parseFile } from "music-metadata";
 
 const djDir = "/Users/tseitz/Dropbox/TransferMusic/Downloaded/";

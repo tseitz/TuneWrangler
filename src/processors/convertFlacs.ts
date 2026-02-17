@@ -4,9 +4,9 @@ Renames downloaded music to the format that I like. Also converts to flac if wav
 Incoming (generally): album - artist - title
 Outgoing:             artist - album - title
 */
-import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
+import * as fs from "@std/fs";
 
-import { backupFile, convertLocalToWav, getFolder, logWithBreak } from "../core/utils/common.ts";
+import { backupFile, convertLocalToAiff, getFolder, logWithBreak } from "../core/utils/common.ts";
 import { LocalSong } from "../core/models/Song.ts";
 
 let debug = true;
@@ -48,7 +48,7 @@ async function main() {
 
       console.log("Processing: ", currEntry.name);
       if (!debug && currEntry.name) {
-        await convertLocalToWav(moveDir, song);
+        await convertLocalToAiff(moveDir, song);
       }
       count++;
     } else {

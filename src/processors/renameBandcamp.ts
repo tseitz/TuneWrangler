@@ -1,7 +1,7 @@
 /*
 Tags local songs. Converts to flac if necessary
 */
-import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
+import * as fs from "@std/fs";
 
 import {
   backupFile,

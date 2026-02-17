@@ -1,6 +1,6 @@
-#!/usr/bin/env -S deno run --allow-read --allow-write --allow-run --allow-net --allow-env --allow-sys
+#!/usr/bin/env -S deno run -A
 
-import { parse } from "https://deno.land/std@0.224.0/flags/mod.ts";
+import { parseArgs } from "@std/cli/parse-args";
 import { getLogger } from "../../core/utils/logger.ts";
 import { performanceMonitor, performanceOptimizer, memoryManager } from "../../core/utils/performance.ts";
 
@@ -18,7 +18,7 @@ interface PerformanceFlags {
 
 async function performance(args: string[]): Promise<void> {
   // Parse the arguments including any flags
-  const flags = parse(args, {
+  const flags = parseArgs(args, {
     boolean: ["report", "clear", "monitor", "optimize", "memory", "help"],
     alias: {
       help: "h",

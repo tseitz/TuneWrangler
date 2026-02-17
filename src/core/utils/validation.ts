@@ -1,4 +1,4 @@
-import { extname } from "https://deno.land/std@0.224.0/path/mod.ts";
+import { extname } from "@std/path";
 import { FilePathError, UnsupportedFormatError, ConfigurationError, TuneWranglerError } from "./errors.ts";
 
 /**

@@ -1,6 +1,6 @@
-#!/usr/bin/env -S deno run --allow-read --allow-write --allow-run --allow-net --allow-env --allow-sys
+#!/usr/bin/env -S deno run -A
 
-import { parse } from "https://deno.land/std@0.224.0/flags/mod.ts";
+import { parseArgs } from "@std/cli/parse-args";
 import { validateConfiguration } from "../core/utils/common.ts";
 import { logError } from "../core/utils/errors.ts";
 import { configureLogger, getLogger, LogLevel } from "../core/utils/logger.ts";
@@ -228,7 +228,7 @@ Run 'tunewrangler --help' to see all available commands.
 }
 
 async function main(): Promise<void> {
-  const args = parse(Deno.args, {
+  const args = parseArgs(Deno.args, {
     boolean: ["help", "version", "verbose", "quiet"],
     alias: {
       help: "h",

@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.ns", "deno.window"]
+  },
+  "imports": {
+    "@std/path": "jsr:@std/path@^1",
+    "@std/fs": "jsr:@std/fs@^1",
+    "@std/cli": "jsr:@std/cli@^1",
+    "node-id3": "npm:node-id3@^0.2.9",
+    "youtube": "https://deno.land/x/youtube@v0.3.0/mod.ts"
+  },
+  "tasks": {
+    "validate": "deno run --allow-env --allow-read src/config/validate.ts",
+    "rM": "deno run -A src/processors/renameMusic.ts",
+    "rBc": "deno run -A src/processors/renameBandcamp.ts",
+    "rI": "deno run -A src/processors/renameItunes.ts",
+    "rBp": "deno run -A src/processors/renameBeatport.ts",
+    "ytRb": "deno run -A src/processors/addM3uToYoutubePlaylist.ts",
+    "playlistImport": "deno run -A src/processors/betterM3uSearch.ts",
+    "cF": "deno run -A src/processors/convertFlacs.ts",
+    "cli": "deno run -A src/cli/main.ts"
+  }
+}

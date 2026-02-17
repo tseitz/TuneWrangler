@@ -4,7 +4,7 @@ Run before downloadBadBitrates.ts to get token
 import {
   authenticator,
   authParams,
-} from "https://deno.land/x/youtube@v0.3.0/mod.ts";
+} from "youtube";
 
 const auth = new authenticator();
 const creds: authParams = {

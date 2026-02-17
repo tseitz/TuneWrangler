@@ -1,4 +1,4 @@
-import * as path from "https://deno.land/std@0.157.0/path/mod.ts";
+import * as path from "@std/path";
 import { normalizeUnicode, normalizeFilename } from "../utils/unicode.ts";
 
 export class Song {

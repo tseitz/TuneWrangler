@@ -2,7 +2,7 @@
 
 **Professional Music File Management & Organization Tool**
 
-[![Deno](https://img.shields.io/badge/Deno-1.40+-000000?logo=deno&logoColor=white)](https://deno.land/)
+[![Deno](https://img.shields.io/badge/Deno-2.0+-000000?logo=deno&logoColor=white)](https://deno.land/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 TuneWrangler is a powerful, Deno-based tool for managing and organizing music files. It provides intelligent file
@@ -207,8 +207,7 @@ export TUNEWRANGLER_DOWNLOADS="/custom/downloads/path"
 
 ### Prerequisites
 
-- [Deno](https://deno.land/) 1.40 or higher
-- Node.js (for some dependencies)
+- [Deno](https://deno.land/) 2.0 or higher
 
 ### Setup Development Environment
 
@@ -218,13 +217,13 @@ git clone https://github.com/yourusername/TuneWrangler.git
 cd TuneWrangler
 
 # Install dependencies
-deno cache src/**/*.ts
+deno install
 
 # Run tests
 deno test
 
 # Build (if needed)
-deno compile --allow-read --allow-write --allow-run src/cli/main.ts
+deno compile -A src/cli/main.ts
 ```
 
 ### Project Structure

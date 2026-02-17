@@ -1,8 +1,8 @@
 /*
 Renames downloaded music from Beatport to format I like
 */
-import * as fs from "https://deno.land/std@0.170.0/fs/mod.ts";
-import { walk } from "https://deno.land/std@0.170.0/fs/walk.ts";
+import * as fs from "@std/fs";
+import { walk } from "@std/fs";
 
 import {
   backupFile,

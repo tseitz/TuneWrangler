@@ -4,7 +4,7 @@ Renames downloaded music to the format that I like. Also converts to flac if wav
 Incoming (generally): album - artist - title
 Outgoing:             artist - album - title
 */
-import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
+import * as fs from "@std/fs";
 
 import {
   backupFile,

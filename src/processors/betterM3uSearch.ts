@@ -4,14 +4,10 @@ Takes an m3u file and removes x's and dashes from the name so you can search bet
 Incoming: artist x artist - title
 Outgoing: artist artist title
 */
-import { readLines } from "https://deno.land/std@0.167.0/io/buffer.ts";
+import { getFolder } from "../core/utils/common.ts";
 
-import { getFolder } from "./common.ts";
-
-const unix = true;
-
-const startDir = getFolder("djPlaylists", unix);
-const importDir = getFolder("djPlaylistImport", unix);
+const startDir = getFolder("djPlaylists");
+const importDir = getFolder("djPlaylistImport");
 
 // run the program
 await main();
@@ -23,8 +19,10 @@ async function main() {
       const outputFile = `${importDir}/${currEntry.name}`;
       await Deno.truncate(outputFile);
 
-      const fileReader = await Deno.open(`${startDir}/${currEntry.name}`);
-      for await (let line of readLines(fileReader)) {
+      const content = await Deno.readTextFile(
+        `${startDir}/${currEntry.name}`,
+      );
+      for (let line of content.split("\n")) {
         if (/#EXTINF/.test(line)) {
           // line = line.replace(/ - /g, " ");
           line = line.replace(/ x /g, " & ");

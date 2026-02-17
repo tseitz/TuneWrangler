@@ -1,10 +1,10 @@
-import { parse } from "https://deno.land/std@0.224.0/flags/mod.ts";
-import { join } from "https://deno.land/std@0.224.0/path/mod.ts";
+import { parseArgs } from "@std/cli/parse-args";
+import { join } from "@std/path";
 import { getLogger } from "../../core/utils/logger.ts";
 
 export async function logs(args: string[]): Promise<void> {
   const logger = getLogger();
-  const flags = parse(args, {
+  const flags = parseArgs(args, {
     boolean: ["help", "list", "tail", "clear"],
     string: ["file"],
     alias: { help: "h" },

@@ -1,9 +1,9 @@
 /*
 Optimized version of convertFlacs processor with streaming and batching
 */
-import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
+import * as fs from "@std/fs";
 
-import { backupFile, convertLocalToWav, getFolder, logWithBreak } from "../core/utils/common.ts";
+import { backupFile, convertLocalToAiff, getFolder, logWithBreak } from "../core/utils/common.ts";
 import { LocalSong } from "../core/models/Song.ts";
 import { performanceOptimizer, performanceMonitor, StreamingProcessor, LRUCache } from "../core/utils/performance.ts";
 import { getLogger } from "../core/utils/logger.ts";
@@ -96,7 +96,7 @@ async function main() {
             // Use streaming processor for better memory management
             await streamingProcessor.processFileStream(
               `${startDir}/${filename}`,
-              `${moveDir}/${filename.replace(".flac", ".wav")}`,
+              `${moveDir}/${filename.replace(".flac", ".aiff")}`,
               async (chunk: Uint8Array) => {
                 // For now, just pass through the chunk
                 // In a real implementation, you'd do audio conversion here
@@ -105,7 +105,7 @@ async function main() {
             );
 
             // Fallback to original conversion method
-            await convertLocalToWav(moveDir, song);
+            await convertLocalToAiff(moveDir, song);
           }
 
           // Cache successful conversion

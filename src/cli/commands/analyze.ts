@@ -1,10 +1,10 @@
-import { parse } from "https://deno.land/std@0.224.0/flags/mod.ts";
+import { parseArgs } from "@std/cli/parse-args";
 import { analyzeDjCollection } from "../../processors/analyzeDjCollection.ts";
 import { getFolder } from "../../core/utils/common.ts";
 import { info, error } from "../../core/utils/logger.ts";
 
 export async function analyzeDj(args: string[]): Promise<void> {
-  const flags = parse(args, {
+  const flags = parseArgs(args, {
     boolean: ["help"],
     string: ["output", "limit"],
     alias: { help: "h" },

@@ -1,7 +1,7 @@
 /*
 Optimized version of renameMusic processor with performance enhancements
 */
-import * as fs from "https://deno.land/std@0.165.0/fs/mod.ts";
+import * as fs from "@std/fs";
 
 import {
   backupFile,

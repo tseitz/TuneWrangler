@@ -271,14 +271,14 @@ const commands = {
 #### `src/cli/commands/example.ts`
 
 ```typescript
-import { parse } from "https://deno.land/std@0.224.0/flags/mod.ts";
+import { parseArgs } from "@std/cli/parse-args";
 import { getLogger } from "../../core/utils/logger.ts";
 
 export async function exampleCommand(args: string[]): Promise<void> {
   const logger = getLogger();
   
   // Parse command flags
-  const flags = parse(args, {
+  const flags = parseArgs(args, {
     boolean: ["help", "verbose"],
     string: ["input", "output"],
     alias: { help: "h" }

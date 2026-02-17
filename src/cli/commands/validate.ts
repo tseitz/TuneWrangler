@@ -1,10 +1,10 @@
-import { parse } from "https://deno.land/std@0.224.0/flags/mod.ts";
+import { parseArgs } from "@std/cli/parse-args";
 import { validateConfiguration } from "../../core/utils/common.ts";
 import { loadConfig } from "../../config/index.ts";
 import { getLogger } from "../../core/utils/logger.ts";
 
 export async function renameMusic(args: string[]): Promise<void> {
-  const flags = parse(args, {
+  const flags = parseArgs(args, {
     boolean: ["help"],
     alias: { help: "h" },
   });
@@ -32,7 +32,7 @@ to follow the standard "Artist - Title" format.
 }
 
 export async function renameBandcamp(args: string[]): Promise<void> {
-  const flags = parse(args, {
+  const flags = parseArgs(args, {
     boolean: ["help"],
     alias: { help: "h" },
   });
@@ -59,7 +59,7 @@ This command processes Bandcamp music files and renames them appropriately.
 }
 
 export async function renameItunes(args: string[]): Promise<void> {
-  const flags = parse(args, {
+  const flags = parseArgs(args, {
     boolean: ["help"],
     alias: { help: "h" },
   });
@@ -86,7 +86,7 @@ This command processes iTunes music files and renames them appropriately.
 }
 
 export async function renameBeatport(args: string[]): Promise<void> {
-  const flags = parse(args, {
+  const flags = parseArgs(args, {
     boolean: ["help"],
     alias: { help: "h" },
   });
@@ -113,7 +113,7 @@ This command processes Beatport music files and renames them appropriately.
 }
 
 export async function addM3uToYoutube(args: string[]): Promise<void> {
-  const flags = parse(args, {
+  const flags = parseArgs(args, {
     boolean: ["help"],
     string: ["playlist"],
     alias: { help: "h" },
@@ -142,7 +142,7 @@ This command adds M3U playlist files to YouTube playlists.
 }
 
 export async function playlistImport(args: string[]): Promise<void> {
-  const flags = parse(args, {
+  const flags = parseArgs(args, {
     boolean: ["help"],
     alias: { help: "h" },
   });
@@ -169,7 +169,7 @@ This command imports and processes playlist files.
 }
 
 export async function convertFlacs(args: string[]): Promise<void> {
-  const flags = parse(args, {
+  const flags = parseArgs(args, {
     boolean: ["help"],
     alias: { help: "h" },
   });
@@ -197,7 +197,7 @@ This command converts FLAC files to other audio formats.
 
 export async function validate(args: string[]): Promise<void> {
   const logger = getLogger();
-  const flags = parse(args, {
+  const flags = parseArgs(args, {
     boolean: ["help"],
     alias: { help: "h" },
   });

@@ -2,10 +2,9 @@ import { DownloadedSong, LocalSong, Song, Tags } from "../models/Song.ts";
 import { FolderLocation } from "../models/types.ts";
 import { loadConfig, validatePaths } from "../../config/index.ts";
 import { logError, ConfigurationError } from "./errors.ts";
-// import ffmpeg from "npm:fluent-ffmpeg";
-import ffmpeg from "npm:ffmpeg";
-import nodeId3 from "npm:node-id3";
-import { join } from "https://deno.land/std/path/mod.ts";
+// ffmpeg npm package no longer needed - using Deno.Command for all conversions
+import nodeId3 from "node-id3";
+import { join } from "@std/path";
 import { Semaphore } from "../models/Semaphore.ts";
 
 const MAX_CONCURRENT_OPERATIONS = 10;
@@ -121,22 +120,47 @@ export function fixItunesLabeling(str: string): string {
   return str;
 }
 
-async function convertToAiff(song: Song, outputFile: string, artworkFile?: string) {
-  // const tempOutputFile = join(Deno.makeTempDirSync(), `temp_${Date.now()}.aiff`);
-
+/**
+ * Detects the bit depth of an audio file using ffprobe.
+ * Returns 16 or 24 (defaults to 16 if detection fails).
+ */
+async function detectBitDepth(filePath: string): Promise<16 | 24> {
   try {
-    // Step 1: Convert audio to FLAC
-    // const convertCommand = new Deno.Command("ffmpeg", {
-    //   args: ["-i", inputFile, "-c:a", "flac", tempOutputFile],
-    // });
+    const probeCommand = new Deno.Command("ffprobe", {
+      args: [
+        "-v", "error",
+        "-select_streams", "a:0",
+        "-show_entries", "stream=bits_per_raw_sample,bits_per_sample",
+        "-of", "default=noprint_wrappers=1:nokey=0",
+        filePath,
+      ],
+    });
+    const result = await probeCommand.output();
+    if (result.success) {
+      const output = new TextDecoder().decode(result.stdout);
+      const match = output.match(/bits_per_raw_sample=(\d+)/);
+      const matchFallback = output.match(/bits_per_sample=(\d+)/);
+      const bits = parseInt(match?.[1] || matchFallback?.[1] || "16", 10);
+      if (bits >= 24) return 24;
+    }
+  } catch {
+    console.log("Could not detect bit depth, defaulting to 16-bit");
+  }
+  return 16;
+}
+
+async function convertToAiff(song: Song, outputFile: string, _artworkFile?: string) {
+  try {
+    const bitDepth = await detectBitDepth(song.fullFilename);
+    const codec = bitDepth === 24 ? "pcm_s24be" : "pcm_s16be";
+    console.log(`Converting to AIFF (${bitDepth}-bit): ${song.filename}`);
+
     const convertCommand = new Deno.Command("ffmpeg", {
       args: [
         "-i",
         song.fullFilename,
         "-c:a",
-        "pcm_s16be",
-        // "-c:a",
-        // "copy", // Copy audio without re-encoding
+        codec,
         "-map_metadata",
         "0",
         "-metadata",
@@ -148,64 +172,21 @@ async function convertToAiff(song: Song, outputFile: string, artworkFile?: strin
         "-metadata",
         `album_artist=${song.artist}`,
         "-f",
-        "aiff", // Ensure output is AIFF
-        "-y", // Overwrite output file if it exists
+        "aiff",
+        "-y",
         outputFile,
       ],
     });
     const convertResult = await convertCommand.output();
     if (!convertResult.success) {
-      throw new Error(`FFmpeg conversion failed: ${new TextDecoder().decode(convertResult.stderr)}`);
+      throw new Error(
+        `FFmpeg conversion failed: ${new TextDecoder().decode(convertResult.stderr)}`
+      );
     } else {
       console.log("Conversion successful");
     }
-
-    // if (artworkFile) {
-    //   console.log("Adding artwork", artworkFile);
-    //   const artworkCommand = new Deno.Command("ffmpeg", {
-    //     args: [
-    //       "-i",
-    //       tempOutputFile,
-    //       "-i",
-    //       artworkFile,
-    //       "-map",
-    //       "0:0",
-    //       "-map",
-    //       "1:0",
-    //       "-c",
-    //       "copy",
-    //       "-id3v2_version",
-    //       "3",
-    //       "-disposition:v:0",
-    //       "attached_pic",
-    //       "-y",
-    //       "-metadata:s:v",
-    //       `title="Album cover"`,
-    //       "-metadata:s:v",
-    //       `comment="Cover (front)"`,
-    //       outputFile,
-    //     ],
-    //   });
-    //   const artworkResult = await artworkCommand.output();
-    //   if (!artworkResult.success) {
-    //     throw new Error(`FFmpeg artwork addition failed: ${new TextDecoder().decode(artworkResult.stderr)}`);
-    //   } else {
-    //     console.log("Artwork added");
-    //   }
-
-    //   await Deno.remove(tempOutputFile);
-    // } else {
-    //   // If no artwork, just rename the temp file
-    //   await Deno.rename(tempOutputFile, outputFile);
-    // }
   } catch (error) {
     console.error("An error occurred:", error);
-    // Clean up temp file if it exists
-    try {
-      // await Deno.remove(tempOutputFile);
-    } catch {
-      // Ignore error if temp file doesn't exist
-    }
     throw error;
   }
 }
@@ -238,13 +219,12 @@ export async function renameAndMove(
     }
 
     let finalPath = `${moveDir}${song.finalFilename}`;
-    if (song.extension === ".wav" || song.extension === ".m4a") {
-      finalPath = `${moveDir}${song.finalFilename.slice(0, song.extension.length * -1)}.aiff`;
-      await convertToAiff(song, finalPath, tempImageFile);
-    } else if (song.extension === ".mp3") {
-      await convertToMp3(song, finalPath, tempImageFile);
+    if (song.extension === ".mp3") {
+      await retagMp3(song, finalPath, tempImageFile);
     } else {
-      finalPath = `${moveDir}${song.finalFilename}`;
+      // All non-MP3 formats (WAV, M4A, FLAC, OGG, OPUS, etc.) → AIFF
+      const baseName = song.finalFilename.slice(0, song.extension.length * -1);
+      finalPath = `${moveDir}${baseName}.aiff`;
       await convertToAiff(song, finalPath, tempImageFile);
     }
 
@@ -256,7 +236,11 @@ export async function renameAndMove(
   }
 }
 
-export async function convertLocalToWav(moveDir: string, song: LocalSong) {
+/**
+ * Converts a local FLAC (or other lossless) file to AIFF with proper metadata.
+ * Preserves original bit depth (16 or 24-bit) and removes the source file on success.
+ */
+export async function convertLocalToAiff(moveDir: string, song: LocalSong) {
   song.tags = {
     title: song.title,
     artist: song.artist,
@@ -264,25 +248,16 @@ export async function convertLocalToWav(moveDir: string, song: LocalSong) {
   };
 
   if (song.tags) {
-    console.log("Setting Tags");
-
-    const process = ffmpeg();
-    process
-      .input(song.fullFilename)
-      .metadata({ artist: song.artist, title: song.title, album: song.album })
-      .audioBitrate("320k")
-      .overwrite() // overwrite any existing output files
-      .output(`${moveDir}${song.filename.slice(0, -5)}.mp3`);
+    const outputFile = `${moveDir}${song.filename.slice(0, song.filename.lastIndexOf("."))}.aiff`;
 
     try {
-      await process.run();
+      await convertToAiff(song, outputFile);
       await Deno.remove(song.fullFilename);
     } catch (e) {
       console.log(e, song.filename);
     }
   } else {
     console.log("No tags for, leaving in place: ", song.filename);
-    // renameFile(song.fullFilename, `${moveDir}${song.finalFilename}`);
   }
 }
 
@@ -303,17 +278,21 @@ export function setFinalDownloadedSongName(song: DownloadedSong): DownloadedSong
   return song;
 }
 
-async function convertToMp3(song: Song, outputFile: string, artworkFile?: string) {
+/**
+ * Retags an MP3 file without re-encoding the audio stream.
+ * Uses -c:a copy to preserve the original audio bitstream exactly,
+ * avoiding generation loss from lossy-to-lossy transcoding.
+ */
+async function retagMp3(song: Song, outputFile: string, _artworkFile?: string) {
   try {
-    // First try with metadata copying (includes artwork)
-    const convertCommand = new Deno.Command("ffmpeg", {
+    console.log(`Retagging MP3 (no re-encode): ${song.filename}`);
+
+    const retagCommand = new Deno.Command("ffmpeg", {
       args: [
         "-i",
         song.fullFilename,
         "-c:a",
-        "libmp3lame",
-        "-b:a",
-        "320k",
+        "copy",
         "-map_metadata",
         "0",
         "-id3v2_version",
@@ -331,22 +310,20 @@ async function convertToMp3(song: Song, outputFile: string, artworkFile?: string
       ],
     });
 
-    const convertResult = await convertCommand.output();
-    if (convertResult.success) {
-      console.log(`Conversion complete: ${outputFile}`);
+    const retagResult = await retagCommand.output();
+    if (retagResult.success) {
+      console.log(`Retag complete: ${outputFile}`);
       return;
     }
 
-    // If that fails, try without copying metadata (skips corrupted artwork)
-    console.log("First conversion attempt failed, trying without metadata copy...");
-    const convertCommandNoMetadata = new Deno.Command("ffmpeg", {
+    // If stream copy fails (e.g. corrupted metadata), try without -map_metadata
+    console.log("First retag attempt failed, trying without metadata copy...");
+    const retagCommandNoMetadata = new Deno.Command("ffmpeg", {
       args: [
         "-i",
         song.fullFilename,
         "-c:a",
-        "libmp3lame",
-        "-b:a",
-        "320k",
+        "copy",
         "-id3v2_version",
         "3",
         "-metadata",
@@ -362,12 +339,14 @@ async function convertToMp3(song: Song, outputFile: string, artworkFile?: string
       ],
     });
 
-    const convertResultNoMetadata = await convertCommandNoMetadata.output();
-    if (!convertResultNoMetadata.success) {
-      throw new Error(`FFmpeg conversion failed: ${new TextDecoder().decode(convertResultNoMetadata.stderr)}`);
+    const retagResultNoMetadata = await retagCommandNoMetadata.output();
+    if (!retagResultNoMetadata.success) {
+      throw new Error(
+        `FFmpeg retag failed: ${new TextDecoder().decode(retagResultNoMetadata.stderr)}`
+      );
     }
 
-    console.log(`Conversion complete (without artwork): ${outputFile}`);
+    console.log(`Retag complete (without original metadata): ${outputFile}`);
   } catch (error) {
     console.error("An error occurred:", error);
     throw error;
