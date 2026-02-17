@@ -8,6 +8,9 @@ import * as fs from "@std/fs";
 
 import { backupFile, convertLocalToAiff, getFolder, logWithBreak } from "../core/utils/common.ts";
 import { LocalSong } from "../core/models/Song.ts";
+import { Semaphore } from "../core/models/Semaphore.ts";
+
+const MAX_CONCURRENT_CONVERSIONS = 4;
 
 let debug = true;
 let clear = true;
@@ -34,26 +37,43 @@ if (clear) await fs.emptyDir(backupDir);
 await main();
 
 async function main() {
-  let count = 0;
+  // Phase 1: Collect all FLAC files
+  const flacFiles: { name: string; song: LocalSong }[] = [];
   for await (const currEntry of Deno.readDir(startDir)) {
     if (currEntry.isFile) {
-      await backupFile(startDir, backupDir, currEntry.name);
-
       const song = new LocalSong(currEntry.name, startDir);
-
-      if (song.extension !== ".flac") {
-        // logWithBreak(`Skipping: ${song.filename}`);
-        continue;
+      if (song.extension === ".flac") {
+        flacFiles.push({ name: currEntry.name, song });
       }
-
-      console.log("Processing: ", currEntry.name);
-      if (!debug && currEntry.name) {
-        await convertLocalToAiff(moveDir, song);
-      }
-      count++;
     } else {
       logWithBreak(`Skipping (not a file): ${currEntry.name}`);
     }
   }
-  console.log(`Total Count: ${count}`);
+
+  console.log(`Found ${flacFiles.length} FLAC files to process`);
+
+  // Phase 2: Parallel backup
+  await Promise.all(
+    flacFiles.map(({ name }) => backupFile(startDir, backupDir, name))
+  );
+
+  // Phase 3: Parallel conversion with concurrency limit
+  if (!debug) {
+    const sem = new Semaphore(MAX_CONCURRENT_CONVERSIONS);
+    await Promise.all(
+      flacFiles.map(async ({ name, song }) => {
+        await sem.acquire();
+        try {
+          console.log("Processing: ", name);
+          await convertLocalToAiff(moveDir, song);
+        } finally {
+          sem.release();
+        }
+      })
+    );
+  } else {
+    flacFiles.forEach(({ name }) => console.log("Processing: ", name));
+  }
+
+  console.log(`Total Count: ${flacFiles.length}`);
 }

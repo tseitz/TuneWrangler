@@ -56,13 +56,37 @@ export async function validateConfiguration(): Promise<boolean> {
   }
 }
 
-export async function cacheMusic(cacheDir: string): Promise<LocalSong[]> {
-  const cache: LocalSong[] = [];
+/**
+ * Hash-based music cache for O(1) duplicate detection.
+ * Replaces the old array-based O(n) linear scan approach.
+ */
+export class MusicCache {
+  private keys = new Set<string>();
+
+  private static normalizeKey(artist: string, title: string): string {
+    return `${(artist || "").toUpperCase()}|||${(title || "").toUpperCase()}`;
+  }
+
+  add(song: Song): void {
+    this.keys.add(MusicCache.normalizeKey(song.artist, song.title));
+  }
+
+  has(song: Song): boolean {
+    return this.keys.has(MusicCache.normalizeKey(song.artist, song.title));
+  }
+
+  get size(): number {
+    return this.keys.size;
+  }
+}
+
+export async function cacheMusic(cacheDir: string): Promise<MusicCache> {
+  const cache = new MusicCache();
 
   for await (const cacheEntry of Deno.readDir(cacheDir)) {
     if (cacheEntry.isFile) {
       const song = new LocalSong(cacheEntry.name, cacheDir);
-      cache.push(song);
+      cache.add(song);
     }
   }
 
@@ -77,39 +101,9 @@ export function addX(string: string) {
   return string.replace(/\,\s/g, " x ");
 }
 
-export function removeClip(title: string): string {
-  title = title.replace(/(\(|\[).?CLIP.?(\)|\])/gi, "").trim();
 
-  return title;
-}
-
-export function checkIfDuplicate(song: Song, musicArr: Song[] = []): boolean {
-  // console.time('start')
-  for (let i = 0, len = musicArr.length; i < len; i++) {
-    const compare = musicArr[i];
-    const songArtist = song.artist || "";
-    const songTitle = song.title || "";
-    const compareArtist = compare.artist || "";
-    const compareTitle = compare.title || "";
-
-    // remove clip to check if we have full version
-    if (compareTitle.toUpperCase().includes("CLIP")) {
-      compare.title = removeClip(compareTitle);
-    }
-
-    if (
-      compare !== song && // when comparing local to itself, make sure the files don't exactly match
-      songArtist.toUpperCase() === compareArtist.toUpperCase() &&
-      songTitle.toUpperCase() === compareTitle.toUpperCase()
-      // && !dupeExceptions.includes(
-      //   `${song.artist.toUpperCase()} - ${song.title.toUpperCase()}`
-      // )
-    ) {
-      return true;
-    }
-  }
-  // console.time('end')
-  return false;
+export function checkIfDuplicate(song: Song, cache: MusicCache): boolean {
+  return cache.has(song);
 }
 
 export function fixItunesLabeling(str: string): string {

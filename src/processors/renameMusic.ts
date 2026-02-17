@@ -51,6 +51,7 @@ await main();
 
 async function main() {
   let count = 0;
+  const moveOperations: Promise<void>[] = [];
 
   for await (const currEntry of Deno.readDir(startDir)) {
     if (isProcessable(currEntry)) {
@@ -69,7 +70,6 @@ async function main() {
         }
 
         try {
-          /* ALL TOGETHER NOW */
           song = setFinalDownloadedSongName(song);
 
           song.duplicate = checkIfDuplicate(song, musicCache);
@@ -81,21 +81,28 @@ async function main() {
           continue;
         }
 
-        musicCache.push(song);
+        musicCache.add(song);
 
         logWithBreak(song.finalFilename);
 
         count++;
         if (!debug) {
-          await backupFile(startDir, backupDir, currEntry.name);
-          // renameAndMove(moveDir, song);
-          renameAndMove(moveDir, song, undefined, clear);
+          const entryName = currEntry.name;
+          moveOperations.push(
+            backupFile(startDir, backupDir, entryName)
+              .then(() => renameAndMove(moveDir, song, undefined, clear))
+          );
         }
       } catch (error) {
         logWithBreak(`Skipping: ${currEntry.name} - ${error}`);
         continue;
       }
     }
+  }
+
+  // Wait for all parallel backup + rename/move operations
+  if (moveOperations.length > 0) {
+    await Promise.all(moveOperations);
   }
 
   console.log(`Total Count: ${count}`);

@@ -107,7 +107,7 @@ async function main() {
           return null;
         }
 
-        existingMusicCache.push(song);
+        existingMusicCache.add(song);
 
         logger.info(`✅ Processed: ${song.finalFilename}`);
 

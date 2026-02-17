@@ -327,7 +327,6 @@ export class Song {
       /(\(|\[)/g.test(title) &&
       !title.toUpperCase().includes("VIP") &&
       !title.toUpperCase().includes("WIP") &&
-      !title.toUpperCase().includes("CLIP") &&
       !title.toUpperCase().includes("INSTRUMENTAL") &&
       !title.toUpperCase().includes("EXTENDED")
     ) {

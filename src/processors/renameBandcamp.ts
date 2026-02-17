@@ -70,7 +70,7 @@ async function main() {
             continue;
           }
 
-          musicCache.push(song);
+          musicCache.add(song);
 
           logWithBreak(song.finalFilename);
 
