@@ -1,0 +1,67 @@
+{
+  "version": "1.0.0",
+  "flows": [
+    {
+      "name": "SoundCloud Track Page - Find Gate URL",
+      "platform": "soundcloud-track",
+      "urlPatterns": ["soundcloud.com"],
+      "steps": [
+        {
+          "type": "wait",
+          "delay": 3000,
+          "description": "Wait for page to stabilize"
+        },
+        {
+          "type": "evaluate",
+          "code": "(() => { const attributeSelectors = ['[aria-label*=\"Free\"]', '[title*=\"Free DL\"]', '[title*=\"Download\"]', '[aria-label*=\"Download\"]']; for (const selector of attributeSelectors) { const freeDlButton = document.querySelector(selector); if (freeDlButton) { const link = freeDlButton.closest('a') || freeDlButton.querySelector('a'); if (link && link.href) { return link.href; } } } return null; })()",
+          "selector": "gateUrl",
+          "description": "Look for Free DL button by attributes"
+        },
+        {
+          "type": "evaluate",
+          "code": "(() => { const allButtons = document.querySelectorAll('button, a.sc-button, [role=\"button\"]'); for (const btn of allButtons) { const text = (btn.textContent || '').toLowerCase(); if (text.includes('free dl') || text.includes('free download')) { if (btn.href) return btn.href; const link = btn.closest('a') || btn.querySelector('a'); if (link && link.href) return link.href; } } return null; })()",
+          "selector": "gateUrl",
+          "description": "Look for Free DL button by text",
+          "optional": true
+        },
+        {
+          "type": "evaluate",
+          "code": "(() => { const buyLinks = document.querySelectorAll('a[href*=\"toneden\"], a[href*=\"hypeddit\"], a[href*=\"fanlink\"], a[href*=\"linktr\"], a[href*=\"hype.to\"]'); for (const link of buyLinks) { if (link.href) { return link.href; } } return null; })()",
+          "selector": "gateUrl",
+          "description": "Look for gate links in buy buttons",
+          "optional": true
+        },
+        {
+          "type": "evaluate",
+          "code": "(() => { const descriptionLinks = document.querySelectorAll('.truncatedAudioInfo a, .sc-text a'); for (const link of descriptionLinks) { const href = link.href || ''; if (href.includes('toneden') || href.includes('hypeddit') || href.includes('hype.to') || href.includes('fanlink')) { return href; } } return null; })()",
+          "selector": "gateUrl",
+          "description": "Check description section for links",
+          "optional": true
+        },
+        {
+          "type": "click",
+          "selector": "button[aria-label*='more' i], button[title*='More' i], button[aria-label*='More' i]",
+          "description": "Click more button to reveal hidden options",
+          "optional": true
+        },
+        {
+          "type": "wait",
+          "delay": 1000,
+          "description": "Wait for dropdown to appear",
+          "optional": true
+        },
+        {
+          "type": "evaluate",
+          "code": "(() => { const dropdownLinks = document.querySelectorAll('[role=\"menu\"] a, .sc-popup a, .moreActions a'); for (const link of dropdownLinks) { const href = link.href || ''; const text = link.textContent || ''; if (href.includes('toneden') || href.includes('hypeddit') || href.includes('hype.to') || text.toLowerCase().includes('free') || text.toLowerCase().includes('download')) { return href; } } return null; })()",
+          "selector": "gateUrl",
+          "description": "Check dropdown for download link",
+          "optional": true
+        }
+      ],
+      "metadata": {
+        "description": "Flow for finding gate URLs on SoundCloud track pages",
+        "lastUpdated": "2026-01-25T00:00:00.000Z"
+      }
+    }
+  ]
+}

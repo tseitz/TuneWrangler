@@ -1,0 +1,110 @@
+{
+  "version": "1.0.0",
+  "flows": [
+    {
+      "name": "Hypeddit Standard Flow",
+      "platform": "hypeddit",
+      "urlPatterns": ["hypeddit.com", "hype.to"],
+      "steps": [
+        {
+          "type": "waitForSelector",
+          "selector": "input[type='email'], input[name='email']",
+          "description": "Wait for email input to appear",
+          "timeout": 10000
+        },
+        {
+          "type": "fill",
+          "selector": "input[type='email'], input[name='email']",
+          "value": "{{credentials.email}}",
+          "description": "Fill email field"
+        },
+        {
+          "type": "wait",
+          "delay": 500,
+          "description": "Wait for form to process"
+        },
+        {
+          "type": "click",
+          "selector": "button[type='submit'], button:has-text('Submit'), button:has-text('Continue')",
+          "description": "Submit email form",
+          "optional": true
+        },
+        {
+          "type": "waitForSelector",
+          "selector": "[data-action='soundcloud-follow'], .soundcloud-follow, button:has-text('Follow on SoundCloud')",
+          "description": "Wait for SoundCloud follow button",
+          "optional": true,
+          "timeout": 5000
+        },
+        {
+          "type": "click",
+          "selector": "[data-action='soundcloud-follow'], .soundcloud-follow, button:has-text('Follow on SoundCloud')",
+          "description": "Click SoundCloud follow button",
+          "optional": true
+        },
+        {
+          "type": "waitForPopup",
+          "description": "Wait for SoundCloud popup",
+          "optional": true,
+          "timeout": 10000
+        },
+        {
+          "type": "switchToPopup",
+          "description": "Switch to SoundCloud popup",
+          "optional": true
+        },
+        {
+          "type": "click",
+          "selector": ".sc-button-follow, button:has-text('Follow')",
+          "description": "Click follow in SoundCloud popup",
+          "optional": true
+        },
+        {
+          "type": "closePopup",
+          "description": "Close popup",
+          "optional": true
+        },
+        {
+          "type": "waitForSelector",
+          "selector": "#sc_comment_text, textarea[name='comment'], input[name='sc_comment_text']",
+          "description": "Wait for comment field",
+          "optional": true,
+          "timeout": 5000
+        },
+        {
+          "type": "fill",
+          "selector": "#sc_comment_text, textarea[name='comment'], input[name='sc_comment_text']",
+          "value": "{{credentials.defaultComment}}",
+          "description": "Fill comment field",
+          "optional": true
+        },
+        {
+          "type": "click",
+          "selector": "button[type='submit'], button:has-text('Comment'), button:has-text('Post')",
+          "description": "Submit comment",
+          "optional": true
+        },
+        {
+          "type": "wait",
+          "delay": 2000,
+          "description": "Wait for actions to complete"
+        },
+        {
+          "type": "waitForSelector",
+          "selector": "a[download], a:has-text('Download'), button:has-text('Download')",
+          "description": "Wait for download button",
+          "timeout": 30000
+        },
+        {
+          "type": "waitForDownload",
+          "description": "Wait for download to start",
+          "timeout": 30000
+        }
+      ],
+      "metadata": {
+        "description": "Standard Hypeddit gate flow with email, follow, and comment",
+        "lastUpdated": "2026-01-25T00:00:00.000Z"
+      }
+    }
+  ]
+}

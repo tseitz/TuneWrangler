@@ -1,0 +1,109 @@
+{
+  "version": "1.0.0",
+  "flows": [
+    {
+      "name": "ToneDen Standard Flow",
+      "platform": "toneden",
+      "urlPatterns": ["toneden.io"],
+      "steps": [
+        {
+          "type": "wait",
+          "delay": 3000,
+          "description": "Wait for page to stabilize"
+        },
+        {
+          "type": "waitForSelector",
+          "selector": "button:has-text('FOLLOW ON SOUNDCLOUD'), button:has-text('Follow on SoundCloud')",
+          "description": "Wait for SoundCloud follow button",
+          "optional": true,
+          "timeout": 5000
+        },
+        {
+          "type": "click",
+          "selector": "button:has-text('FOLLOW ON SOUNDCLOUD'), button:has-text('Follow on SoundCloud')",
+          "description": "Click SoundCloud follow button",
+          "optional": true
+        },
+        {
+          "type": "waitForPopup",
+          "description": "Wait for SoundCloud authorization popup",
+          "optional": true,
+          "timeout": 10000
+        },
+        {
+          "type": "switchToPopup",
+          "description": "Switch to popup",
+          "optional": true
+        },
+        {
+          "type": "waitForSelector",
+          "selector": "button:has-text('Connect'), button:has-text('Allow'), button:has-text('Authorize')",
+          "description": "Wait for Connect/Allow button",
+          "optional": true,
+          "timeout": 5000
+        },
+        {
+          "type": "click",
+          "selector": "button:has-text('Connect'), button:has-text('Allow'), button:has-text('Authorize')",
+          "description": "Click Connect/Allow button",
+          "optional": true
+        },
+        {
+          "type": "closePopup",
+          "description": "Close popup",
+          "optional": true
+        },
+        {
+          "type": "wait",
+          "delay": 2000,
+          "description": "Wait for action to register"
+        },
+        {
+          "type": "waitForSelector",
+          "selector": "input[type='email'], input[name='email']",
+          "description": "Wait for email input",
+          "optional": true,
+          "timeout": 5000
+        },
+        {
+          "type": "fill",
+          "selector": "input[type='email'], input[name='email']",
+          "value": "{{credentials.email}}",
+          "description": "Fill email field",
+          "optional": true
+        },
+        {
+          "type": "click",
+          "selector": "button[type='submit'], button:has-text('Submit'), button:has-text('Continue')",
+          "description": "Submit email",
+          "optional": true
+        },
+        {
+          "type": "wait",
+          "delay": 2000,
+          "description": "Wait for unlock progress"
+        },
+        {
+          "type": "waitForSelector",
+          "selector": "button:has-text('DOWNLOAD'), button:has-text('Download')",
+          "description": "Wait for download button to unlock",
+          "timeout": 30000
+        },
+        {
+          "type": "click",
+          "selector": "button:has-text('DOWNLOAD'), button:has-text('Download')",
+          "description": "Click download button"
+        },
+        {
+          "type": "waitForDownload",
+          "description": "Wait for download",
+          "timeout": 30000
+        }
+      ],
+      "metadata": {
+        "description": "Standard ToneDen gate flow with SoundCloud follow and email",
+        "lastUpdated": "2026-01-25T00:00:00.000Z"
+      }
+    }
+  ]
+}

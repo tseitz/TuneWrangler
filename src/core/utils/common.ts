@@ -377,3 +377,27 @@ async function convertToMp3(song: Song, outputFile: string, artworkFile?: string
 export function isProcessable(folderItem: Deno.DirEntry): boolean {
   return folderItem.isFile && folderItem.name !== ".DS_Store" && folderItem.name !== ".spotdl-cache";
 }
+
+/**
+ * Creates a delay/pause in execution
+ * @param ms - Milliseconds to delay
+ * @returns Promise that resolves after the delay
+ */
+export function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Sanitizes a string for use as a filename
+ * Removes invalid characters and limits length
+ * @param str - String to sanitize
+ * @param maxLength - Maximum length (default: 100)
+ * @returns Sanitized filename-safe string
+ */
+export function sanitizeFilename(str: string, maxLength = 100): string {
+  return str
+    .replace(/[<>:"/\\|?*]/g, "") // Remove invalid filename characters
+    .replace(/\s+/g, " ") // Normalize whitespace
+    .trim()
+    .slice(0, maxLength);
+}

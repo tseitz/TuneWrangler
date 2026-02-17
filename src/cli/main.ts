@@ -19,6 +19,8 @@ import {
 import { logs } from "./commands/logs.ts";
 import { performance } from "./commands/performance.ts";
 import { analyzeDj } from "./commands/analyze.ts";
+import { soundcloudDownload } from "./commands/soundcloud.ts";
+import { flowConvert } from "./commands/flow-convert.ts";
 
 const VERSION = "1.0.0";
 
@@ -167,6 +169,71 @@ const commands: Record<string, Command> = {
     ],
     execute: analyzeDj,
   },
+  "soundcloud-download": {
+    name: "soundcloud-download",
+    description: "Download free tracks from SoundCloud playlists",
+    usage: "tunewrangler soundcloud-download --url <playlist-url> [options]",
+    flags: [
+      {
+        name: "url, -u",
+        description: "SoundCloud playlist URL (required)",
+      },
+      {
+        name: "output, -o",
+        description: "Output directory for downloads",
+      },
+      {
+        name: "headed, -H",
+        description: "Run browser in headed mode (visible) for debugging",
+      },
+      {
+        name: "skip-gates, -s",
+        description: "Skip tracks that require Hypeddit gates",
+      },
+      {
+        name: "email, -e",
+        description: "Email to use for Hypeddit gates",
+      },
+      {
+        name: "dry-run, -d",
+        description: "Show what would be downloaded without downloading",
+      },
+    ],
+    examples: [
+      "tunewrangler soundcloud-download --url 'https://soundcloud.com/user/sets/playlist'",
+      "tunewrangler soundcloud-download -u 'https://soundcloud.com/user/sets/playlist' --headed",
+      "tunewrangler soundcloud-download -u 'https://soundcloud.com/user/sets/playlist' --dry-run",
+    ],
+    execute: soundcloudDownload,
+  },
+  "flow-convert": {
+    name: "flow-convert",
+    description: "Convert Playwright codegen output to flow configuration",
+    usage: "tunewrangler flow-convert <codegen-file> [options]",
+    flags: [
+      {
+        name: "output, -o",
+        description: "Output path for flow JSON",
+      },
+      {
+        name: "platform, -p",
+        description: "Platform name (hypeddit, toneden, soundcloud-track)",
+      },
+      {
+        name: "name, -n",
+        description: "Flow name",
+      },
+      {
+        name: "url-pattern, -u",
+        description: "URL pattern to match (can specify multiple)",
+      },
+    ],
+    examples: [
+      "tunewrangler flow-convert codegen-output.ts --platform hypeddit",
+      "tunewrangler flow-convert my-flow.ts --platform toneden --name 'ToneDen Flow'",
+    ],
+    execute: flowConvert,
+  },
 };
 
 function showHelp(): void {
@@ -294,15 +361,16 @@ async function main(): Promise<void> {
     Deno.exit(1);
   }
 
-  // For logs and performance commands, pass all remaining arguments including flags
-  if (commandName === "logs" || commandName === "performance") {
+  // For logs, performance, soundcloud-download, and flow-convert commands, pass all remaining arguments including flags
+  if (commandName === "logs" || commandName === "performance" || commandName === "soundcloud-download" || commandName === "flow-convert") {
     const commandArgs = Deno.args.slice(Deno.args.indexOf(commandName) + 1);
     await command.execute(commandArgs);
     return;
   }
 
   // Validate configuration before running commands
-  if (commandName !== "validate" && commandName !== "logs" && commandName !== "analyze-dj") {
+  // Skip validation for commands that don't need local paths
+  if (commandName !== "validate" && commandName !== "logs" && commandName !== "analyze-dj" && commandName !== "soundcloud-download" && commandName !== "flow-convert") {
     try {
       logger.debug("Validating configuration before running command");
       const isValid = await validateConfiguration();
