@@ -6,6 +6,7 @@ providing options to use either source as the authority.
 """
 
 import unicodedata
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Tuple, List, Dict, Any, Union
 from dataclasses import dataclass
@@ -18,7 +19,6 @@ from ..utils.logging import (
     log_exception,
     create_progress_logger,
 )
-from ..utils.validation import validate_filename_format, validate_file_path
 from ..utils.file_utils import find_files, safe_move
 from .database import RekordboxDatabase, DatabaseError
 from .backup_manager import BackupManager
@@ -167,9 +167,7 @@ class MetadataFixer:
         # Commit database changes if any were made
         if not self.config.dry_run:
             db_updates = [
-                r
-                for r in results
-                if r.action_taken == MetadataAction.UPDATE_DATABASE and r.success
+                r for r in results if r.action_taken == MetadataAction.UPDATE_DATABASE and r.success
             ]
             if db_updates:
                 try:
@@ -241,8 +239,100 @@ class MetadataFixer:
         # Commit database changes if any were made
         if not self.config.dry_run:
             db_updates = [
-                r
-                for r in results
+                r for r in results if r.action_taken == MetadataAction.UPDATE_DATABASE and r.success
+            ]
+            if db_updates:
+                try:
+                    self.db.commit()
+                    log_success(logger, f"Committed {len(db_updates)} database updates")
+                except DatabaseError as e:
+                    log_error(logger, f"Failed to commit database changes: {e}")
+
+        self._print_results_summary(results)
+        return results
+
+    def fix_metadata_batch_by_age(self, newer_than_days: int = 30) -> List[MetadataFixResult]:
+        """
+        Fix metadata using file age to choose authority.
+
+        Files newer than the cutoff use filename as authority (update database).
+        Older files use database as authority (rename file).
+
+        Args:
+            newer_than_days: Files within this many days are considered "new"
+
+        Returns:
+            List of metadata fix results
+        """
+        cutoff = datetime.now() - timedelta(days=newer_than_days)
+        logger.info(
+            f"Starting batch-by-age metadata fixing "
+            f"(newer than {newer_than_days} days → filename authority, "
+            f"older → database authority)..."
+        )
+        self.db.preload_content_cache()
+
+        if not self.config.dry_run and self.config.backup_before_changes:
+            backup_manager = BackupManager(self.config)
+            backup_path = backup_manager.create_backup("before_metadata_fix")
+            if backup_path:
+                log_success(logger, f"Backup created: {backup_path}")
+            else:
+                log_error(logger, "Failed to create backup, aborting")
+                return []
+
+        audio_files = self._get_audio_files()
+        results: List[MetadataFixResult] = []
+        new_count = 0
+        old_count = 0
+
+        progress = create_progress_logger(
+            len(audio_files), "Processing files (batch-by-age)"
+        )
+
+        for file_path in audio_files:
+            try:
+                comparison = self._compare_metadata(file_path)
+                if not comparison or not comparison.needs_update:
+                    continue
+
+                track_date = self._get_track_date(
+                    comparison.content_object, comparison.file_path
+                )
+
+                if track_date >= cutoff:
+                    result = self._update_database_metadata(comparison)
+                    new_count += 1
+                    logger.debug(
+                        f"New file ({track_date:%Y-%m-%d}): "
+                        f"filename → DB for {comparison.filename}"
+                    )
+                else:
+                    result = self._update_filename_metadata(comparison)
+                    old_count += 1
+                    logger.debug(
+                        f"Old file ({track_date:%Y-%m-%d}): "
+                        f"DB → filename for {comparison.filename}"
+                    )
+
+                results.append(result)
+                progress.update(message=f"Processed {comparison.filename}")
+
+            except Exception as e:
+                log_exception(logger, e, f"processing {file_path.name}")
+                result = MetadataFixResult(
+                    filename=file_path.name,
+                    success=False,
+                    action_taken=MetadataAction.SKIP,
+                    error_message=str(e),
+                )
+                results.append(result)
+
+        progress.finish("Batch-by-age metadata fixing completed")
+
+        if not self.config.dry_run:
+            db_updates = [
+                r for r in results
                 if r.action_taken == MetadataAction.UPDATE_DATABASE and r.success
             ]
             if db_updates:
@@ -252,6 +342,10 @@ class MetadataFixer:
                 except DatabaseError as e:
                     log_error(logger, f"Failed to commit database changes: {e}")
 
+        logger.info(
+            f"Age split: {new_count} new file(s) (filename → DB), "
+            f"{old_count} old file(s) (DB → filename)"
+        )
         self._print_results_summary(results)
         return results
 
@@ -291,6 +385,41 @@ class MetadataFixer:
         patterns = [f"*{ext}" for ext in self.config.audio_extensions]
         return find_files(self.collection_path, patterns, recursive=True)
 
+    def _get_track_date(self, content: Any, file_path: Path) -> datetime:
+        """
+        Get the most relevant date for a track.
+
+        Tries Rekordbox DB date-added attributes first, then falls back
+        to file creation/modification time on disk.
+        """
+        # Try common Rekordbox content date attributes
+        db_date_attrs = ["DateAdded", "DateCreated", "ImportDate", "created_at"]
+        for attr in db_date_attrs:
+            value = getattr(content, attr, None)
+            if value is None:
+                continue
+            if isinstance(value, datetime):
+                return value
+            if isinstance(value, (int, float)):
+                try:
+                    return datetime.fromtimestamp(value)
+                except (ValueError, OSError):
+                    continue
+            if isinstance(value, str):
+                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+                    try:
+                        return datetime.strptime(value, fmt)
+                    except ValueError:
+                        continue
+
+        # Fall back to file system dates
+        stat = file_path.stat()
+        # macOS exposes real creation time via st_birthtime
+        birthtime = getattr(stat, "st_birthtime", None)
+        if birthtime is not None:
+            return datetime.fromtimestamp(birthtime)
+        return datetime.fromtimestamp(stat.st_mtime)
+
     def _compare_metadata(self, file_path: Path) -> Optional[MetadataComparison]:
         """
         Compare metadata between database and filename.
@@ -327,12 +456,8 @@ class MetadataFixer:
         db_album = getattr(content, "AlbumName", "Unknown")
 
         # Compare metadata
-        artist_matches = self._normalize_string(db_artist) == self._normalize_string(
-            file_artist
-        )
-        title_matches = self._normalize_string(db_title) == self._normalize_string(
-            file_title
-        )
+        artist_matches = self._normalize_string(db_artist) == self._normalize_string(file_artist)
+        title_matches = self._normalize_string(db_title) == self._normalize_string(file_title)
         album_matches = file_album is None or self._normalize_string(
             db_album
         ) == self._normalize_string(file_album or "")
@@ -353,9 +478,7 @@ class MetadataFixer:
             content_object=content,
         )
 
-    def _parse_filename(
-        self, filename: str
-    ) -> Optional[Tuple[str, str, Optional[str]]]:
+    def _parse_filename(self, filename: str) -> Optional[Tuple[str, str, Optional[str]]]:
         """
         Parse filename to extract artist, title, and optional album.
 
@@ -385,9 +508,7 @@ class MetadataFixer:
             return ""
         return unicodedata.normalize("NFC", str(text).lower().strip())
 
-    def _prompt_user_action(
-        self, comparison: MetadataComparison
-    ) -> Union[MetadataAction, str]:
+    def _prompt_user_action(self, comparison: MetadataComparison) -> Union[MetadataAction, str]:
         """
         Prompt user to choose action for metadata discrepancy.
 
@@ -427,9 +548,7 @@ class MetadataFixer:
             else:
                 print("Invalid choice. Please enter 'd', 'f', 's', or 'e'.")
 
-    def _update_database_metadata(
-        self, comparison: MetadataComparison
-    ) -> MetadataFixResult:
+    def _update_database_metadata(self, comparison: MetadataComparison) -> MetadataFixResult:
         """
         Update database metadata to match filename.
 
@@ -462,14 +581,10 @@ class MetadataFixer:
 
         if self.config.dry_run:
             logger.info(f"[DRY RUN] Would update database for {comparison.filename}")
-            logger.info(
-                f"  Artist: '{old_values['artist']}' -> '{new_values['artist']}'"
-            )
+            logger.info(f"  Artist: '{old_values['artist']}' -> '{new_values['artist']}'")
             logger.info(f"  Title: '{old_values['title']}' -> '{new_values['title']}'")
             if comparison.file_album:
-                logger.info(
-                    f"  Album: '{old_values['album']}' -> '{new_values['album']}'"
-                )
+                logger.info(f"  Album: '{old_values['album']}' -> '{new_values['album']}'")
 
             return MetadataFixResult(
                 filename=comparison.filename,
@@ -511,9 +626,7 @@ class MetadataFixer:
             )
 
         except Exception as e:
-            log_exception(
-                logger, e, f"updating database metadata for {comparison.filename}"
-            )
+            log_exception(logger, e, f"updating database metadata for {comparison.filename}")
             return MetadataFixResult(
                 filename=comparison.filename,
                 success=False,
@@ -523,9 +636,7 @@ class MetadataFixer:
                 new_values=new_values,
             )
 
-    def _update_filename_metadata(
-        self, comparison: MetadataComparison
-    ) -> MetadataFixResult:
+    def _update_filename_metadata(self, comparison: MetadataComparison) -> MetadataFixResult:
         """
         Update filename to match database metadata.
 
@@ -541,14 +652,14 @@ class MetadataFixer:
         if comparison.db_album and comparison.db_album != "Unknown":
             new_filename = f"{comparison.db_artist} - {comparison.db_album} - {comparison.db_title}{comparison.file_path.suffix}"
         else:
-            new_filename = f"{comparison.db_artist} - {comparison.db_title}{comparison.file_path.suffix}"
+            new_filename = (
+                f"{comparison.db_artist} - {comparison.db_title}{comparison.file_path.suffix}"
+            )
 
         new_values = {"filename": new_filename}
 
         if self.config.dry_run:
-            logger.info(
-                f"[DRY RUN] Would rename {comparison.filename} -> {new_filename}"
-            )
+            logger.info(f"[DRY RUN] Would rename {comparison.filename} -> {new_filename}")
 
             return MetadataFixResult(
                 filename=comparison.filename,
@@ -574,13 +685,9 @@ class MetadataFixer:
                             check_path=False,
                             commit=False,
                         )
-                        log_success(
-                            logger, f"Renamed {comparison.filename} -> {new_filename}"
-                        )
+                        log_success(logger, f"Renamed {comparison.filename} -> {new_filename}")
                     except Exception as e:
-                        log_exception(
-                            logger, e, f"updating database filename reference"
-                        )
+                        log_exception(logger, e, f"updating database filename reference")
                         # File was renamed but database update failed
                         # Try to rename back
                         safe_move(new_file_path, comparison.file_path)
@@ -636,12 +743,8 @@ class MetadataFixer:
         successful = [r for r in results if r.success]
         failed = [r for r in results if not r.success]
         skipped = [r for r in results if r.action_taken == MetadataAction.SKIP]
-        db_updates = [
-            r for r in successful if r.action_taken == MetadataAction.UPDATE_DATABASE
-        ]
-        file_updates = [
-            r for r in successful if r.action_taken == MetadataAction.UPDATE_FILENAME
-        ]
+        db_updates = [r for r in successful if r.action_taken == MetadataAction.UPDATE_DATABASE]
+        file_updates = [r for r in successful if r.action_taken == MetadataAction.UPDATE_FILENAME]
 
         print(f"\nMetadata Fix Summary")
         print("=" * 50)

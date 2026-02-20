@@ -616,6 +616,17 @@ class MetadataCommand(BaseCommand):
             action="store_true",
             help="Batch mode - use filename as authority",
         )
+        fix_group.add_argument(
+            "--batch-by-age",
+            action="store_true",
+            help="Batch by age: filename authority for new files, database authority for older files",
+        )
+        fix_parser.add_argument(
+            "--newer-than-days",
+            type=int,
+            default=None,
+            help="Treat files newer than this many days as 'new' (default: 30, used with --batch-by-age)",
+        )
         fix_parser.add_argument(
             "--skip-backup",
             action="store_true",
@@ -653,9 +664,15 @@ class MetadataCommand(BaseCommand):
 
         if args.metadata_action == "fix":
             # Must specify one mode for fix command
-            if not (args.interactive or args.batch_database or args.batch_filename):
+            if not (
+                args.interactive
+                or args.batch_database
+                or args.batch_filename
+                or args.batch_by_age
+            ):
                 logger.error(
-                    "Must specify fix mode: --interactive, --batch-database, or --batch-filename"
+                    "Must specify fix mode: --interactive, --batch-database, "
+                    "--batch-filename, or --batch-by-age"
                 )
                 return False
 
@@ -690,6 +707,13 @@ class MetadataCommand(BaseCommand):
                     results = metadata_fixer.fix_metadata_batch(MetadataSource.DATABASE)
                 elif args.batch_filename:
                     results = metadata_fixer.fix_metadata_batch(MetadataSource.FILENAME)
+                elif args.batch_by_age:
+                    newer_than_days = (
+                        args.newer_than_days
+                        if args.newer_than_days is not None
+                        else self.config.metadata_newer_than_days
+                    )
+                    results = metadata_fixer.fix_metadata_batch_by_age(newer_than_days)
 
                 # Check for failures
                 failed_results = [r for r in results if not r.success]

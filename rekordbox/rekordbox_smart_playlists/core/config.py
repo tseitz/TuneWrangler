@@ -49,6 +49,9 @@ class Config:
     auto_backup: bool = True
     backup_before_changes: bool = True
 
+    # Metadata settings
+    metadata_newer_than_days: int = 30
+
     # Processing settings
     dry_run: bool = False
     verbose: bool = False
@@ -120,6 +123,7 @@ class Config:
             "REKORDBOX_PLAYLIST_DATA_PATH": "playlist_data_path",
             "REKORDBOX_BACKUP_PATH": "backup_base_path",
             "REKORDBOX_PIONEER_INSTALL": "pioneer_install_dir",
+            "REKORDBOX_METADATA_NEWER_THAN_DAYS": "metadata_newer_than_days",
             "REKORDBOX_DRY_RUN": "dry_run",
             "REKORDBOX_VERBOSE": "verbose",
             "REKORDBOX_LOG_LEVEL": "log_level",
@@ -138,7 +142,7 @@ class Config:
                 ]:
                     bool_value = value.lower() in ("true", "1", "yes", "on")
                     setattr(config, config_key, bool_value)
-                elif config_key in ["max_backups", "progress_interval"]:
+                elif config_key in ["max_backups", "progress_interval", "metadata_newer_than_days"]:
                     try:
                         int_value = int(value)
                         setattr(config, config_key, int_value)
@@ -192,6 +196,10 @@ class Config:
 
         if self.progress_interval < 1:
             logger.error("progress_interval must be at least 1")
+            is_valid = False
+
+        if self.metadata_newer_than_days < 1:
+            logger.error("metadata_newer_than_days must be at least 1")
             is_valid = False
 
         # Validate log level
