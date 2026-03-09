@@ -1,0 +1,29 @@
+[project]
+name = "soundcloud-dl"
+version = "0.1.0"
+description = "SoundCloud free-download automation (API + optional browser-use)"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.0",
+    "python-dotenv>=1.2.1",
+]
+
+[project.scripts]
+soundcloud-dl = "soundcloud_dl.main:main"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.5",
+    "ty>=0.0.21",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["D", "COM812", "ISC001"]
+
+[tool.ty.environment]
+python-version = "3.12"

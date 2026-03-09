@@ -93,3 +93,8 @@ jspm_packages
 .env
 fix-list.txt
 bad-matches.txt
+
+# Python (soundcloud_dl)
+soundcloud_dl/.venv/
+__pycache__/
+*.py[cod]
