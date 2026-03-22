@@ -10,24 +10,67 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 load_dotenv(_PROJECT_ROOT / ".env")
 load_dotenv(Path.cwd() / ".env")
 
-# Required for Phase 1 (playlist extraction via API)
+
+def _parse_int_env(name: str, default: int) -> int:
+    val = os.getenv(name, "").strip()
+    if not val:
+        return default
+    try:
+        return int(val)
+    except ValueError:
+        return default
+
+
+# ── Phase 1: SoundCloud API ────────────────────────────────────────────────────
 TUNEWRANGLER_SC_PLAYLIST_URL = os.getenv("TUNEWRANGLER_SC_PLAYLIST_URL")
 SOUNDCLOUD_CLIENT_ID = os.getenv("SOUNDCLOUD_CLIENT_ID")
 SOUNDCLOUD_CLIENT_SECRET = os.getenv("SOUNDCLOUD_CLIENT_SECRET")
 
-# Optional (for Phase 2 / browser-use agent)
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-BROWSERLESS_WS_URL = os.getenv("BROWSERLESS_WS_URL", "wss://production-sfo.browserless.io")
-BROWSERLESS_TOKEN = os.getenv("BROWSERLESS_TOKEN")
-
-# SoundCloud download prompts (from .env)
+# ── Phase 2: Browser / gate form values ───────────────────────────────────────
 DOWNLOAD_EMAIL = os.getenv("TUNEWRANGLER_SC_EMAIL", "tdseitz10@outlook.com")
-SC_USERNAME = os.getenv("TUNEWRANGLER_SC_USERNAME", "")
+DOWNLOAD_NAME = os.getenv("TUNEWRANGLER_SC_NAME", "Tom")
 DOWNLOAD_COMMENT = os.getenv("TUNEWRANGLER_SC_COMMENT", "🔥🔥🔥")
 
-# Run browser with visible window (Phase 2 only)
+# Headed browser (visible window). Set TUNEWRANGLER_SC_HEADED=1 in .env.
 HEADED = os.getenv("TUNEWRANGLER_SC_HEADED", "").lower() in ("1", "true", "yes")
 
+# Persistent browser profile. Unset = default path. Set to "0" to disable.
+BROWSER_PROFILE_ENV = os.getenv("TUNEWRANGLER_SC_BROWSER_PROFILE", "").strip()
+
+# Optional download directory for browser-triggered downloads.
+_download_dir = os.getenv("TUNEWRANGLER_SC_DOWNLOAD_DIR", "").strip()
+DOWNLOAD_DIR: Path | None = Path(_download_dir).expanduser().resolve() if _download_dir else None
+
+# Seconds between tracks (rate limiting).
+try:
+    DELAY_SECONDS = max(0.0, float(os.getenv("TUNEWRANGLER_SC_DELAY_SECONDS", "3")))
+except ValueError:
+    DELAY_SECONDS = 3.0
+
+# ── Phase 2: Human-like timing ────────────────────────────────────────────────
+# Random pause between Playwright actions (ms). Makes the bot look less robotic.
+ACTION_DELAY_MIN_MS = _parse_int_env("TUNEWRANGLER_SC_ACTION_DELAY_MIN_MS", 300)
+ACTION_DELAY_MAX_MS = _parse_int_env("TUNEWRANGLER_SC_ACTION_DELAY_MAX_MS", 900)
+
+# Per-keystroke delay when filling text fields (ms).
+TYPE_DELAY_MS = _parse_int_env("TUNEWRANGLER_SC_TYPE_DELAY_MS", 80)
+
+# Scroll element into view before clicking (1 = enabled).
+_scroll = os.getenv("TUNEWRANGLER_SC_SCROLL_BEFORE_CLICK", "1").strip()
+SCROLL_BEFORE_CLICK = _scroll not in ("0", "false", "no")
+
+# Seconds to wait after a SoundCloud track page load before interacting (SPA render time).
+PAGE_LOAD_WAIT_SECONDS = max(0, _parse_int_env("TUNEWRANGLER_SC_PAGE_LOAD_WAIT", 3))
+
+# ── Resume / cache ─────────────────────────────────────────────────────────────
+_resume = os.getenv("TUNEWRANGLER_SC_RESUME", "1").strip().lower()
+RESUME_ENABLED = _resume not in ("0", "false", "no")
+
+_playlist_cache = os.getenv("TUNEWRANGLER_SC_PLAYLIST_CACHE", "1").strip().lower()
+PLAYLIST_CACHE_ENABLED = _playlist_cache not in ("0", "false", "no")
+
+
+# ── Path helpers ───────────────────────────────────────────────────────────────
 
 def get_log_dir() -> Path:
     """Return project logs directory (created if needed)."""
@@ -35,6 +78,27 @@ def get_log_dir() -> Path:
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir
 
+
+def get_processed_file() -> Path:
+    """Path to JSON file storing processed track URLs per playlist (for resume)."""
+    return get_log_dir() / "soundcloud_dl_processed.json"
+
+
+def get_playlist_cache_file() -> Path:
+    """Path to JSON file storing cached playlist track lists (by playlist URL)."""
+    return get_log_dir() / "soundcloud_dl_playlist_cache.json"
+
+
+def get_browser_profile_dir() -> Path | None:
+    """Return persistent browser profile directory, or None if disabled."""
+    if BROWSER_PROFILE_ENV.lower() in ("0", "false", "no"):
+        return None
+    if BROWSER_PROFILE_ENV:
+        return Path(BROWSER_PROFILE_ENV).expanduser().resolve()
+    return (_PROJECT_ROOT / "soundcloud_browser_profile").resolve()
+
+
+# ── Validation ─────────────────────────────────────────────────────────────────
 
 def validate_phase1_config() -> None:
     """Raise if config required for Phase 1 (SoundCloud API) is missing."""
@@ -49,4 +113,12 @@ def validate_phase1_config() -> None:
             "SOUNDCLOUD_CLIENT_ID and SOUNDCLOUD_CLIENT_SECRET are required for the API. "
             "Register an app at https://soundcloud.com/you/apps and set them in .env."
         )
+        raise RuntimeError(msg)
+
+
+def validate_phase2_config() -> None:
+    """Raise if config required for Phase 2 (stealth Playwright) is invalid."""
+    # No LLM required. Playwright + browser profile are enough.
+    if DOWNLOAD_DIR is not None and not DOWNLOAD_DIR.parent.exists():
+        msg = f"TUNEWRANGLER_SC_DOWNLOAD_DIR parent does not exist: {DOWNLOAD_DIR.parent}"
         raise RuntimeError(msg)
