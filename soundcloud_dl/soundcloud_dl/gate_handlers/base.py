@@ -6,7 +6,7 @@ import logging
 import random
 import re
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
@@ -55,6 +55,9 @@ class GateHandler:
                 raise ValueError(msg)
             with self.config_path.open() as f:
                 config = yaml.safe_load(f)
+            if not isinstance(config, dict):
+                msg = f"YAML config at {self.config_path} is empty or not a mapping."
+                raise TypeError(msg)
 
         self.gate_name: str = config["gate"]
         self.steps: list[dict] = config.get("steps", [])
@@ -80,7 +83,7 @@ class GateHandler:
         ms = random.randint(self.action_delay_min_ms, self.action_delay_max_ms)  # noqa: S311
         await page.wait_for_timeout(ms)
 
-    async def _find_element(self, page: Page, trigger: str) -> object | None:
+    async def _find_element(self, page: Page, trigger: str) -> Any | None:  # noqa: ANN401
         """Try each comma-separated selector; return first match or None."""
         for selector in [s.strip() for s in trigger.split(",")]:
             el = await page.query_selector(selector)

@@ -1,13 +1,11 @@
 """Unit tests for GateHandler YAML step interpreter (base.py)."""
 
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import yaml
 
 from soundcloud_dl.gate_handlers.base import GateHandler, GateStepError, StepResult
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
