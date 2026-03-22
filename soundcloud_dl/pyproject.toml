@@ -1,9 +1,12 @@
 [project]
 name = "soundcloud-dl"
-version = "0.1.0"
-description = "SoundCloud free-download automation (API + optional browser-use)"
+version = "0.2.0"
+description = "SoundCloud free-download automation (API + stealth Playwright)"
 requires-python = ">=3.12"
 dependencies = [
+    "playwright>=1.40.0",
+    "playwright-stealth>=1.0.6",
+    "pyyaml>=6.0",
     "httpx>=0.28.0",
     "python-dotenv>=1.2.1",
 ]
@@ -15,7 +18,12 @@ soundcloud-dl = "soundcloud_dl.main:main"
 dev = [
     "ruff>=0.15.5",
     "ty>=0.0.21",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
 ]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
 
 [tool.ruff]
 line-length = 100
