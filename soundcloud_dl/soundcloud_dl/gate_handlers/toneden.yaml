@@ -1,3 +1,54 @@
 gate: toneden
 url_pattern: "toneden.io"
-steps: []
+
+steps:
+  # Initial "Get Download" / unlock button
+  - id: click_unlock
+    trigger: >-
+      button:has-text('Get Download'), button:has-text('Unlock'),
+      button:has-text('Free Download'), .unlock-btn
+    action: click
+    required: true
+
+  # Email input
+  - id: fill_email
+    trigger: "input[type='email'], input[placeholder*='email' i]"
+    action: fill
+    value: "{{email}}"
+    optional: true
+
+  # Name input
+  - id: fill_name
+    trigger: "input[placeholder*='name' i], input[name='name']"
+    action: fill
+    value: "{{name}}"
+    optional: true
+
+  # Submit the email form (if separate from unlock button)
+  - id: submit_email_form
+    trigger: "button[type='submit'], button:has-text('Submit'), button:has-text('Continue')"
+    action: click
+    optional: true
+    depends_on: fill_email
+
+  # Follow on SoundCloud gate
+  - id: follow_soundcloud
+    trigger: >-
+      button:has-text('Follow'), a:has-text('Follow on SoundCloud'),
+      .follow-btn
+    action: click
+    optional: true
+
+  # Repost gate
+  - id: repost_soundcloud
+    trigger: "button:has-text('Repost'), a:has-text('Repost')"
+    action: click
+    optional: true
+
+  # Final download link
+  - id: final_download
+    trigger: >-
+      a:has-text('Download'), button:has-text('Download'),
+      a:has-text('Click here to download'), .download-link
+    action: click
+    required: true

@@ -1,3 +1,75 @@
 gate: hypeddit
 url_pattern: "hypeddit.com"
-steps: []
+
+steps:
+  # Click the main gated download button to open the form/flow
+  - id: click_gate_button
+    trigger: "#gateDownloadButton, .hype-btn-green, a[data-type='gate']"
+    action: click
+    required: true
+
+  # Email field (present on most Hypeddit gates)
+  - id: fill_email
+    trigger: "input[type='email'], input[placeholder*='email' i], input[name*='email' i]"
+    action: fill
+    value: "{{email}}"
+    optional: true
+
+  # Name field (present on some gates)
+  - id: fill_name
+    trigger: >-
+      input[name='name'], input[placeholder*='name' i],
+      input[placeholder*='first name' i], input[name='firstName']
+    action: fill
+    value: "{{name}}"
+    optional: true
+
+  # "Share a comment" gate — click to reveal textarea
+  - id: share_comment_gate
+    trigger: >-
+      button:has-text('Share a comment'), button:has-text('Leave a comment'),
+      .comment-gate-btn
+    action: click
+    optional: true
+
+  # Comment textarea — only shown after comment gate is opened
+  - id: fill_comment
+    trigger: "textarea[placeholder*='comment' i], textarea.hype-textarea, textarea"
+    action: fill
+    value: "{{comment}}"
+    optional: true
+    depends_on: share_comment_gate
+
+  # Submit the comment (separate button on some gates)
+  - id: submit_comment
+    trigger: >-
+      button:has-text('Share a comment'), button:has-text('Submit comment'),
+      button:has-text('Post comment')
+    action: click
+    optional: true
+    depends_on: fill_comment
+
+  # Repost on SoundCloud gate
+  - id: repost_soundcloud
+    trigger: >-
+      button:has-text('Repost'), a:has-text('Repost on SoundCloud'),
+      .repost-gate-btn
+    action: click
+    optional: true
+
+  # Follow on SoundCloud gate
+  - id: follow_soundcloud
+    trigger: >-
+      button:has-text('Follow'), a:has-text('Follow on SoundCloud'),
+      .follow-gate-btn
+    action: click
+    optional: true
+
+  # Final download button (after all gates are satisfied)
+  - id: final_download
+    trigger: >-
+      a#gateDownloadButton:not([data-type='gate']),
+      button:has-text('Download'), a:has-text('Download Now'),
+      a:has-text('Get Download'), .download-link
+    action: click
+    required: true
