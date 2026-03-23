@@ -57,9 +57,21 @@ async def get_gate_url(context: BrowserContext, track_url: str) -> str:
             msg = f"No free download button found on: {track_url}"
             raise SoundCloudPageError(msg)
 
-        # Intercept the new tab that opens on click
+        # Detect login modal — means we're not authenticated in this profile
+        auth_modal = await page.query_selector(".auth-modal")
+        if auth_modal:
+            msg = (
+                "SoundCloud is showing a login prompt. "
+                "Run once with TUNEWRANGLER_SC_HEADED=1 to log in and save your session, "
+                "then re-run without it."
+            )
+            raise SoundCloudPageError(msg)
+
+        # Use dispatch_event to bypass pointer-event interception by ad iframes/overlays.
+        # el.click() enforces Playwright's actionability checks (no overlapping elements),
+        # but dispatch_event sends the event directly to the target element.
         async with context.expect_page() as new_page_info:
-            await el.click()
+            await el.dispatch_event("click")
 
         gate_page = await new_page_info.value
         await gate_page.wait_for_load_state("domcontentloaded", timeout=15_000)

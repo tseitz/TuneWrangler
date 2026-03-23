@@ -62,9 +62,16 @@ async def stealth_browser() -> AsyncIterator[BrowserContext]:
             browser = await pw.chromium.launch(headless=not HEADED, args=launch_args)
             context = await browser.new_context(accept_downloads=True)
 
-        # Apply stealth to all new pages automatically
+        # Apply stealth to all new pages automatically.
+        # The done-callback suppresses "Future exception was never retrieved" warnings
+        # that occur when pages close before stealth finishes applying.
         _stealth = Stealth()
-        context.on("page", lambda page: asyncio.ensure_future(_apply_stealth(page, _stealth)))
+
+        def _on_page(page: Page) -> None:
+            task = asyncio.ensure_future(_apply_stealth(page, _stealth))
+            task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
+
+        context.on("page", _on_page)
 
         try:
             yield context
