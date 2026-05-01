@@ -217,9 +217,7 @@ class GateHandler:
                 results[step_id] = StepResult.SKIPPED
                 continue
 
-            logger.info(
-                "[%s] Executing step '%s' (%s)", self.gate_name, step_id, step["action"]
-            )
+            logger.info("[%s] Executing step '%s' (%s)", self.gate_name, step_id, step["action"])
             await self._execute_step(page, step)
             results[step_id] = StepResult.EXECUTED
 
