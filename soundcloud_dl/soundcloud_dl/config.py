@@ -34,6 +34,21 @@ DOWNLOAD_COMMENT = os.getenv("TUNEWRANGLER_SC_COMMENT", "🔥🔥🔥")
 # Headed browser (visible window). Set TUNEWRANGLER_SC_HEADED=1 in .env.
 HEADED = os.getenv("TUNEWRANGLER_SC_HEADED", "").lower() in ("1", "true", "yes")
 
+# ── Phase 2: Chrome bring-up (CDP attach) ─────────────────────────────────────
+CHROME_PATH: str = os.getenv(
+    "TUNEWRANGLER_SC_CHROME_PATH",
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+)
+
+CHROME_DEBUG_PORT: int = _parse_int_env("TUNEWRANGLER_SC_CHROME_DEBUG_PORT", 9222)
+
+_chrome_profile_env = os.getenv("TUNEWRANGLER_SC_CHROME_PROFILE_DIR", "").strip()
+CHROME_PROFILE_DIR: Path = (
+    Path(_chrome_profile_env).expanduser().resolve()
+    if _chrome_profile_env
+    else (_PROJECT_ROOT / "soundcloud_dl_chrome_profile").resolve()
+)
+
 # Persistent browser profile. Unset = default path. Set to "0" to disable.
 BROWSER_PROFILE_ENV = os.getenv("TUNEWRANGLER_SC_BROWSER_PROFILE", "").strip()
 
