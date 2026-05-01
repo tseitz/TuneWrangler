@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from playwright.async_api import BrowserContext
 
 from soundcloud_dl.config import PAGE_LOAD_WAIT_SECONDS
-from soundcloud_dl.playwright_browser import new_stealth_page, random_delay
+from soundcloud_dl.playwright_browser import new_page, random_delay
 
 logger = logging.getLogger("soundcloud_dl.soundcloud_page")
 
@@ -34,7 +34,7 @@ async def get_gate_url(context: BrowserContext, track_url: str) -> str:
 
     Raises SoundCloudPageError if no free download button is found.
     """
-    page = await new_stealth_page(context)
+    page = await new_page(context)
     try:
         logger.info("Navigating to track: %s", track_url)
         await page.goto(track_url, wait_until="domcontentloaded", timeout=30_000)
