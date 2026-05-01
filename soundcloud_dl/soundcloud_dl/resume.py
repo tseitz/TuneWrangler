@@ -33,6 +33,15 @@ def _read_raw() -> dict:
     return data if isinstance(data, dict) else {}
 
 
+def _coerce_to_state_map(entry: object) -> dict[str, str]:
+    """Normalize a stored playlist entry to a state map, tolerating legacy list format."""
+    if isinstance(entry, list):
+        return {k: "done" for k in entry if isinstance(k, str)}
+    if isinstance(entry, dict):
+        return {k: v for k, v in entry.items() if isinstance(k, str) and isinstance(v, str)}
+    return {}
+
+
 def load_states(playlist_url: str) -> dict[str, str]:
     """
     Load track-state map for this playlist. Empty dict if none.
@@ -42,12 +51,7 @@ def load_states(playlist_url: str) -> dict[str, str]:
     """
     data = _read_raw()
     key = _normalize_playlist_url(playlist_url)
-    entry = data.get(key)
-    if isinstance(entry, list):
-        return {k: "done" for k in entry if isinstance(k, str)}
-    if isinstance(entry, dict):
-        return {k: v for k, v in entry.items() if isinstance(k, str) and isinstance(v, str)}
-    return {}
+    return _coerce_to_state_map(data.get(key))
 
 
 def record_state(playlist_url: str, track_url: str, state: TrackState) -> None:
@@ -56,17 +60,7 @@ def record_state(playlist_url: str, track_url: str, state: TrackState) -> None:
     key = _normalize_playlist_url(playlist_url)
     try:
         data = _read_raw()
-        existing = data.get(key)
-        if isinstance(existing, list):
-            states: dict[str, str] = {k: "done" for k in existing if isinstance(k, str)}
-        elif isinstance(existing, dict):
-            states = {
-                k: v
-                for k, v in existing.items()
-                if isinstance(k, str) and isinstance(v, str)
-            }
-        else:
-            states = {}
+        states = _coerce_to_state_map(data.get(key))
         states[track_url] = state
         data[key] = states
         path.parent.mkdir(parents=True, exist_ok=True)
