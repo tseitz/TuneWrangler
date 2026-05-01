@@ -44,7 +44,7 @@ def load_states(playlist_url: str) -> dict[str, str]:
     key = _normalize_playlist_url(playlist_url)
     entry = data.get(key)
     if isinstance(entry, list):
-        return dict.fromkeys(entry, "done")
+        return {k: "done" for k in entry if isinstance(k, str)}
     if isinstance(entry, dict):
         return {k: v for k, v in entry.items() if isinstance(k, str) and isinstance(v, str)}
     return {}
@@ -58,9 +58,13 @@ def record_state(playlist_url: str, track_url: str, state: TrackState) -> None:
         data = _read_raw()
         existing = data.get(key)
         if isinstance(existing, list):
-            states: dict[str, str] = dict.fromkeys(existing, "done")
+            states: dict[str, str] = {k: "done" for k in existing if isinstance(k, str)}
         elif isinstance(existing, dict):
-            states = {k: v for k, v in existing.items() if isinstance(k, str)}
+            states = {
+                k: v
+                for k, v in existing.items()
+                if isinstance(k, str) and isinstance(v, str)
+            }
         else:
             states = {}
         states[track_url] = state
