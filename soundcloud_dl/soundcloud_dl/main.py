@@ -7,22 +7,25 @@ import logging
 from soundcloud_dl.config import (
     ACTION_DELAY_MAX_MS,
     ACTION_DELAY_MIN_MS,
+    CHROME_PROFILE_DIR,
     DELAY_SECONDS,
     DOWNLOAD_COMMENT,
     DOWNLOAD_EMAIL,
     DOWNLOAD_NAME,
-    HEADED,
     PLAYLIST_CACHE_ENABLED,
     RESUME_ENABLED,
     SCROLL_BEFORE_CLICK,
     TUNEWRANGLER_SC_PLAYLIST_URL,
     TYPE_DELAY_MS,
-    get_browser_profile_dir,
     validate_phase1_config,
     validate_phase2_config,
 )
 from soundcloud_dl.gate_handlers import GateNotSupportedError, get_handler_for_url
-from soundcloud_dl.gate_handlers.base import GateStepError
+from soundcloud_dl.gate_handlers.base import (
+    CaptchaEncountered,
+    GateStepError,
+    StuckGate,
+)
 from soundcloud_dl.logger import setup_logging
 from soundcloud_dl.playlist import TrackItem, extract_track_urls
 from soundcloud_dl.playlist_cache import load_cached_tracks, save_cached_tracks
@@ -97,16 +100,17 @@ def _get_tracks_to_process(tracks: list[TrackItem], playlist_url: str) -> list[T
     return to_process
 
 
-async def _run_phase2(playlist_url: str, to_process: list[TrackItem]) -> None:  # noqa: C901
-    """Run stealth Playwright gate handler on each track; log outcomes and record resume."""
+async def _run_phase2(playlist_url: str, to_process: list[TrackItem]) -> None:
+    """Run gate handler against each track via CDP-attached Chrome; track outcomes."""
     validate_phase2_config()
-    succeeded = 0
-    failed = 0
-    failure_reasons: list[str] = []
+    counts = {"done": 0, "captcha_pending": 0, "manual_review": 0, "failed": 0}
 
     async with attached_browser() as context:
+        await _ensure_logged_in(context)
+
         for idx, track in enumerate(to_process, 1):
             logger.info("Phase 2 track %d/%d: %s", idx, len(to_process), track.url)
+            outcome: str
             try:
                 gate_url = await get_gate_url(context, track.url)
                 handler_cls = get_handler_for_url(gate_url)
@@ -121,43 +125,73 @@ async def _run_phase2(playlist_url: str, to_process: list[TrackItem]) -> None:  
                     type_delay_ms=TYPE_DELAY_MS,
                     scroll_before_click=SCROLL_BEFORE_CLICK,
                 )
-                # Gate page is already open; we need a new page for the gate
                 page = await context.new_page()
                 await page.goto(gate_url, wait_until="domcontentloaded", timeout=30_000)
                 results = await handler.run(page)
                 await page.close()
                 logger.info("DOWNLOAD_SUCCESS | %s | steps=%s", track.title or track.url, results)
-                succeeded += 1
-                if RESUME_ENABLED:
-                    record_state(playlist_url, track.url, "done")
+                outcome = "done"
+            except CaptchaEncountered as e:
+                logger.warning(
+                    "CAPTCHA | %s | %s — tab left open, manual followup needed",
+                    track.title or track.url,
+                    e.kind,
+                )
+                outcome = "captcha_pending"
+            except StuckGate as e:
+                logger.warning(
+                    "STUCK | %s | last_step=%s — gate variant; consider --record",
+                    track.title or track.url,
+                    e.last_step_id,
+                )
+                outcome = "manual_review"
             except GateNotSupportedError as e:
-                reason = f"Unsupported gate: {e}"
-                logger.warning("SKIPPED | %s | %s", track.title or track.url, reason)
-                failure_reasons.append(reason)
-                failed += 1
-                if RESUME_ENABLED:
-                    record_state(playlist_url, track.url, "failed")
-            except (GateStepError, SoundCloudPageError) as e:
-                reason = str(e)
-                logger.exception("FAILED | %s | %s", track.title or track.url, reason)
-                failure_reasons.append(reason)
-                failed += 1
-                if RESUME_ENABLED:
-                    record_state(playlist_url, track.url, "failed")
+                logger.warning("SKIPPED | %s | unsupported gate: %s", track.title or track.url, e)
+                outcome = "failed"
+            except (GateStepError, SoundCloudPageError):
+                logger.exception("FAILED | %s", track.title or track.url)
+                outcome = "failed"
             except Exception:
-                reason = "unexpected error"
                 logger.exception("FAILED | %s | unexpected error", track.title or track.url)
-                failure_reasons.append(reason)
-                failed += 1
-                if RESUME_ENABLED:
-                    record_state(playlist_url, track.url, "failed")
+                outcome = "failed"
+
+            counts[outcome] += 1
+            if RESUME_ENABLED:
+                record_state(playlist_url, track.url, outcome)
 
             if idx < len(to_process) and DELAY_SECONDS > 0:
                 await asyncio.sleep(DELAY_SECONDS)
 
-    logger.info("Completed: %d succeeded, %d failed.", succeeded, failed)
-    if failure_reasons:
-        logger.info("Failure reasons: %s", failure_reasons)
+    _print_summary(counts)
+
+
+def _print_summary(counts: dict[str, int]) -> None:
+    """Print structured end-of-run summary."""
+    logger.info("─" * 50)
+    logger.info("✓  %d downloaded", counts["done"])
+    logger.info("⚠   %d captcha_pending (tabs open: see Chrome)", counts["captcha_pending"])
+    logger.info("?   %d manual_review (gate variant — consider --record)", counts["manual_review"])
+    logger.info("✗   %d failed", counts["failed"])
+    logger.info("─" * 50)
+
+
+async def _ensure_logged_in(context) -> None:  # noqa: ANN001
+    """Navigate to SoundCloud and pause for manual login if signed out."""
+    page = await context.new_page()
+    try:
+        await page.goto("https://soundcloud.com", wait_until="domcontentloaded", timeout=30_000)
+        # The "Sign in" button is only present when logged out.
+        sign_in = await page.query_selector("button:has-text('Sign in'), a:has-text('Sign in')")
+        if sign_in is not None:
+            logger.warning(
+                "Not logged into SoundCloud. Please log in in the open Chrome window, "
+                "then press Enter here to continue."
+            )
+            await asyncio.to_thread(input, "")
+        else:
+            logger.info("SoundCloud session detected — continuing.")
+    finally:
+        await page.close()
 
 
 async def main_async() -> None:
@@ -186,25 +220,13 @@ async def main_async() -> None:
 
 
 async def _run_login_bootstrap() -> None:
-    """Open SoundCloud in headed mode and wait for manual login."""
-    if not HEADED:
-        logger.warning(
-            "TUNEWRANGLER_SC_HEADED is disabled. Set TUNEWRANGLER_SC_HEADED=1 for manual login."
-        )
-    profile_dir = get_browser_profile_dir()
-    if profile_dir is None:
-        logger.warning(
-            "Persistent browser profile is disabled (TUNEWRANGLER_SC_BROWSER_PROFILE=0). "
-            "Login session will not be saved."
-        )
-    else:
-        logger.info("Login session will be saved in: %s", profile_dir)
-
+    """Open SoundCloud in attached Chrome and wait for manual login."""
+    logger.info("Login session will persist in: %s", CHROME_PROFILE_DIR)
     async with attached_browser() as context:
         page = await context.new_page()
         await page.goto("https://soundcloud.com", wait_until="domcontentloaded", timeout=30_000)
         logger.info("Browser opened to SoundCloud for manual login.")
-        logger.info("After login completes, press Enter here to close browser and continue.")
+        logger.info("After login completes, press Enter here to close.")
         await asyncio.to_thread(input, "")
         await page.close()
 

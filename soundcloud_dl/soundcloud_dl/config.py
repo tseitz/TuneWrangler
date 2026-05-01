@@ -49,9 +49,6 @@ CHROME_PROFILE_DIR: Path = (
     else (_PROJECT_ROOT / "soundcloud_dl_chrome_profile").resolve()
 )
 
-# Persistent browser profile. Unset = default path. Set to "0" to disable.
-BROWSER_PROFILE_ENV = os.getenv("TUNEWRANGLER_SC_BROWSER_PROFILE", "").strip()
-
 # Optional download directory for browser-triggered downloads.
 _download_dir = os.getenv("TUNEWRANGLER_SC_DOWNLOAD_DIR", "").strip()
 DOWNLOAD_DIR: Path | None = Path(_download_dir).expanduser().resolve() if _download_dir else None
@@ -102,15 +99,6 @@ def get_processed_file() -> Path:
 def get_playlist_cache_file() -> Path:
     """Path to JSON file storing cached playlist track lists (by playlist URL)."""
     return get_log_dir() / "soundcloud_dl_playlist_cache.json"
-
-
-def get_browser_profile_dir() -> Path | None:
-    """Return persistent browser profile directory, or None if disabled."""
-    if BROWSER_PROFILE_ENV.lower() in ("0", "false", "no"):
-        return None
-    if BROWSER_PROFILE_ENV:
-        return Path(BROWSER_PROFILE_ENV).expanduser().resolve()
-    return (_PROJECT_ROOT / "soundcloud_browser_profile").resolve()
 
 
 # ── Validation ─────────────────────────────────────────────────────────────────
