@@ -11,11 +11,13 @@ from soundcloud_dl.config import (
     DOWNLOAD_COMMENT,
     DOWNLOAD_EMAIL,
     DOWNLOAD_NAME,
+    HEADED,
     PLAYLIST_CACHE_ENABLED,
     RESUME_ENABLED,
     SCROLL_BEFORE_CLICK,
     TUNEWRANGLER_SC_PLAYLIST_URL,
     TYPE_DELAY_MS,
+    get_browser_profile_dir,
     validate_phase1_config,
     validate_phase2_config,
 )
@@ -26,7 +28,7 @@ from soundcloud_dl.playlist import TrackItem, extract_track_urls
 from soundcloud_dl.playlist_cache import load_cached_tracks, save_cached_tracks
 from soundcloud_dl.playwright_browser import stealth_browser
 from soundcloud_dl.recorder import record
-from soundcloud_dl.resume import load_processed_urls, record_processed
+from soundcloud_dl.resume import load_states, record_state, should_skip
 from soundcloud_dl.soundcloud_page import SoundCloudPageError, get_gate_url
 
 logger = logging.getLogger("soundcloud_dl.main")
@@ -45,6 +47,14 @@ def _parse_args() -> argparse.Namespace:
         metavar=("GATE_NAME", "URL"),
         help=(
             "Bootstrap a new gate config: launch playwright codegen and scaffold GATE_NAME.yaml."
+        ),
+    )
+    p.add_argument(
+        "--login",
+        action="store_true",
+        help=(
+            "Open headed browser for manual SoundCloud login "
+            "and persist session in browser profile."
         ),
     )
     return p.parse_args()
@@ -76,18 +86,18 @@ def _log_track_list(playlist_url: str, tracks: list[TrackItem]) -> None:
 
 
 def _get_tracks_to_process(tracks: list[TrackItem], playlist_url: str) -> list[TrackItem]:
-    """Apply resume filter: return only tracks not yet processed."""
+    """Apply resume filter: return only tracks whose state is not 'done'."""
     if not RESUME_ENABLED:
         return tracks
-    processed = load_processed_urls(playlist_url)
-    to_process = [t for t in tracks if t.url not in processed]
+    states = load_states(playlist_url)
+    to_process = [t for t in tracks if not should_skip(t.url, states)]
     skipped = len(tracks) - len(to_process)
     if skipped:
-        logger.info("Resume: skipping %d already-processed tracks.", skipped)
+        logger.info("Resume: skipping %d already-done tracks.", skipped)
     return to_process
 
 
-async def _run_phase2(playlist_url: str, to_process: list[TrackItem]) -> None:
+async def _run_phase2(playlist_url: str, to_process: list[TrackItem]) -> None:  # noqa: C901
     """Run stealth Playwright gate handler on each track; log outcomes and record resume."""
     validate_phase2_config()
     succeeded = 0
@@ -118,24 +128,29 @@ async def _run_phase2(playlist_url: str, to_process: list[TrackItem]) -> None:
                 await page.close()
                 logger.info("DOWNLOAD_SUCCESS | %s | steps=%s", track.title or track.url, results)
                 succeeded += 1
+                if RESUME_ENABLED:
+                    record_state(playlist_url, track.url, "done")
             except GateNotSupportedError as e:
                 reason = f"Unsupported gate: {e}"
                 logger.warning("SKIPPED | %s | %s", track.title or track.url, reason)
                 failure_reasons.append(reason)
                 failed += 1
+                if RESUME_ENABLED:
+                    record_state(playlist_url, track.url, "failed")
             except (GateStepError, SoundCloudPageError) as e:
                 reason = str(e)
                 logger.exception("FAILED | %s | %s", track.title or track.url, reason)
                 failure_reasons.append(reason)
                 failed += 1
+                if RESUME_ENABLED:
+                    record_state(playlist_url, track.url, "failed")
             except Exception:
                 reason = "unexpected error"
                 logger.exception("FAILED | %s | unexpected error", track.title or track.url)
                 failure_reasons.append(reason)
                 failed += 1
-
-            if RESUME_ENABLED:
-                record_processed(playlist_url, track.url)
+                if RESUME_ENABLED:
+                    record_state(playlist_url, track.url, "failed")
 
             if idx < len(to_process) and DELAY_SECONDS > 0:
                 await asyncio.sleep(DELAY_SECONDS)
@@ -170,6 +185,30 @@ async def main_async() -> None:
     await _run_phase2(playlist_url, to_process)
 
 
+async def _run_login_bootstrap() -> None:
+    """Open SoundCloud in headed mode and wait for manual login."""
+    if not HEADED:
+        logger.warning(
+            "TUNEWRANGLER_SC_HEADED is disabled. Set TUNEWRANGLER_SC_HEADED=1 for manual login."
+        )
+    profile_dir = get_browser_profile_dir()
+    if profile_dir is None:
+        logger.warning(
+            "Persistent browser profile is disabled (TUNEWRANGLER_SC_BROWSER_PROFILE=0). "
+            "Login session will not be saved."
+        )
+    else:
+        logger.info("Login session will be saved in: %s", profile_dir)
+
+    async with stealth_browser() as context:
+        page = await context.new_page()
+        await page.goto("https://soundcloud.com", wait_until="domcontentloaded", timeout=30_000)
+        logger.info("Browser opened to SoundCloud for manual login.")
+        logger.info("After login completes, press Enter here to close browser and continue.")
+        await asyncio.to_thread(input, "")
+        await page.close()
+
+
 def main() -> None:
     """Run Phase 1 then Phase 2; entrypoint for CLI."""
     args = _parse_args()
@@ -177,6 +216,9 @@ def main() -> None:
     if args.record:
         gate_name, url = args.record
         record(gate_name, url)
+        return
+    if args.login:
+        asyncio.run(_run_login_bootstrap())
         return
     asyncio.run(main_async())
 
