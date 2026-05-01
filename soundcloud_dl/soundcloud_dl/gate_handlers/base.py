@@ -23,8 +23,70 @@ class StepResult(StrEnum):
     SKIPPED = "SKIPPED"
 
 
+class CaptchaKind(StrEnum):
+    HCAPTCHA = "hcaptcha"
+    RECAPTCHA = "recaptcha"
+    TURNSTILE = "turnstile"
+    CLOUDFLARE_INTERSTITIAL = "cloudflare_interstitial"
+
+
+class CaptchaEncountered(RuntimeError):  # noqa: N818
+    """Raised when a captcha is detected mid-flow. Track is left in captcha_pending state."""
+
+    def __init__(self, kind: CaptchaKind, gate_name: str) -> None:
+        super().__init__(f"[{gate_name}] Captcha encountered: {kind}")
+        self.kind = kind
+        self.gate_name = gate_name
+
+
+class StuckGate(RuntimeError):  # noqa: N818
+    """Raised when a gate sequence stalls without a known cause. Track is left in manual_review."""
+
+    def __init__(self, gate_name: str, last_step_id: str) -> None:
+        super().__init__(
+            f"[{gate_name}] Gate stuck after step '{last_step_id}' (no captcha, no progress)"
+        )
+        self.gate_name = gate_name
+        self.last_step_id = last_step_id
+
+
 class GateStepError(RuntimeError):
     """Raised when a required step cannot find its element."""
+
+
+_CAPTCHA_SELECTORS: tuple[tuple[CaptchaKind, str], ...] = (
+    (CaptchaKind.HCAPTCHA, 'iframe[src*="hcaptcha.com"]'),
+    (CaptchaKind.RECAPTCHA, 'iframe[src*="recaptcha"]'),
+    (CaptchaKind.TURNSTILE, '.cf-turnstile, iframe[src*="challenges.cloudflare.com"]'),
+)
+
+_CLOUDFLARE_TEXT_PATTERNS = (
+    "verify you are human",
+    "checking your browser",
+)
+
+
+async def detect_captcha(page: Page) -> CaptchaKind | None:
+    """
+    Return the first matching captcha kind on the page, or None.
+
+    Checks each known captcha vendor's selector. As a fallback, scans visible body
+    text for Cloudflare-style interstitial language.
+    """
+    for kind, selector in _CAPTCHA_SELECTORS:
+        el = await page.query_selector(selector)
+        if el is not None:
+            # Presence alone is enough: captcha widgets (especially Turnstile
+            # placeholders) often have zero size before their iframe mounts,
+            # and cross-origin iframes can throw on is_visible().
+            return kind
+    try:
+        body_text = (await page.inner_text("body", timeout=500)).lower()
+    except Exception:  # noqa: BLE001
+        return None
+    if any(p in body_text for p in _CLOUDFLARE_TEXT_PATTERNS):
+        return CaptchaKind.CLOUDFLARE_INTERSTITIAL
+    return None
 
 
 class GateHandler:
