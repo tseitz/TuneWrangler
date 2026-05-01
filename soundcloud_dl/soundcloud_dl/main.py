@@ -26,7 +26,7 @@ from soundcloud_dl.gate_handlers.base import GateStepError
 from soundcloud_dl.logger import setup_logging
 from soundcloud_dl.playlist import TrackItem, extract_track_urls
 from soundcloud_dl.playlist_cache import load_cached_tracks, save_cached_tracks
-from soundcloud_dl.playwright_browser import stealth_browser
+from soundcloud_dl.playwright_browser import attached_browser
 from soundcloud_dl.recorder import record
 from soundcloud_dl.resume import load_states, record_state, should_skip
 from soundcloud_dl.soundcloud_page import SoundCloudPageError, get_gate_url
@@ -104,7 +104,7 @@ async def _run_phase2(playlist_url: str, to_process: list[TrackItem]) -> None:  
     failed = 0
     failure_reasons: list[str] = []
 
-    async with stealth_browser() as context:
+    async with attached_browser() as context:
         for idx, track in enumerate(to_process, 1):
             logger.info("Phase 2 track %d/%d: %s", idx, len(to_process), track.url)
             try:
@@ -200,7 +200,7 @@ async def _run_login_bootstrap() -> None:
     else:
         logger.info("Login session will be saved in: %s", profile_dir)
 
-    async with stealth_browser() as context:
+    async with attached_browser() as context:
         page = await context.new_page()
         await page.goto("https://soundcloud.com", wait_until="domcontentloaded", timeout=30_000)
         logger.info("Browser opened to SoundCloud for manual login.")
