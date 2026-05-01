@@ -180,6 +180,7 @@ class GateHandler:
         Walk all steps. Return a dict of step_id → StepResult.
 
         Raises GateStepError if a required step's element is not found.
+        Raises CaptchaEncountered if a captcha appears mid-flow.
         """
         results: dict[str, StepResult] = {}
 
@@ -188,6 +189,13 @@ class GateHandler:
             trigger: str = step["trigger"]
             is_required: bool = step.get("required", False)
             depends_on: str | None = step.get("depends_on")
+
+            # Captcha check before each step. Real Chrome rarely triggers these,
+            # but if one appears we abort cleanly so the orchestrator can mark
+            # captcha_pending and move on.
+            captcha = await detect_captcha(page)
+            if captcha is not None:
+                raise CaptchaEncountered(captcha, self.gate_name)
 
             # Skip if parent step was skipped
             if depends_on and results.get(depends_on) == StepResult.SKIPPED:

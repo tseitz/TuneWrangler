@@ -5,7 +5,23 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 import yaml
 
-from soundcloud_dl.gate_handlers.base import GateHandler, GateStepError, StepResult
+from soundcloud_dl.gate_handlers.base import (
+    CaptchaEncountered,
+    CaptchaKind,
+    GateHandler,
+    GateStepError,
+    StepResult,
+)
+
+
+@pytest.fixture(autouse=True)
+def _stub_detect_captcha(monkeypatch):
+    """Stub detect_captcha to return None by default for gate-handler tests."""
+
+    async def _none(_page):
+        return None
+
+    monkeypatch.setattr("soundcloud_dl.gate_handlers.base.detect_captcha", _none)
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -117,3 +133,45 @@ def test_missing_template_var_raises():
     handler = make_handler(SIMPLE_CONFIG, template_vars={})
     with pytest.raises(KeyError):
         handler.resolve_value("{{email}}")
+
+
+@pytest.mark.asyncio
+async def test_run_raises_captcha_encountered_when_detected(monkeypatch):
+    """When detect_captcha returns a kind during run(), CaptchaEncountered is raised."""
+    handler = make_handler(SIMPLE_CONFIG)
+
+    page = MagicMock()
+    page.query_selector = AsyncMock(return_value=MagicMock())
+    page.wait_for_timeout = AsyncMock()
+
+    async def fake_detect(_page):
+        return CaptchaKind.HCAPTCHA
+
+    monkeypatch.setattr("soundcloud_dl.gate_handlers.base.detect_captcha", fake_detect)
+
+    with pytest.raises(CaptchaEncountered) as exc:
+        await handler.run(page)
+    assert exc.value.kind == CaptchaKind.HCAPTCHA
+    assert exc.value.gate_name == "test"
+
+
+@pytest.mark.asyncio
+async def test_run_continues_when_no_captcha(monkeypatch):
+    """When detect_captcha returns None, run completes normally."""
+    handler = make_handler(SIMPLE_CONFIG)
+
+    el = MagicMock()
+    el.click = AsyncMock()
+    el.fill = AsyncMock()
+    el.type = AsyncMock()
+    el.scroll_into_view_if_needed = AsyncMock()
+    page = MagicMock()
+    page.query_selector = AsyncMock(return_value=el)
+    page.wait_for_timeout = AsyncMock()
+
+    async def fake_detect(_page):
+        return None
+
+    monkeypatch.setattr("soundcloud_dl.gate_handlers.base.detect_captcha", fake_detect)
+    results = await handler.run(page)
+    assert "required_click" in results
