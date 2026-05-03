@@ -30,6 +30,11 @@ def get_handler_for_url(url: str) -> type:
 
         return TonedenHandler
 
+    if "fanlink.tv" in lower or "fanlink.to" in lower:
+        from soundcloud_dl.gate_handlers.fanlink import FanLinkHandler  # noqa: PLC0415
+
+        return FanLinkHandler
+
     domain = urlparse(url).netloc or url
     msg = f"No gate handler registered for: {domain}"
     raise GateNotSupportedError(msg)
