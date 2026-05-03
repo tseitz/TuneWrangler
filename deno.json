@@ -10,7 +10,8 @@
     "youtube": "https://deno.land/x/youtube@v0.3.0/mod.ts"
   },
   "tasks": {
-    "test": "deno test --allow-env --allow-read --allow-write src/",
+    "test": "deno test --allow-env --allow-read --allow-write src/ tests/",
+    "promote": "deno run --allow-env --allow-read --allow-write scripts/promote.ts",
     "validate": "deno run --allow-env --allow-read src/config/validate.ts",
     "rM": "deno run -A src/processors/renameMusic.ts",
     "rBc": "deno run -A src/processors/renameBandcamp.ts",

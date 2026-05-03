@@ -192,6 +192,7 @@ function buildEntry(filename: string, cache: MusicCache): ManifestEntry | null {
       return {
         src: filename,
         proposed: song.finalFilename,
+        parser_output: song.finalFilename,
         confidence: score.level,
         reasons: ["duplicate of an existing track in the DJ collection", ...score.reasons],
         decision: "skip",
@@ -204,6 +205,7 @@ function buildEntry(filename: string, cache: MusicCache): ManifestEntry | null {
     return {
       src: filename,
       proposed: song.finalFilename,
+      parser_output: song.finalFilename,
       confidence: score.level,
       reasons: score.reasons,
       decision: score.decision,

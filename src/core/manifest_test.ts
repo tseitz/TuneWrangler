@@ -20,13 +20,15 @@ const sampleManifest: Manifest = {
     {
       src: "BUGGY - Pillage Dub.wav",
       proposed: "BUGGY - Pillage Dub.wav",
+      parser_output: "BUGGY - Pillage Dub.wav",
       confidence: "high",
       reasons: ["clean parse"],
       decision: "apply",
     },
     {
       src: "Halsey - Gasoline - Fang Shui Flip.wav",
-      proposed: "Gasoline - Halsey - Fang Shui Flip.wav",
+      proposed: "Fang Shui - Halsey - Gasoline.wav",
+      parser_output: "Gasoline - Halsey - Fang Shui Flip.wav",
       confidence: "low",
       reasons: ["bare remix keyword in last segment"],
       decision: "review",
@@ -75,6 +77,16 @@ Deno.test("readManifest rejects entry with invalid confidence value", async () =
     };
     await Deno.writeTextFile(path, JSON.stringify(bad));
     await assertRejects(() => readManifest(path), Error, "confidence");
+  });
+});
+
+Deno.test("readManifest defaults parser_output to proposed when missing (backwards compat)", async () => {
+  await withTempFile(async (path) => {
+    const { parser_output: _, ...withoutParserOutput } = sampleManifest.entries[0];
+    const compat = { ...sampleManifest, entries: [withoutParserOutput] };
+    await Deno.writeTextFile(path, JSON.stringify(compat));
+    const loaded = await readManifest(path);
+    assertEquals(loaded.entries[0].parser_output, loaded.entries[0].proposed);
   });
 });
 

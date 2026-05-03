@@ -2,7 +2,10 @@ import { ConfidenceLevel, Decision } from "./confidence.ts";
 
 export interface ManifestEntry {
   src: string;
+  /** What the user approved (may be edited from parser_output before --apply). */
   proposed: string;
+  /** Immutable: what the parser originally produced. Never edited by the user. */
+  parser_output: string;
   confidence: ConfidenceLevel;
   reasons: string[];
   decision: Decision;
@@ -67,6 +70,13 @@ function validateEntry(entry: unknown, index: number, path: string): void {
 
   if (typeof e.src !== "string" || typeof e.proposed !== "string") {
     throw new Error(`Manifest entry ${index} at ${path} requires string src and proposed`);
+  }
+  // parser_output was added in a later version; default to proposed for older manifests
+  if (e.parser_output !== undefined && typeof e.parser_output !== "string") {
+    throw new Error(`Manifest entry ${index} at ${path} has invalid parser_output (must be a string)`);
+  }
+  if (e.parser_output === undefined) {
+    e.parser_output = e.proposed;
   }
   if (typeof e.confidence !== "string" || !VALID_CONFIDENCE.includes(e.confidence as ConfidenceLevel)) {
     throw new Error(

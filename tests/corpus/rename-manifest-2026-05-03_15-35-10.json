@@ -1,0 +1,2575 @@
+{
+  "version": 1,
+  "generated_at": "2026-05-03T15:35:10.839Z",
+  "source_dir": "/Users/tseitz/Library/CloudStorage/GoogleDrive-tdseitz10@gmail.com/My Drive/TransferMusic/Downloaded/soundcloud",
+  "move_dir": "/Users/tseitz/Library/CloudStorage/GoogleDrive-tdseitz10@gmail.com/My Drive/TransferMusic/Renamed/",
+  "cache_dir": "/Users/tseitz/Library/CloudStorage/GoogleDrive-tdseitz10@gmail.com/My Drive/DJ/Dane Dubz DJ Music/Collection/",
+  "entries": [
+    {
+      "src": "YOGIC - DA DA DUB (UK GARAGE FREE DL).wav",
+      "proposed": "YOGIC - DA DA DUB.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Lil Pimp - Cook Crack on da Stove - Lushreds Remix.wav",
+      "proposed": "Cook Crack on da Stove - Lil Pimp - Lushreds Remix.wav",
+      "confidence": "low",
+      "reasons": [
+        "last segment of source filename ends in a bare remix keyword (FLIP/EDIT/REMIX/etc.) — likely 'artist - title - remixer' structure rather than 'album - artist - title'"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "EsDeeKid - 4 Raws (Roto Flip).wav",
+      "proposed": "Roto - EsDeeKid - 4 Raws.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Gunnar Nash - Tapped (AH Tune Tuesday).wav",
+      "proposed": "Gunnar Nash - Tapped.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "CLIN - FOH.wav",
+      "proposed": "CLIN - FOH.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "A$AP Rocky - Goldie ( Zei x Scyq Flip ).wav",
+      "proposed": "Zei x Scyq - A$AP Rocky - Goldie.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Ferrofluid - Driver.wav",
+      "proposed": "Ferrofluid - Driver.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "SUBSICC - PRESSURE.wav",
+      "proposed": "SUBSICC - PRESSURE.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "IDGAF - YEAT (FIENDI FLIP).wav",
+      "proposed": "FIENDI - IDGAF - YEAT.wav",
+      "confidence": "medium",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "Skrillex, PEEKABOO, Flowdan, Fireboy DML - 6 Million (Secret Recipe Flip).wav",
+      "proposed": "Secret Recipe - Skrillex x PEEKABOO x Flowdan x Fireboy DML - 6 Million.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "CONSTANTIN - PUTA DRIFT (Constantin Edit).mp3",
+      "proposed": "Constantin - CONSTANTIN - PUTA DRIFT.mp3",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "odd language - I Love The Way You Move.wav",
+      "proposed": "odd language - I Love The Way You Move.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Smokestax - Pop Drop (AH Tune Tuesday).wav",
+      "proposed": "Smokestax - Pop Drop.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Fred Again - Jungle (Jimmy Pé RMX).wav",
+      "proposed": "Fred Again - Jungle.wav",
+      "confidence": "low",
+      "reasons": [
+        "non-ASCII characters in source title were stripped entirely — title may have lost meaning"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "BØRIS - PAPER CUTS.mp3",
+      "proposed": "BORIS - PAPER CUTS.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "GIGI D'AGOSTINO - BLA BLA BLA (FELMAX & URAI REMIX).wav",
+      "proposed": "FELMAX x URAI - GIGI D'AGOSTINO - BLA BLA BLA.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "FSHR - mic killa (10k fdl).mp3",
+      "proposed": "FSHR - mic killa.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Juos - Imma Be [SLFREEDL002] (Played by Cloonee, Wax Motif, Sosa, Black V Neck).wav",
+      "proposed": "Juos - Imma Be.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Meridiyn - Like Me.wav",
+      "proposed": "Meridiyn - Like Me.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Kwn x Kehlani - Worst Behavior (Roto x PANDO! Flip) FREE DL.wav",
+      "proposed": "Roto x PANDO! - Kwn x Kehlani - Worst Behavior.wav",
+      "confidence": "medium",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "DEVILZ - FOX (P EDIT VIP).wav",
+      "proposed": "P - DEVILZ - FOX.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Dasoma - Labyrinth.wav",
+      "proposed": "Dasoma - Labyrinth.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "squirt - SEVEN MINUTES.wav",
+      "proposed": "squirt - SEVEN MINUTES.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Sepia x Spektiv - Crook.wav",
+      "proposed": "Sepia x Spektiv - Crook.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Eminem - Without Me (DOUG!, Dabi Edit) [SUPPORTED BY GORDO + WADE].wav",
+      "proposed": "DOUG! x Dabi - Eminem - Without Me.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Devault - Feels Like Us (2SUM FLIP).wav",
+      "proposed": "2SUM - Devault - Feels Like Us.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Claymore - Ren Dub.wav",
+      "proposed": "Claymore - Ren Dub.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Yoto Swords - DEM BOIZ DUB [1k Free DL].mp3",
+      "proposed": "Yoto Swords - DEM BOIZ DUB.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "ISEEU - TOP OF THE DOME.wav",
+      "proposed": "ISEEU - TOP OF THE DOME.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Chef Boyarbeatz - Squidward's Revenge (Mikrodot Remix).mp3",
+      "proposed": "Mikrodot - Chef Boyarbeatz - Squidward's Revenge.mp3",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "OVEREAZY - Make It Rain (OVEREAZY X ROTO FLIP).wav",
+      "proposed": "OVEREAZY x ROTO - OVEREAZY - Make It Rain.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "Jacidorex - Freed From Desire.wav",
+      "proposed": "Jacidorex - Freed From Desire.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "JAKELOV - Left to Right (Crastinate x JAKELOV).wav",
+      "proposed": "JAKELOV - Left to Right.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "NOXX - NOT DEAD.wav",
+      "proposed": "NOXX - NOT DEAD.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "John Summit with Paige Cavell - Tears (Vanic Remix).wav",
+      "proposed": "Vanic - John Summit with Paige Cavell - Tears.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "XILLA - Bring It Back.wav",
+      "proposed": "XILLA - Bring It Back.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Triphoria - SFYM.wav",
+      "proposed": "Triphoria - SFYM.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Gunpoint - Oh Ya.wav",
+      "proposed": "Gunpoint - Oh Ya.wav",
+      "confidence": "high",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "clean parse, no transformations needed"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "DEVOWR. - HITMARKER.wav",
+      "proposed": "DEVOWR. - HITMARKER.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "HAARPER x Freddie Dredd - WTF U MEAN (CØNTRA FLIP).wav",
+      "proposed": "CONTRA - HAARPER x Freddie Dredd - WTF U MEAN.wav",
+      "confidence": "low",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "non-ASCII characters in source title were stripped entirely — title may have lost meaning"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "GORILLAZ - DARE (JAYNIE BOOTLEG).wav",
+      "proposed": "JAYNIE - GORILLAZ - DARE.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "50 Carrot - Wiz Kid (Samplifire Remix).wav",
+      "proposed": "Samplifire - 50 Carrot - Wiz Kid.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "STRAB - ONI.mp3",
+      "proposed": "STRAB - ONI.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Lushreds - Lost.wav",
+      "proposed": "Lushreds - Lost.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "LUCKY - White Wine & Adderall (LUCKY REMIX).wav",
+      "proposed": "LUCKY - White Wine & Adderall.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "FRED AGAIN x SKEPTA - VICTORY LAP (MYTHM BOOTLEG).wav",
+      "proposed": "MYTHM - FRED AGAIN x SKEPTA - VICTORY LAP.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Addison Rae - Aquamarine (Sulky Edit).wav",
+      "proposed": "Sulky - Addison Rae - Aquamarine.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "SVILIAN - F YOU.wav",
+      "proposed": "SVILIAN - F YOU.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Britney Spears - I Wanna Go (MAJED Remix).wav",
+      "proposed": "MAJED - Britney Spears - I Wanna Go.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "BADTRIP - KILLA.wav",
+      "proposed": "BADTRIP - KILLA.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Dr. Ushūu - Kaaris-Chargé (Ushuuflip).wav",
+      "proposed": "Dr. Ushuu - Kaaris-Charge.wav",
+      "confidence": "low",
+      "reasons": [
+        "non-ASCII characters in source title were stripped entirely — title may have lost meaning"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "SPACEWALK & Reece Rosé - Freak Street.mp3",
+      "proposed": "SPACEWALK x Reece Rose - Freak Street.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Taiki Nulight - Never (Taiki Nulight & borne Refix).wav",
+      "proposed": "Taiki Nulight x borne - Taiki Nulight - Never.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "Charlie Shell - ALL EYES ON US.mp3",
+      "proposed": "Charlie Shell - ALL EYES ON US.mp3",
+      "confidence": "high",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "clean parse, no transformations needed"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "zaterday - Something Like This..wav",
+      "proposed": "zaterday - Something Like This..wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "smokeylegatta - SIDE BY SIDE DUB FREE DL.wav",
+      "proposed": "smokeylegatta - SIDE BY SIDE DUB FREE DL.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "TAKAI - Cops & Robbers (TAKAI Remix).wav",
+      "proposed": "TAKAI - Cops & Robbers.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "John Summit, LAVINIA - Shadows (PLSMA X LUCKKY Remix).wav",
+      "proposed": "PLSMA x LUCKKY - John Summit x LAVINIA - Shadows.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "SAMMY VIRJI - DAMAGER (XOTIX FLIP).wav",
+      "proposed": "XOTIX - SAMMY VIRJI - DAMAGER.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "ISEEU - Missy Elliott- The Rain (Supa Dupa Fly) (ISEEU Remix).wav",
+      "proposed": "ISEEU - Missy Elliott- The Rain.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "BEN HOLLAND - FLAWDA RIDDIM.wav",
+      "proposed": "BEN HOLLAND - FLAWDA RIDDIM.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Kimati - left foot, right foot W Ghisele.wav",
+      "proposed": "Kimati x Ghisele - left foot, right foot.wav",
+      "confidence": "high",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "clean parse, no transformations needed"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "MALWARE - Ultima (Malware & PHYS!XX Flip).wav",
+      "proposed": "Malware x PHYS!XX - MALWARE - Ultima.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "Showtek - Booyah [Zubah Flip].wav",
+      "proposed": "Zubah - Showtek - Booyah.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "MIDROLL - MOAB.wav",
+      "proposed": "MIDROLL - MOAB.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Joyryde - Selecta 19 (Axel Boy Edit).wav",
+      "proposed": "Axel Boy - Joyryde - Selecta 19.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "saka - BREATHE [SAKA RMX].wav",
+      "proposed": "saka - BREATHE.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "nikko - GIMME THAT (BASS).mp3",
+      "proposed": "nikko - GIMME THAT.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "viiiral. - pose.wav",
+      "proposed": "viiiral. - pose.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "FLATLINE - ZEI X FOSSILS.wav",
+      "proposed": "FLATLINE - ZEI X FOSSILS.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Kaiyo - Pressure.wav",
+      "proposed": "Kaiyo - Pressure.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "saka - HEADS WILL ROLL [SAKA RMX].wav",
+      "proposed": "saka - HEADS WILL ROLL.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Wiley - 100% Publishing (Tunic Bootleg).aif",
+      "proposed": "Tunic - Wiley - 100% Publishing.aif",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Burt Cope - Push It Dub.wav",
+      "proposed": "Burt Cope - Push It Dub.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "BIYO - ASTRAL RIDDIM.wav",
+      "proposed": "BIYO - ASTRAL RIDDIM.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Wailing Souls - Fire House Rock (Submana Flip).wav",
+      "proposed": "Submana - Wailing Souls - Fire House Rock.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "DJ Jackum - Hard (STPTBOOT081).wav",
+      "proposed": "DJ Jackum - Hard.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "bauti - BACK2LIFE.mp3",
+      "proposed": "bauti - BACK2LIFE.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "STVSH x Crucial - VESPER.wav",
+      "proposed": "STVSH x Crucial - VESPER.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Mythic Rogue - Solo Traveler.wav",
+      "proposed": "Mythic Rogue - Solo Traveler.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "RYNS - ifeeleverything.wav",
+      "proposed": "RYNS - ifeeleverything.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Qwyattbeats - RISING!.wav",
+      "proposed": "Qwyattbeats - RISING!.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Starjunk 95 - Grimestar (DEADPAN FLIP).wav",
+      "proposed": "DEADPAN - Starjunk 95 - Grimestar.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Sanzu - CONFLUENCE.wav",
+      "proposed": "Sanzu - CONFLUENCE.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "BALLADS - Good Flirts (Ballads Edit).mp3",
+      "proposed": "Ballads - BALLADS - Good Flirts.mp3",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "So Dope vip - LOTUS EATER (SO DOPE VIP).wav",
+      "proposed": "So Dope vip - LOTUS EATER (SO DOPE VIP).wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "MUCKANIKS - Step Out.wav",
+      "proposed": "MUCKANIKS - Step Out.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Sweet Tee, Jazzy Joyce - It's My Beat (Blosso Edition).wav",
+      "proposed": "Sweet Tee x Jazzy Joyce - It's My Beat.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Dink the Poof - Tree.wav",
+      "proposed": "Dink the Poof - Tree.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "ADAME - On The Block.mp3",
+      "proposed": "ADAME - On The Block.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "GOS003 TOM LECHEF - DOT DOT EDIT (Kwengface, Interplanetary Criminal, Flowdan).wav",
+      "proposed": "GOS003 TOM LECHEF - DOT DOT EDIT.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Ludacris - What's Your Fantasy (Moceans & RANKZ Flip) MASTER.wav",
+      "proposed": "Moceans x RANKZ - Ludacris - What's Your Fantasy.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "zaterday - No_Pressure.wav",
+      "proposed": "zaterday - No_Pressure.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "PHOMPY - THIRTY6IX (REMORSE REMIX).wav",
+      "proposed": "REMORSE - PHOMPY - THIRTY6IX.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Mr Reds feat Ranking S - Can You Feel It (Mattik '26 Mix).wav",
+      "proposed": "Mr Reds x Ranking S - Can You Feel It.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "CRYSOMEMORE X AD - ARE U DUMB.wav",
+      "proposed": "CRYSOMEMORE x AD - ARE U DUMB.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "So Dope vip - POP DAT THING (SO DOPE VIP).wav",
+      "proposed": "So Dope vip - POP DAT THING (SO DOPE VIP).wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Kunas - Stay.mp3",
+      "proposed": "Kunas - Stay.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "little dragon - hidewildfire edit.wav",
+      "proposed": "little dragon - hidewildfire edit.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Delerium - Silence - Average Citizens Dub.wav",
+      "proposed": "Silence - Delerium - Average Citizens Dub.wav",
+      "confidence": "low",
+      "reasons": [
+        "last segment of source filename ends in a bare remix keyword (FLIP/EDIT/REMIX/etc.) — likely 'artist - title - remixer' structure rather than 'album - artist - title'"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "Stush - Me Nuh Deal Wid Dat (Froidy Bootleg).wav",
+      "proposed": "Froidy - Stush - Me Nuh Deal Wid Dat.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "tsou - ithinkimight.wav",
+      "proposed": "tsou - ithinkimight.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "CHMURA - HOW WE DO (TRiP B REMIX).wav",
+      "proposed": "TRiP B - CHMURA - HOW WE DO.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "SETH DAVID & CHOZEN - MONSTERS.wav",
+      "proposed": "SETH DAVID x CHOZEN - MONSTERS.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "phompy - 大蛇丸 (666 freebie).wav",
+      "proposed": "phompy - .wav",
+      "confidence": "low",
+      "reasons": [
+        "title field is empty after parsing",
+        "non-ASCII characters in source title were stripped entirely — title may have lost meaning"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "Freda Payne - I Get High (Roto Flip) FREE DL.wav",
+      "proposed": "Roto - Freda Payne - I Get High.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "FROIDY - PRIMARY WITNESS.wav",
+      "proposed": "FROIDY - PRIMARY WITNESS.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "SAINT MILLER - Winny [saint miller flip].wav",
+      "proposed": "saint miller - SAINT MILLER - Winny.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "koicha - CHUPABLE.mp3",
+      "proposed": "koicha - CHUPABLE.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "L8NITE - CRYBBY BLUE.mp3",
+      "proposed": "L8NITE - CRYBBY BLUE.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "TRiP B X BWOMPSTER - ECSTACY.wav",
+      "proposed": "TRiP B x BWOMPSTER - ECSTACY.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Disclosure - You & Me (Flume Remix) [kLL sMTH Flip].wav",
+      "proposed": "Flume - Disclosure - You & Me.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "OF THE TREES FT. SOPHIE MARKS - WINDHORSE - KALI FLIP.mp3",
+      "proposed": "WINDHORSE - OF THE TREES x SOPHIE MARKS - KALI FLIP.mp3",
+      "confidence": "low",
+      "reasons": [
+        "last segment of source filename ends in a bare remix keyword (FLIP/EDIT/REMIX/etc.) — likely 'artist - title - remixer' structure rather than 'album - artist - title'"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "Flo Milli - Never Lose Me (SEVSKY x Roto Remix).wav",
+      "proposed": "SEVSKY x Roto - Flo Milli - Never Lose Me.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "BACK HURT - ASAP FERG FT. MIGOS  (ZEI X FOSSILS REMIX).wav",
+      "proposed": "ZEI x FOSSILS - BACK HURT x MIGOS - ASAP FERG.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "HARBAR - Windows 7.wav",
+      "proposed": "HARBAR - Windows 7.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Segan's Selects - TEKTEKTEK (Circles Segan Edit).wav",
+      "proposed": "Circles Segan - Segan's Selects - TEKTEKTEK.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Take Off - Casper (raftyr flip).wav",
+      "proposed": "raftyr - Take Off - Casper.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "SAIGGA - EXTERMINATOR.wav",
+      "proposed": "SAIGGA - EXTERMINATOR.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Twinkle Brothers - Faith Can Move Mountain (Uman Bootleg).wav",
+      "proposed": "Uman - Twinkle Brothers - Faith Can Move Mountain.wav",
+      "confidence": "medium",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "Jack Harlow - Nail Tech (Lykwid Flip).wav",
+      "proposed": "Lykwid - Jack Harlow - Nail Tech.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "STEVE FERAL - Fight For Your Right (STEVE FERAL's Tech House Edit)- Beastie Boys.wav",
+      "proposed": "STEVE FERAL's Tech House - STEVE FERAL - Fight For Your Right.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "Valentinho Khan - Deep Down Low (Dredlok Remix).wav",
+      "proposed": "Dredlok - Valentinho Khan - Deep Down Low.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "d8 - 90'S RAVE.wav",
+      "proposed": "d8 - 90'S RAVE.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "RICHTANNER® - BANDIT BASS (25' CLUB TOOLS) [MIAMI BASS REMIX].wav",
+      "proposed": "MIAMI BASS - RICHTANNER - BANDIT BASS.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Abelation2 - pusher.wav",
+      "proposed": "Abelation2 - pusher.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "PRZMA - JIGSAW.wav",
+      "proposed": "PRZMA - JIGSAW.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "WODD - Relight The Disco.wav",
+      "proposed": "WODD - Relight The Disco.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Max Fuster - WHOOP WHOOP.wav",
+      "proposed": "Max Fuster - WHOOP WHOOP.wav",
+      "confidence": "high",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "clean parse, no transformations needed"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "xxena - ROTH rmx.wav",
+      "proposed": "xxena - ROTH rmx.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "KIKI - JUMPED IN.wav",
+      "proposed": "KIKI - JUMPED IN.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "MACROCELL RECORDS - Goon.mp3",
+      "proposed": "MACROCELL RECORDS - Goon.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "defy. - hallucinate..wav",
+      "proposed": "defy. - hallucinate..wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Sweet Sounds Collective - Suddenly.mp3",
+      "proposed": "Sweet Sounds Collective - Suddenly.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "WooK - Pot Party.wav",
+      "proposed": "WooK - Pot Party.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "DVNK - 1STEP.wav",
+      "proposed": "DVNK - 1STEP.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "LOZER - LOZER- COMING IN HOT.wav",
+      "proposed": "LOZER - LOZER- COMING IN HOT.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "chmura - Bad.wav",
+      "proposed": "chmura - Bad.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "STVSH - POCKET.wav",
+      "proposed": "STVSH - POCKET.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Anycia - Back Outside (zotti flip).wav",
+      "proposed": "zotti - Anycia - Back Outside.wav",
+      "confidence": "medium",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "GBSN - BRAZIL [H-DUBZ VOL.1].mp3",
+      "proposed": "GBSN - BRAZIL.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "WeeWah - I Feel It.aiff",
+      "proposed": "WeeWah - I Feel It.aiff",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "cassö, RAYE, D-Block Europe - Prada (STAR SEED & PIERCE Remix).wav",
+      "proposed": "STAR SEED x PIERCE - casso x RAYE x D-Block Europe - Prada.wav",
+      "confidence": "medium",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "shwiLLy & huck.jorris - Let It Run (ft. JiLLi).wav",
+      "proposed": "shwiLLy x huck.jorris x JiLLi - Let It Run.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "JAKELOV x Scratch The Surface - Kicking.wav",
+      "proposed": "JAKELOV x Scratch The Surface - Kicking.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Young Thug - Floyd Mayweather (Luhv Remix).wav",
+      "proposed": "Luhv - Young Thug - Floyd Mayweather.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "LYES - PRESSURE.wav",
+      "proposed": "LYES - PRESSURE.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "THIRST FOR REVENGE (Nexu5 x jjjacksen Remix).wav",
+      "proposed": "Nexu5 x jjjacksen - THIRST FOR REVENGE.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Velvet - Woodstock.wav",
+      "proposed": "Velvet - Woodstock.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "ATYYA - MAD TING.wav",
+      "proposed": "ATYYA - MAD TING.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Jaynie - You Got.wav",
+      "proposed": "Jaynie - You Got.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "INNUSTA - BADIYA.wav",
+      "proposed": "INNUSTA - BADIYA.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Crankdat - Movement (Blood Vision Remix).wav",
+      "proposed": "Blood Vision - Crankdat - Movement.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "MXXWLL & Robustt - Jenny Dub [CYCFD008].wav",
+      "proposed": "MXXWLL x Robustt - Jenny Dub.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "CAPRI - Teen Spirit (CAPRI Remix).wav",
+      "proposed": "CAPRI - Teen Spirit.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "MYTHM - TWISTED.wav",
+      "proposed": "MYTHM - TWISTED.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "ID - FAT BASTARD.mp3",
+      "proposed": "ID - FAT BASTARD.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "VULTURE THEORY - Run It Back.mp3",
+      "proposed": "VULTURE THEORY - Run It Back.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "asáu - issa vibe.wav",
+      "proposed": "asau - issa vibe.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "ONE HELL OF A LIFE - (FOSSILS X AZASSIN REMIX).wav",
+      "proposed": "FOSSILS x AZASSIN - ONE HELL OF A LIFE -.wav - E HELL OF A LIFE -.wav",
+      "confidence": "low",
+      "reasons": [
+        "finalFilename appears mangled (duplicate extension or extra characters past the first extension)"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "CYCLOPS - TURN MY SWAG ON (CYCLOPS REMIX).wav",
+      "proposed": "CYCLOPS - TURN MY SWAG ON.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "JPKy - 4 raws (club mix).wav",
+      "proposed": "JPKy - 4 raws.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Solfire - ZOIDBERG.wav",
+      "proposed": "Solfire - ZOIDBERG.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Phosphr - Finisher.wav",
+      "proposed": "Phosphr - Finisher.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "VelcroShirt X DEVOWR. - FAHHH!.wav",
+      "proposed": "VelcroShirt x DEVOWR. - FAHHH!.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "JohnnySmall - nefer.wav",
+      "proposed": "JohnnySmall - nefer.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Smokestax - Like This.wav",
+      "proposed": "Smokestax - Like This.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "BUGGY - Pillage Dub.wav",
+      "proposed": "BUGGY - Pillage Dub.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Tokischa, ROSALÍA - Linda (Kuren Remix).wav",
+      "proposed": "Kuren - Tokischa x ROSALIA - Linda.wav",
+      "confidence": "medium",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "SYRUM - BUFFER DUB.wav",
+      "proposed": "SYRUM - BUFFER DUB.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Skinny Limbs - Potion.aif",
+      "proposed": "Skinny Limbs - Potion.aif",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Subciety Presents - Taiga.wav",
+      "proposed": "Subciety Presents - Taiga.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "SAINT MILLER - To ü,, saint miller flip.wav",
+      "proposed": "SAINT MILLER - To u,, saint miller flip.wav",
+      "confidence": "low",
+      "reasons": [
+        "non-ASCII characters in source title were stripped entirely — title may have lost meaning"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "Pop Smoke - Welcome To The Party (SEVSKY Remix).wav",
+      "proposed": "SEVSKY - Pop Smoke - Welcome To The Party.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Virtual Self - Ghost Voices (Phrva Flip).wav",
+      "proposed": "Phrva - Virtual Self - Ghost Voices.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "AZASSIN X ROTO - J's On My Feet (FLIP).wav",
+      "proposed": "AZASSIN x ROTO - J's On My Feet.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Fallon - Diet Coke (BERNZIKIAL Edit).wav",
+      "proposed": "BERNZIKIAL - Fallon - Diet Coke.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Cavemen - Below The Neck.wav",
+      "proposed": "Cavemen - Below The Neck.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Qwyattbeats - crewdub.wav",
+      "proposed": "Qwyattbeats - crewdub.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "ISEEU - John Summit, Inez- light years (ISEEU BOOTLEG).wav",
+      "proposed": "ISEEU - John Summit, Inez- light years.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "REESE x futose - Get On Up (Bootleg).wav",
+      "proposed": "REESE x futose - Get On Up.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Nonames, Killa P & Roachee - Dads And Mums (Hound Bootleg).wav",
+      "proposed": "Hound - Nonames x Killa P x Roachee - Dads And Mums.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "DRE.FIA - I JUST WANT TO RAVE.wav",
+      "proposed": "DRE.FIA - I JUST WANT TO RAVE.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "zedd - spectrum (jpky flip).wav",
+      "proposed": "jpky - zedd - spectrum.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "SHEZ KURX - Different Style Dub.wav",
+      "proposed": "SHEZ KURX - Different Style Dub.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Lushreds - Don't Kill My Vibe.wav",
+      "proposed": "Lushreds - Don't Kill My Vibe.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Buunshin - Tax Evasion [Belik x coil circuit Remix].wav",
+      "proposed": "Belik x coil circuit - Buunshin - Tax Evasion.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Lowcation - If You Think I'm Pretty (Lowcation Flip).wav",
+      "proposed": "Lowcation - If You Think I'm Pretty.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Dimension - DJ Turn it Up (Midnight Club Flip).wav",
+      "proposed": "Midnight Club - Dimension - DJ Turn it Up.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "UTOPIA - PEACHES N KAREM FLIP.mp3",
+      "proposed": "UTOPIA - PEACHES N KAREM FLIP.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Lowshade - GIVE EM ALL.wav",
+      "proposed": "Lowshade - GIVE EM ALL.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Lithe, Don Toliver - Cannonball (NOES Flip).wav",
+      "proposed": "NOES - Lithe x Don Toliver - Cannonball.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Zei - turn it.wav",
+      "proposed": "Zei - turn it.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Daft Punk - Digital Love (STAR SEED Remix).wav",
+      "proposed": "STAR SEED - Daft Punk - Digital Love.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "MAD DUBZ - HARLEM SHAKE (MAD DUBZ & AUTOMHATE BOOTLEG).mp3",
+      "proposed": "MAD DUBZ x AUTOMHATE - MAD DUBZ - HARLEM SHAKE.mp3",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "Twopercent - Burn.wav",
+      "proposed": "Twopercent - Burn.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Halsey - Gasoline - Fang Shui Flip.wav",
+      "proposed": "Gasoline - Halsey - Fang Shui Flip.wav",
+      "confidence": "low",
+      "reasons": [
+        "last segment of source filename ends in a bare remix keyword (FLIP/EDIT/REMIX/etc.) — likely 'artist - title - remixer' structure rather than 'album - artist - title'"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "NGHT VZN - MULTIPLY.wav",
+      "proposed": "NGHT VZN - MULTIPLY.wav",
+      "confidence": "high",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "clean parse, no transformations needed"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "Player Dave - YOU RIGHT FLIP.wav",
+      "proposed": "Player Dave - YOU RIGHT FLIP.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "M8TRX - LOST.wav",
+      "proposed": "M8TRX - LOST.wav",
+      "confidence": "high",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "clean parse, no transformations needed"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "VISIM - WAKE UP (FIYAH REMIX).wav",
+      "proposed": "FIYAH - VISIM - WAKE UP.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Business As Usual - No No No (BAU Bootleg).wav",
+      "proposed": "BAU - Business As Usual - No No No.wav",
+      "confidence": "medium",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "Sweet Sounds Collective - Break It Down.wav",
+      "proposed": "Sweet Sounds Collective - Break It Down.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Hemi.Wav - Haul It Up!.wav",
+      "proposed": "Hemi.Wav - Haul It Up!.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "KC & The Sunshine Band - Get Down Tonight (Scribble Remix).wav",
+      "proposed": "Scribble - KC x The Sunshine Band - Get Down Tonight.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Luhv & episcool - Space Ship (AH Tune Tuesday).wav",
+      "proposed": "Luhv x episcool - Space Ship.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "LV vs LAZ-R vs KHOLD - ATOMICFLANGWARE⚛️ (10K FREE DOWNLOAD).wav",
+      "proposed": "LV vs LAZ-R vs KHOLD - ATOMICFLANGWARE.wav",
+      "confidence": "low",
+      "reasons": [
+        "non-ASCII characters in source title were stripped entirely — title may have lost meaning"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "cloubee - Lady Chann Edit.wav",
+      "proposed": "cloubee - Lady Chann Edit.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "D Double E - Coldest Dub.wav",
+      "proposed": "D Double E - Coldest Dub.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "pinkpanthress - stateside + zara larsson (jpky flip).wav",
+      "proposed": "jpky - pinkpanthress - stateside + zara larsson.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Crystal Waters - Gypsy Woman (Fabric8 Refix).wav",
+      "proposed": "Fabric8 - Crystal Waters - Gypsy Woman.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Crucial - PARADOX.wav",
+      "proposed": "Crucial - PARADOX.wav",
+      "confidence": "high",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "clean parse, no transformations needed"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "HAVOC - Knock Knock.wav",
+      "proposed": "HAVOC - Knock Knock.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "KiLO - Disrupt [Electric Hawk Premiere].wav",
+      "proposed": "KiLO - Disrupt.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "DEVOWR. x Chirenji - PINK POLO CLUB.mp3",
+      "proposed": "DEVOWR. x Chirenji - PINK POLO CLUB.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Kreesay x Dluzion - Violence.wav",
+      "proposed": "Kreesay x Dluzion - Violence.wav",
+      "confidence": "high",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "clean parse, no transformations needed"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "LYNY - SECTION (XAEBOR REMIX).wav",
+      "proposed": "XAEBOR - LYNY - SECTION.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "FLY - WUUKZ x HEAD$TASH.wav",
+      "proposed": "FLY - WUUKZ x HEAD$TASH.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "MOB - DIRTY BUBBLE.wav",
+      "proposed": "MOB - DIRTY BUBBLE.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "JG DUBZ - EVERYDAY.wav",
+      "proposed": "JG DUBZ - EVERYDAY.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Section! - Ratchetry.wav",
+      "proposed": "Section! - Ratchetry.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "PHANTOM NEXUS - RELOADED.wav",
+      "proposed": "PHANTOM NEXUS - RELOADED.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "HOLD ON (Lindley X Remix) - Justin Bieber.mp3",
+      "proposed": "Lindley X - HOLD ON.mp3 - LD ON.mp3",
+      "confidence": "low",
+      "reasons": [
+        "finalFilename appears mangled (duplicate extension or extra characters past the first extension)"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "Caru X Hyan - MeloDub.wav",
+      "proposed": "Caru x Hyan - MeloDub.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "XAEBOR - PROTOCOL.mp3",
+      "proposed": "XAEBOR - PROTOCOL.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "NVADRZ & ALIAS - ROTTWEILER (NVADRZ & ALIAS BOOTLEG).mp3",
+      "proposed": "NVADRZ x ALIAS - ROTTWEILER.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Salay - BAO.wav",
+      "proposed": "Salay - BAO.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "EsDeeKid - 4 Raws (FORMAL Remix).mp3",
+      "proposed": "FORMAL - EsDeeKid - 4 Raws.mp3",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "UNK - WALK IT OUT (RNGR REMIX).wav",
+      "proposed": "RNGR - UNK - WALK IT OUT.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "XAEBOR - DANGER.mp3",
+      "proposed": "XAEBOR - DANGER.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Gallium - Calling.wav",
+      "proposed": "Gallium - Calling.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "SAINT MILLER - can't feel my face (saint miller redo).wav",
+      "proposed": "SAINT MILLER - can't feel my face.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Notlaw UK - Waiting Edit.wav",
+      "proposed": "Notlaw UK - Waiting Edit.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "MENACE - RUN IT PLEASE.mp3",
+      "proposed": "MENACE - RUN IT PLEASE.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "ZEKE BEATS - LITTLE BITTER.wav",
+      "proposed": "ZEKE BEATS - LITTLE BITTER.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Joe Hunt - Up To No Good (Froidy Bootleg).wav",
+      "proposed": "Froidy - Joe Hunt - Up To No Good.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "tonz - Where's Your Head At Dub.mp3",
+      "proposed": "tonz - Where's Your Head At Dub.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Dabow - GUATA GUATA FLIP.wav",
+      "proposed": "Dabow - GUATA GUATA FLIP.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Oppidan & Cutty Ranks - Armed & Dangerous (Elliot Keith Bootleg) [STPTBOOT049].wav",
+      "proposed": "Elliot Keith - Oppidan x Cutty Ranks - Armed & Dangerous.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "saka - PONY [SAKA RMX].wav",
+      "proposed": "saka - PONY.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "$UICIDEBOY$ - CHAMPAGNE FACE (XOTIX FLIP).wav",
+      "proposed": "XOTIX - $UICIDEBOY$ - CHAMPAGNE FACE.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "L8NITE - DJ SAVED MY LIFE.mp3",
+      "proposed": "L8NITE - DJ SAVED MY LIFE.mp3",
+      "confidence": "high",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "clean parse, no transformations needed"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "Vyhara - Another Life.wav",
+      "proposed": "Vyhara - Another Life.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "crankdat - movement (sfam remix).wav",
+      "proposed": "sfam - crankdat - movement.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Eminem - Lose Yourself - James Hype Edit.aif",
+      "proposed": "Lose Yourself - Eminem - James Hype Edit.aif",
+      "confidence": "low",
+      "reasons": [
+        "last segment of source filename ends in a bare remix keyword (FLIP/EDIT/REMIX/etc.) — likely 'artist - title - remixer' structure rather than 'album - artist - title'"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "Stoop Noise - balled 2 hard.wav",
+      "proposed": "Stoop Noise - balled 2 hard.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "NOTION, Unknown T, D38 - TENTEN (Shrinq Flip).mp3",
+      "proposed": "Shrinq - NOTION x Unknown T x D38 - TENTEN.mp3",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Black Uhuru - Sensimilia (Uman Bootleg) FREE DL.wav",
+      "proposed": "Uman - Black Uhuru - Sensimilia.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Emma Jensen - Closer (Hello Human Flip).wav",
+      "proposed": "Hello Human - Emma Jensen - Closer.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Pretty Sweet X DUBV - Clocking.wav",
+      "proposed": "Pretty Sweet x DUBV - Clocking.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "IVAN & FINNINGHAM - NOBODY IS SAFE.wav",
+      "proposed": "IVAN x FINNINGHAM - NOBODY IS SAFE.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "EMWA - Lights Go Out (EMWA Remix).wav",
+      "proposed": "EMWA - Lights Go Out.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Slaythoven - Descent.mp3",
+      "proposed": "Slaythoven - Descent.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Armin van Buuren - On & On (STAR SEED Remix).wav",
+      "proposed": "STAR SEED - Armin van Buuren - On & On.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "L8NITE - POW.mp3",
+      "proposed": "L8NITE - POW.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Workflow - Irie.mp3",
+      "proposed": "Workflow - Irie.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Sir Spyro - Topper Top (Adeel 160 Remix) FREE DOWNLOAD.mp3",
+      "proposed": "Adeel 160 - Sir Spyro - Topper Top.mp3",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Ashdunn - I Enter Dub.wav",
+      "proposed": "Ashdunn - I Enter Dub.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "YAZEN - North Troops (BDAY FREEBIE).mp3",
+      "proposed": "YAZEN - North Troops.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "MAZZY REDD - FIGHT CLUB.wav",
+      "proposed": "MAZZY REDD - FIGHT CLUB.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Bwompster - Cursed Eye.wav",
+      "proposed": "Bwompster - Cursed Eye.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "GAWM - Nonstop.mp3",
+      "proposed": "GAWM - Nonstop.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "ZEYDAX - W.T.T.P. (8K FREE DOWNLOAD).wav",
+      "proposed": "ZEYDAX - W.T.T.P..wav",
+      "confidence": "high",
+      "reasons": [
+        "duplicate of an existing track in the DJ collection",
+        "clean parse, no transformations needed"
+      ],
+      "decision": "skip"
+    },
+    {
+      "src": "JMOSS - WTF!.wav",
+      "proposed": "JMOSS - WTF!.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "RIP GRANNY - illadelph DnB Remix.mp3",
+      "proposed": "RIP GRANNY - illadelph DnB Remix.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Chris Brown & T-pain - Kiss Kiss (LNDN Edit Free Download).wav",
+      "proposed": "LNDN - Chris Brown x T-pain - Kiss Kiss.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "DropTalk - Firepower.wav",
+      "proposed": "DropTalk - Firepower.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Waka Flocka - No Hands (Jaenga Remix).wav",
+      "proposed": "Jaenga - Waka Flocka - No Hands.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Injustice - sacred place (prod. by KiLO).wav",
+      "proposed": "Injustice x by KiLO - sacred place.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "ISEEU - Billie Eilish- bad guy (ISEEU Remix).wav",
+      "proposed": "ISEEU - Billie Eilish- bad guy.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "JAYNIE - NO NO NO DUB.wav",
+      "proposed": "JAYNIE - NO NO NO DUB.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "zero point - Shake.wav",
+      "proposed": "zero point - Shake.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Shipwreck Paradise - Fair Combat.wav",
+      "proposed": "Shipwreck Paradise - Fair Combat.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "XOTIX - DEAN TURNLEY- ACTIN' TOUGH (XOTIX x MYRIAS FLIP).wav",
+      "proposed": "XOTIX x MYRIAS - XOTIX - DEAN TURNLEY- ACTIN' TOUGH.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "review"
+    },
+    {
+      "src": "DEVOWR. - WERK.wav",
+      "proposed": "DEVOWR. - WERK.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Skinny Limbs - Awesome.aif",
+      "proposed": "Skinny Limbs - Awesome.aif",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "A$AP ROCKY - STOP SNITCHING (AUTHENTICZ FLIP).mp3",
+      "proposed": "AUTHENTICZ - A$AP ROCKY - STOP SNITCHING.mp3",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "TIAN - BEST FRIEND.mp3",
+      "proposed": "TIAN - BEST FRIEND.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Mport - Sneaky Snakes.wav",
+      "proposed": "Mport - Sneaky Snakes.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "PH3 VS SUBZ - ILLEGAL SUMTHING [FREE DIRECT DL].wav",
+      "proposed": "PH3 VS SUBZ - ILLEGAL SUMTHING.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "KONTENT X REAZAN - SEWAGE RIDDIM.wav",
+      "proposed": "KONTENT x REAZAN - SEWAGE RIDDIM.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Asher - Shimmer Freestyle.wav",
+      "proposed": "Asher - Shimmer Freestyle.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "fuck boob toot boyz - KNOCKIN DOORS DOWN.mp3",
+      "proposed": "fuck boob toot boyz - KNOCKIN DOORS DOWN.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply"
+    }
+  ]
+}
