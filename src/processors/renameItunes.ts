@@ -161,6 +161,10 @@ function grabItunesArtist(song: Song, artist: string = ""): Song {
   } else {
     /* otherwise the artist is straightforward */
     song.artist = artist;
+    /* fall back to filename parsing when tag has no artist */
+    if (!song.artist && song.getDashCount() >= 1) {
+      song.artist = song.grabFirst();
+    }
   }
 
   song.checkWith();
