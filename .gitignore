@@ -96,5 +96,7 @@ bad-matches.txt
 
 # Python (soundcloud_dl)
 soundcloud_dl/.venv/
+soundcloud_dl_chrome_profile/
+soundcloud_browser_profile/
 __pycache__/
 *.py[cod]

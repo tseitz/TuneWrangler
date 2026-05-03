@@ -42,7 +42,8 @@ export function getDefaultPaths(): PathConfig {
   const platform = detectPlatform();
 
   if (platform.isMac) {
-    const transferMusic = "/Users/tseitz/Dropbox/TransferMusic";
+    const gdrive = "/Users/tseitz/Library/CloudStorage/GoogleDrive-tdseitz10@gmail.com/My Drive";
+    const transferMusic = `${gdrive}/TransferMusic`;
     const userDir = "/Users/tseitz";
     return {
       music: `${userDir}/Music/`,
@@ -51,9 +52,9 @@ export function getDefaultPaths(): PathConfig {
       youtube: `${transferMusic}/Youtube/`,
       downloaded: `${transferMusic}/Downloaded/`,
       itunes: `${transferMusic}/Downloaded/itunes/Music`,
-      djMusic: `${userDir}/Dropbox/DJ/Dane Dubz DJ Music/Collection/`,
-      djPlaylists: `${userDir}/Dropbox/DJ/Dane Dubz DJ Music/Playlist Backups/`,
-      djPlaylistImport: `${userDir}/Dropbox/DJ/Dane Dubz DJ Music/Playlist Backups/Import/`,
+      djMusic: `${gdrive}/DJ/Dane Dubz DJ Music/Collection/`,
+      djPlaylists: `${gdrive}/DJ/Dane Dubz DJ Music/Playlist Backups/`,
+      djPlaylistImport: `${gdrive}/DJ/Dane Dubz DJ Music/Playlist Backups/Import/`,
       rename: `${transferMusic}/Renamed/`,
       backup: `${transferMusic}/bak/`,
       transfer: transferMusic,

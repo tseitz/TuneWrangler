@@ -1,0 +1,274 @@
+gate: hypeddit
+url_pattern: "hypeddit.com"
+
+steps:
+  # Some purchase_url links point to a Hypeddit smart link page (streaming aggregator
+  # with Spotify/Beatport etc.) instead of directly to a gate page. The smart link
+  # contains a FREE DL button linking to the actual gate. Two variants observed:
+  #   data-type="custom"  — artist-added custom button (original pattern)
+  #   data-type="hypeddit" — Hypeddit-generated Download button (e.g. moab8k1 smart link)
+  # Both have href pointing to hypeddit.com/<artist>/<slug> — navigate to it.
+  - id: follow_smartlink_if_needed
+    trigger: >-
+      a.hype-smart-link-part[data-type='custom'][href*='hypeddit.com'],
+      a.hype-smart-link-part[data-type='hypeddit'][href*='hypeddit.com']
+    action: navigate
+    optional: true
+
+  # Click the initial "Download" anchor to reveal the gate carousel.
+  # Hypeddit's visible entry point is <a id="downloadProcess" class="... dp ..."> —
+  # NOT #gateDownloadButton. The carousel step buttons also carry .hype-btn-green
+  # but are hidden (display:none) until the anchor is clicked, so targeting a.dp
+  # or #downloadProcess avoids scroll_into_view_if_needed timing out on a hidden el.
+  - id: click_gate_button
+    trigger: "a#downloadProcess, a.dp, #downloadProcess"
+    action: click
+    required: true
+
+  # Wait for the carousel form to be visible before trying to fill fields.
+  # The carousel opens with a CSS animation; without this wait, _find_element
+  # runs before inputs are visible and skips fill_name/fill_email silently.
+  - id: wait_for_form
+    trigger: "input[type='email'], input[type='text']"
+    action: wait
+    timeout_ms: 5000
+    optional: true
+
+  # --- Carousel slide 1: email subscription form ---
+  # Hypeddit uses name='email_name' and name='email_address' (both type='text').
+  - id: fill_name
+    trigger: "input[name='email_name'], input#email_name"
+    action: fill
+    value: "{{name}}"
+    optional: true
+
+  - id: fill_email
+    trigger: "input[name='email_address'], input#email_address"
+    action: fill
+    value: "{{email}}"
+    optional: true
+
+  # Submit the email form to advance to the next carousel slide.
+  # depends_on fill_email prevents clicking Submit on an empty/unfilled form.
+  - id: submit_email
+    trigger: >-
+      button:has-text('Share email address'), button:has-text('Share Email Address'),
+      button:has-text('Share Email'), input[type='submit'][value*='email' i]
+    action: click
+    optional: true
+    depends_on: fill_email
+    force: true
+
+  # --- SC|SP choice panel (sc|sp gate variant) ---
+  # Some gates offer SoundCloud OR Spotify as alternatives on the same slide
+  # (steps_select: dw,email,sc|sp). The choice buttons use onclick="jumpGate(...)"
+  # which is distinct from the normal Connect button (data-onclick="inAppSetup(...)").
+  # Clicking SoundCloud advances the carousel to the SC connect slide and hides
+  # the Spotify slide — which causes wait_for_spotify_slide (below) to time out,
+  # so Spotify steps are naturally skipped for choice-panel gates.
+  - id: wait_for_sc_sp_choice
+    trigger: "a[onclick*='jumpGate']"
+    action: wait
+    # state=attached: these buttons are injected into the DOM after email submit but inside a
+    # CSS-hidden carousel slide, so state=visible always times out even though they're on screen.
+    state: attached
+    timeout_ms: 5000
+    optional: true
+
+  - id: choose_soundcloud
+    trigger: >-
+      a[onclick*='jumpGate'][class*='soundcloud'],
+      a[onclick*="jumpGate"][onclick*="'sc'"],
+      a[onclick*='jumpGate('][onclick*='sc']
+    action: click
+    optional: true
+    depends_on: wait_for_sc_sp_choice
+    # No force: choice panel buttons are visible when the choice slide is active.
+    # Sequential gates (sp,sc,email) hide these with display:none, so without
+    # force the step is correctly skipped — avoiding premature SC slide jump.
+
+  # --- Spotify step (sequential gates: sp,sc,email) ---
+  # For sequential gates, Spotify is the first active step after email submit.
+  # The Connect button uses onclick="inAppSetup(this,1);PopupCenterDual(...)" and
+  # is visible when Spotify is the current carousel step.
+  # For choice-panel gates (sc|sp), choose_soundcloud calls jumpGate(this,'sc')
+  # which hides the Spotify slide — so wait_for_spotify_slide times out and
+  # follow_spotify is skipped. inAppSetup(this,N) checks the active carousel step
+  # server-side, so Spotify must be clicked while it is the active step.
+  - id: wait_for_spotify_slide
+    trigger: >-
+      a[onclick*='accounts.spotify.com'],
+      button#skipper_sp_next, button#skipper_sp_channel
+    action: wait
+    timeout_ms: 5000
+    optional: true
+
+  - id: follow_spotify
+    trigger: "a[onclick*='accounts.spotify.com']"
+    action: click
+    optional: true
+    force: true
+    depends_on: wait_for_spotify_slide
+
+  - id: skip_spotify
+    trigger: "button#skipper_sp_next, button#skipper_sp_channel, a#skipper_sp"
+    action: click
+    optional: true
+    force: true
+    depends_on: wait_for_spotify_slide
+
+  # --- Carousel slide 2: optional comment gate ---
+  # After email submit (or Spotify done, or SC|SP choice) the carousel animates
+  # to the SC comment slide. Wait for the SC Connect button — it uses data-onclick
+  # (not onclick), which distinguishes it from Spotify's Connect.
+  - id: wait_for_comment_slide
+    trigger: "a[data-onclick*='soundcloud.com'], input[name='sc_comment_text']"
+    action: wait
+    timeout_ms: 5000
+    optional: true
+
+  # Some Hypeddit variants show a "Share a comment" button that opens the form;
+  # others show the textarea/input directly. share_comment_gate handles the button case.
+  - id: share_comment_gate
+    trigger: >-
+      button:has-text('Share a comment'), button:has-text('Leave a comment'),
+      .comment-gate-btn
+    action: click
+    optional: true
+    force: true
+
+  - id: fill_comment
+    trigger: >-
+      textarea[placeholder*='comment' i], textarea.hype-textarea, textarea,
+      input[placeholder*='comment' i],
+      input.hype-form-control:not([name='email_name']):not([name='email_address'])
+    action: fill
+    value: "{{comment}}"
+    optional: true
+
+  # The SC Connect element uses data-onclick="inAppSetup(this,2);PopupCenterDual(...)"
+  # (note: data-onclick, NOT onclick). Spotify's Connect uses onclick. Targeting
+  # data-onclick*='soundcloud.com' avoids matching the Spotify Connect button, which
+  # also has text "Connect" and appears first in DOM order on multi-step gates like
+  # dw,sp,sc,email where both slides are visible simultaneously.
+  # No depends_on: gates with nwSteps including "sc" but no comment field still show
+  # a Connect button that must be clicked to proceed.
+  # force: SC-connect slide (current-slide zindex) intercepts pointer events on the
+  # connect button during carousel transition.
+  - id: submit_comment
+    trigger: >-
+      a[data-onclick*='soundcloud.com'], a[data-onclick*='secure.soundcloud'],
+      button:has-text('Submit comment'), button:has-text('Post comment')
+    action: click
+    optional: true
+    force: true
+
+  # --- Spotify step after SC (sequential gates: dw,sc,sp) ---
+  # For gates where Spotify is AFTER SC comment (nwSteps: sc,sp), the early
+  # follow_spotify click happened before SC was done so Hypeddit server-side ignored it.
+  # After submit_comment (SC OAuth complete) the carousel advances to the Spotify slide;
+  # re-attempt Spotify here. On sp-first gates (dw,sp,sc,...) this is a harmless duplicate.
+  # depends_on: submit_comment ensures this only fires when SC was actually done.
+  - id: follow_spotify_post_sc
+    trigger: "a[onclick*='accounts.spotify.com']"
+    action: click
+    optional: true
+    force: true
+    depends_on: submit_comment
+
+  - id: skip_spotify_post_sc
+    trigger: "button#skipper_sp_next, button#skipper_sp_channel, a#skipper_sp, a#skipper[data-step='sp']"
+    action: click
+    optional: true
+    force: true
+    depends_on: submit_comment
+
+  # --- Email step after SC (sequential gates: dw,sp,sc,email) ---
+  # For gates where email is the LAST step (after Spotify + SC comment), the carousel
+  # advances to the email slide after submit_comment fires. The email fields were filled
+  # earlier but submit_email ran before the email slide was active, so re-submit here.
+  # depends_on: submit_comment ensures this only fires on gates that had an SC step.
+  - id: submit_email_after_sc
+    trigger: >-
+      button:has-text('Share email address'), button:has-text('Share Email Address'),
+      button:has-text('Share Email'), input[type='submit'][value*='email' i]
+    action: click
+    optional: true
+    depends_on: submit_comment
+    force: true
+
+  # --- Carousel slide 2/3: optional SoundCloud actions ---
+  - id: repost_soundcloud
+    trigger: >-
+      button:has-text('Repost'), a:has-text('Repost on SoundCloud'),
+      .repost-gate-btn
+    action: click
+    optional: true
+    force: true
+
+  - id: follow_soundcloud
+    trigger: >-
+      button:has-text('Follow'), a:has-text('Follow on SoundCloud'),
+      .follow-gate-btn
+    action: click
+    optional: true
+    force: true
+
+  # --- Carousel slide 3: Instagram follow ---
+  # Wait for the Instagram slide/button to become visible.
+  # span#instagram_status is the visible child span inside the follow button;
+  # a.hype-btn-instagram is the button itself; a#skipper_ig is the skip link.
+  # Wait for the IG follow button — a.button-instagram-1 is the actual per-artist
+  # follow anchor (rendered visibly alongside other slides). a.hype-btn-instagram
+  # is the carousel nav button and always has class "hide".
+  - id: wait_for_instagram_slide
+    trigger: "a.button-instagram-1, a#skipper_ig, button#skipper_ig_channel"
+    action: wait
+    timeout_ms: 5000
+    optional: true
+
+  # Click the Instagram follow button. a.button-instagram-1 is the artist-specific
+  # follow link that's visible in the DOM (class "button-instagram-1 undone").
+  - id: follow_instagram
+    trigger: "a.button-instagram-1"
+    action: click
+    optional: true
+    force: true
+
+  # Advance past the Instagram slide. In the "modern" Hypeddit gate design,
+  # button#skipper_ig_next (data-step="ig") is the visible Next button;
+  # button#skipper_ig_channel carries class "hide" and is never visible.
+  # Must use trusted click — Hypeddit's carousel checks event.isTrusted.
+  # force: Spotify slide (data-group="2") can sit in the Z-order and intercept
+  # pointer events while the carousel transitions, blocking a normal click.
+  - id: skip_instagram
+    trigger: "button#skipper_ig_next, button#skipper_ig_channel, a#skipper_ig"
+    action: click
+    optional: true
+    force: true
+
+  # --- Final download link ---
+  # After all gate steps, either:
+  # - #downloadProcess href updates from javascript:void(0) to a real CDN URL, OR
+  # - #gateDownloadButton becomes visible (sc-only gates where #downloadProcess never updates)
+  - id: wait_for_download_ready
+    trigger: >-
+      a#downloadProcess[href]:not([href='javascript:void(0)']),
+      a#gateDownloadButton
+    action: wait
+    timeout_ms: 8000
+    optional: true
+
+  - id: final_download
+    trigger: >-
+      a#gateDownloadButton, a.free_dwln,
+      a.dp[href]:not([href='javascript:void(0)']),
+      a#downloadProcess[href]:not([href='javascript:void(0)']),
+      a:has-text('Get Free Download'), a:has-text('Download Now'),
+      a:has-text('Get Download'), button:has-text('Download'), .download-link
+    action: click
+    download: true
+    # force bypasses "pointer intercepted" when the Instagram slide div is still
+    # in the Z-order during carousel transition — button is visible but overlaid.
+    force: true
+    required: true

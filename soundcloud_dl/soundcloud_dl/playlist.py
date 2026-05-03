@@ -21,6 +21,8 @@ class TrackItem:
 
     url: str
     title: str | None = None
+    purchase_url: str | None = None
+    artist: str | None = None
 
 
 def _get_access_token(client_id: str, client_secret: str) -> str:
@@ -80,7 +82,14 @@ def _track_to_item(track: dict) -> TrackItem | None:
     if not url:
         return None
     title = track.get("title")
-    return TrackItem(url=url, title=title if isinstance(title, str) else None)
+    purchase_url = track.get("purchase_url")
+    artist = track.get("user", {}).get("username")
+    return TrackItem(
+        url=url,
+        title=title if isinstance(title, str) else None,
+        purchase_url=purchase_url if isinstance(purchase_url, str) else None,
+        artist=artist if isinstance(artist, str) else None,
+    )
 
 
 def _tracks_from_playlist_data(data: dict) -> list[TrackItem]:
