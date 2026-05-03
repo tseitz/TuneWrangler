@@ -1,95 +1,34 @@
-# Configuration System
+# Configuration
 
-The TuneWrangler configuration system provides flexible path management across different platforms.
-
-## Features
-
-- **Platform Detection**: Automatically detects macOS, Windows, or Linux
-- **Environment Variables**: Override any path using environment variables
-- **Path Validation**: Validates that configured paths exist
-- **Type Safety**: Full TypeScript support with proper interfaces
+Path management for the main tool. Each path is hardcoded to a platform-specific
+default in [`paths.ts`](paths.ts) and can be overridden via environment variable.
 
 ## Usage
 
-### Basic Usage
-
 ```typescript
-import { loadConfig, getFolder } from "../config/index.ts";
-
-// Load all configuration
-const config = loadConfig();
-
-// Get a specific folder path
-const musicPath = getFolder("music");
-const downloadsPath = getFolder("downloads");
-```
-
-### Platform Detection
-
-```typescript
-import { detectPlatform } from "../config/index.ts";
-
-const platform = detectPlatform();
-console.log(`Running on: ${platform.isMac ? "macOS" : platform.isWindows ? "Windows" : "Linux"}`);
-```
-
-### Path Validation
-
-```typescript
-import { validatePaths } from "../config/index.ts";
+import { loadConfig, getFolder, validatePaths } from "./index.ts";
 
 const config = loadConfig();
-const validation = await validatePaths(config);
-
-if (!validation.valid) {
-  console.error("Invalid paths:", validation.errors);
-}
+const downloadPath = getFolder("downloaded");
+const { valid, errors } = await validatePaths(config);
 ```
 
-## Environment Variables
+## Paths
 
-You can override any path using environment variables:
-
-```bash
-# Set custom paths
-export TUNEWRANGLER_MUSIC_PATH="/custom/music/path"
-export TUNEWRANGLER_DOWNLOADS_PATH="/custom/downloads/path"
-export TUNEWRANGLER_YOUTUBE_PATH="/custom/youtube/path"
-
-# Run with custom configuration
-deno task rM
-```
-
-## Available Paths
-
-| Path | Environment Variable | Description |
-|------|-------------------|-------------|
+| Key | Env override | Purpose |
+|---|---|---|
 | `music` | `TUNEWRANGLER_MUSIC_PATH` | Main music library |
-| `downloads` | `TUNEWRANGLER_DOWNLOADS_PATH` | Downloads folder |
-| `playlists` | `TUNEWRANGLER_PLAYLISTS_PATH` | Playlist storage |
+| `downloads` | `TUNEWRANGLER_DOWNLOADS_PATH` | OS Downloads folder |
+| `downloaded` | `TUNEWRANGLER_DOWNLOADED_PATH` | Source for `rename-music` |
+| `bandcamp` | `TUNEWRANGLER_BANDCAMP_PATH` | Source for `rename-bandcamp` |
+| `itunes` | `TUNEWRANGLER_ITUNES_PATH` | Source for `rename-itunes` |
 | `youtube` | `TUNEWRANGLER_YOUTUBE_PATH` | YouTube downloads |
-| `downloaded` | `TUNEWRANGLER_DOWNLOADED_PATH` | Downloaded music |
-| `itunes` | `TUNEWRANGLER_ITUNES_PATH` | iTunes music folder |
-| `formatted` | `TUNEWRANGLER_FORMATTED_PATH` | Formatted playlists |
-| `broken` | `TUNEWRANGLER_BROKEN_PATH` | Broken/corrupted files |
-| `djMusic` | `TUNEWRANGLER_DJMUSIC_PATH` | DJ music collection |
+| `djMusic` | `TUNEWRANGLER_DJMUSIC_PATH` | DJ collection (used for dedup) |
 | `djPlaylists` | `TUNEWRANGLER_DJPLAYLISTS_PATH` | DJ playlist backups |
-| `djPlaylistImport` | `TUNEWRANGLER_DJPLAYLISTIMPORT_PATH` | DJ playlist imports |
-| `rename` | `TUNEWRANGLER_RENAME_PATH` | Renamed music output |
-| `backup` | `TUNEWRANGLER_BACKUP_PATH` | Backup directory |
-| `transfer` | `TUNEWRANGLER_TRANSFER_PATH` | Transfer music folder |
+| `djPlaylistImport` | `TUNEWRANGLER_DJPLAYLISTIMPORT_PATH` | Playlist import staging |
+| `rename` | `TUNEWRANGLER_RENAME_PATH` | Destination for renamed files |
+| `backup` | `TUNEWRANGLER_BACKUP_PATH` | Source-file backup destination |
+| `transfer` | `TUNEWRANGLER_TRANSFER_PATH` | Transfer/staging folder |
 
-## Validation
-
-Run the validation task to check your configuration:
-
-```bash
-deno task validate
-```
-
-This will:
-
-- Detect your platform
-- Show all configured paths
-- Validate that paths exist
-- Display any configuration errors
+Run `deno task validate` to detect platform, list configured paths, and check
+that each one exists.

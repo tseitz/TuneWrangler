@@ -1,80 +1,115 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code working in this repository.
 
 ## Project Overview
 
-TuneWrangler is a music file management tool with two distinct components:
+TuneWrangler is a music file management tool with two components:
 
-1. **Main tool** (Deno/TypeScript): CLI for renaming music files (Bandcamp, iTunes, Beatport formats), playlist management, FLAC conversion, and DJ collection analysis.
-2. **soundcloud_dl** (Python/uv): Subproject for automating SoundCloud free downloads using the SoundCloud API (Phase 1) and browser-use with a local LLM agent (Phase 2).
+1. **Main tool** (Deno/TypeScript, `src/`): CLI that renames downloaded music files into a normalized `artist - album - title` format, manages playlists, converts formats, and analyzes a DJ collection.
+2. **soundcloud_dl** (Python/uv, `soundcloud_dl/`): Automates SoundCloud free-download gates using Playwright + CDP attach. Pulls track URLs from the SoundCloud API, then drives a real Chrome instance through per-host gate handlers.
 
 ## Commands
 
 ### Deno (main tool)
 
 ```bash
-# Run via CLI wrapper (needs .env configured with paths)
-./tunewrangler <command> [options]
-
-# Or via deno tasks (shortcuts in deno.json)
-deno task rM          # rename music
-deno task rBc         # rename bandcamp
-deno task rI          # rename itunes
-deno task rBp         # rename beatport
-deno task ytRb        # add M3U to YouTube playlist
-deno task playlistImport  # import playlists
-deno task cF          # convert FLACs
-deno task validate    # validate config
-deno task cli         # run full CLI (deno run -A src/cli/main.ts)
-
-# Run directly
-deno run -A src/cli/main.ts rename-music
-deno run -A src/processors/renameMusic.ts
+deno task rM                       # rename music: dry-run, writes manifest
+deno task rM --apply <manifest>    # apply approved entries from a manifest
+deno task rM --move                # legacy: parse + move all in one shot
+deno task promote <manifest>       # copy manifest into tests/corpus/ as regression coverage
+deno task test                     # run all tests (unit + corpus regression)
+deno task validate                 # validate config paths exist
+deno task rBc / rI / rBp           # rename Bandcamp / iTunes / Beatport
+deno task cF                       # convert FLACs
+deno task ytRb                     # add M3U to YouTube playlist
+deno task playlistImport           # import playlists
+deno task cli                      # full CLI entry point
 ```
 
-### soundcloud_dl (Python subproject)
+### soundcloud_dl (Python)
 
 ```bash
-cd soundcloud_dl
-
-# Run the tool
-uv run python -m soundcloud_dl.main
-
-# Or from repo root
-uv run --project soundcloud_dl soundcloud-dl
-
-# Lint and type check
-uv run ruff check soundcloud_dl && uv run ruff format soundcloud_dl
-uv run ty check soundcloud_dl
+uv run --project soundcloud_dl soundcloud-dl   # run the downloader
+uv run --project soundcloud_dl ruff check soundcloud_dl/soundcloud_dl
+uv run --project soundcloud_dl ruff format soundcloud_dl/soundcloud_dl
+uv run --project soundcloud_dl ty check soundcloud_dl/soundcloud_dl
+uv run --project soundcloud_dl pytest soundcloud_dl/tests/
 ```
+
+## Rename workflow (the important one)
+
+The `rename-music` flow is **dry-run first, apply second** — never `--move` unless the user explicitly asks for it. The manifest exists so the user can review low-confidence entries before any files are touched.
+
+```
+1. deno task rM                       → writes logs/tunewrangler/manifests/rename-manifest-<ts>.json
+                                        Each entry has confidence (high/medium/low) + decision (apply/review/skip)
+2. User opens manifest, edits "decision" or "proposed" fields for low-confidence entries
+3. deno task rM --apply <manifest>    → moves only entries with decision: "apply"
+4. deno task promote <manifest>       → locks the batch into tests/corpus/ as regression tests
+```
+
+Confidence model lives in `src/core/confidence.ts`. Low-confidence triggers: 3-part filenames with bare remix keywords (FLIP/EDIT/DUB/etc. as the last segment), empty artist/title after parsing, mangled extensions (`.mp3` appearing twice), or artist duplicated across artist+album fields.
+
+The corpus harness (`src/core/corpus_test.ts`) loads every promoted manifest and runs `parseDownloadedSong` against each entry. `proposed === parser_output` becomes a regression test; `proposed !== parser_output` (user override) is logged as a parser improvement target.
 
 ## Architecture
 
 ### Deno/TypeScript (`src/`)
 
-- **`src/cli/main.ts`** — CLI entry point. Parses args, dispatches to commands. All commands are registered in a `commands` record with metadata (flags, examples, execute function).
+- **`src/cli/main.ts`** — CLI entry. Args parsed via `@std/cli/parse-args`. Commands registered in a record with metadata.
 - **`src/cli/commands/`** — Command handlers (validate, logs, performance, analyze).
-- **`src/processors/`** — Core music processing logic. Each processor handles a specific source format (Bandcamp, iTunes, Beatport, generic music). Some have "Optimized" variants (`renameMusicOptimized.ts`, `renameBandcampOptimized.ts`, `convertFlacsOptimized.ts`).
-- **`src/config/paths.ts`** — Platform-specific path defaults (macOS/Windows/Linux) with env var overrides (`TUNEWRANGLER_*_PATH`). Paths are hardcoded to the owner's directory structure as defaults.
-- **`src/core/utils/`** — Shared utilities: logger (with file rotation), custom error classes, retry logic, performance monitoring, unicode handling, validation.
-- **`src/core/models/`** — Data models: `Song.ts`, `ArtistAnalysis.ts`, `Semaphore.ts` (concurrency control), shared types.
+- **`src/processors/`** — Per-source processors. `renameMusic.ts` is the manifest-driven flow; the rest (`renameBandcamp`, `renameItunes`, `renameBeatport`, `convertFlacs`) still use the older immediate-move pattern.
+- **`src/processors/*Optimized.ts`** — **Deprecated duplicates of their non-Optimized counterparts.** Drift hazard. Don't extend these; consolidate into one file when touched.
+- **`src/core/parser.ts`** — `parseDownloadedSong()`: extracted parsing pipeline. Pure-ish entry point used by both `renameMusic` and the corpus tests.
+- **`src/core/confidence.ts`** — `scoreConfidence()`: returns `{level, reasons, decision}`.
+- **`src/core/manifest.ts`** — `Manifest`/`ManifestEntry` types + `readManifest`/`writeManifest`. `parser_output` is immutable; `proposed` is user-editable.
+- **`src/core/models/Song.ts`** — Song data model. Heavy mutation, regex-based methods (`checkRemix`, `checkFeat`, `checkWith`). Refactor target — see "Known tech debt" below.
+- **`src/core/utils/`** — `common.ts` (move/cache/dedup), `logger.ts` (file-rotating), `unicode.ts`, `errors.ts`, `retry.ts`, `performance.ts`.
+- **`src/config/paths.ts`** — Platform-specific path defaults with `TUNEWRANGLER_*_PATH` env var overrides.
+- **`scripts/promote.ts`** — Copies an applied manifest into `tests/corpus/`.
+- **`tests/corpus/`** — Promoted manifests, loaded automatically by the corpus test.
 
 ### Python (`soundcloud_dl/`)
 
-- **`config.py`** — Loads `.env` from TuneWrangler root (parent of soundcloud_dl). All settings via `TUNEWRANGLER_SC_*` env vars.
-- **`main.py`** — Entry point. Runs Phase 1 (API playlist extraction) then Phase 2 (browser-use agent per track).
-- **`playlist.py`** — SoundCloud API interaction for extracting track URLs.
-- **`agent_task.py`** — browser-use agent configuration for per-track free download automation.
-- **`resume.py`** — Tracks processed URLs in `logs/soundcloud_dl_processed.json` to skip on re-runs.
-- **`playlist_cache.py`** — Caches playlist track lists in `logs/soundcloud_dl_playlist_cache.json`.
+- **`config.py`** — Loads `.env` from repo root. All settings via `TUNEWRANGLER_SC_*` env vars. Provides `get_log_dir()` (returns `logs/soundcloud_dl/`), `get_debug_dir()`, `get_processed_file()`, `get_playlist_cache_file()`.
+- **`main.py`** — Entry. Phase 1 = pull track URLs from SoundCloud API. Phase 2 = iterate tracks through gate handlers in a CDP-attached Chrome.
+- **`playlist.py`** — SoundCloud API: extracts track URLs from a playlist URL.
+- **`chrome_bringup.py`** — Launches Chrome with `--remote-debugging-port`, attaches Playwright via CDP.
+- **`gate_handlers/`** — Per-host gate strategies. `base.py` defines `BaseGateHandler` with declarative steps (required/optional, depends_on). `registry.py` maps URL hosts to handlers. Add a new handler by subclassing and registering.
+- **`captcha.py`** — Detects Cloudflare/captcha walls; pauses for manual completion.
+- **`resume.py`** — Records each URL's terminal state (`done`/`unsupported`/`captcha_pending`/`manual_review`/`failed`) in `logs/soundcloud_dl/processed.json`.
+- **`playlist_cache.py`** — Caches playlist track lists in `logs/soundcloud_dl/playlist_cache.json` to skip API hits on re-runs.
 
-## Key Conventions
+## Logs and state
 
-- **Runtime versions**: Deno 2.6.9, Python 3.12, FFmpeg 7.1.1 (managed via `.mise.toml`)
-- **Configuration**: Main tool uses `TUNEWRANGLER_*` env vars with platform-specific hardcoded defaults. SoundCloud subproject uses `TUNEWRANGLER_SC_*` env vars loaded from root `.env`.
-- **Logging**: Both projects log to `logs/` at the repo root. Deno uses a custom logger (`src/core/utils/logger.ts`). Python uses stdlib logging.
-- **Python tooling**: uv for package management, ruff for linting/formatting (line-length 100, select ALL minus D/COM812/ISC001), ty for type checking.
-- **Markdown**: Linted with markdownlint (`.markdownlint.json`). Lines under 100 chars. Blank lines around code blocks and headers.
-- **Commit style**: Conventional commits (`feat:`, `fix:`, etc.).
-- **No summary files**: Don't create summary markdown files after completing work. Only document actual features.
+```
+logs/
+├── tunewrangler/
+│   ├── tunewrangler-YYYY-MM-DD.log         # rotating Deno logger
+│   └── manifests/
+│       └── rename-manifest-<timestamp>.json # dry-run output
+└── soundcloud_dl/
+    ├── soundcloud_dl.log                   # Python stdlib logging
+    ├── processed.json                      # resume state per playlist
+    ├── playlist_cache.json                 # cached API responses
+    └── debug/
+        └── <track>.png                     # Playwright screenshots on failure
+```
+
+## Known tech debt
+
+- **`*Optimized.ts` duplicates** — `renameMusicOptimized.ts`, `renameBandcampOptimized.ts`, `convertFlacsOptimized.ts` all live alongside their non-Optimized originals. Pick one and delete the other when touching this code.
+- **`Song.ts` is doing too many jobs** — model + parser + regex stack + normalizer + dedup state, all with mutation. Refactor target. Wait until `tests/corpus/` has 50+ entries before touching it (so changes are testable). The `parser.ts` extraction is the first step in this direction.
+- **`checkRemix` has 7 near-identical regex branches** (REMIX/REFIX/FLIP/EDIT/BOOTLEG/REBOOT/DUB). Should be one data-driven loop.
+
+## Conventions
+
+- **Runtimes**: Deno 2.6.9, Python 3.12, FFmpeg 7.1.1 (managed via `.mise.toml`).
+- **Env vars**: Main tool uses `TUNEWRANGLER_*_PATH`; soundcloud_dl uses `TUNEWRANGLER_SC_*`. Both load from repo-root `.env`.
+- **Python tooling**: uv, ruff (line-length 100, select ALL minus D/COM812/ISC001), ty.
+- **Markdown**: markdownlint enforced (`.markdownlint.json`). Lines under 100 chars; blank lines around code blocks and headers.
+- **Commits**: Conventional (`feat:`, `fix:`, `refactor:`, etc.).
+- **Testing**: `deno task test` for the main tool (unit + regression corpus). `pytest` for soundcloud_dl. New rename-pipeline changes should add a corpus entry rather than handwritten tests where possible.
+- **No summary docs**: Don't create post-task `*_SUMMARY.md` files. Document features in CLAUDE.md or README.md, not throwaway markdown.
+- **Sandbox quirk**: Writes to the Google Drive cloud-mount path (`/Users/tseitz/Library/CloudStorage/...`) require running with `dangerouslyDisableSandbox: true`.
