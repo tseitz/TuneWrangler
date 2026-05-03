@@ -71,4 +71,4 @@ def test_chrome_profile_dir_default():
 
 def test_chrome_profile_dir_from_env(tmp_path):
     cfg = _reload_config(TUNEWRANGLER_SC_CHROME_PROFILE_DIR=str(tmp_path / "custom"))
-    assert cfg.CHROME_PROFILE_DIR == (tmp_path / "custom").resolve()
+    assert (tmp_path / "custom").resolve() == cfg.CHROME_PROFILE_DIR
