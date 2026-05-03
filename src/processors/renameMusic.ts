@@ -1,148 +1,245 @@
 /*
-Renames downloaded music to the format that I like. Also converts to flac if wav
+Renames downloaded music to the format that I like. Also converts to flac if wav.
+
+Modes:
+  (default)              dry-run: parse all files, score confidence, write a manifest
+                         to logs/tunewrangler/manifests/rename-manifest-<timestamp>.json,
+                         do not move anything.
+  --apply <manifest>     read the given manifest and move only entries whose
+                         decision is "apply". Edit the manifest first to override.
+  --move                 legacy: process and immediately move all files (no manifest).
 
 Incoming (generally): album - artist - title
 Outgoing:             artist - album - title
 */
 import * as fs from "@std/fs";
+import { parseArgs } from "@std/cli/parse-args";
 
 import {
   backupFile,
   cacheMusic,
   checkIfDuplicate,
   getFolder,
-  logWithBreak,
-  renameAndMove,
   isProcessable,
+  logWithBreak,
+  MusicCache,
+  renameAndMove,
   setFinalDownloadedSongName,
 } from "../core/utils/common.ts";
 import { DownloadedSong } from "../core/models/Song.ts";
-
-// Configuration is now handled automatically by the config system
-let debug = true;
-let clear = false;
-// let trimRating = true;
+import { parseDownloadedSong } from "../core/parser.ts";
+import { scoreConfidence } from "../core/confidence.ts";
+import {
+  Manifest,
+  ManifestEntry,
+  readManifest,
+  writeManifest,
+} from "../core/manifest.ts";
 
 const startDir = getFolder("downloaded");
 const cacheDir = getFolder("djMusic");
 const moveDir = getFolder("rename");
 const backupDir = getFolder("backup");
+const MANIFEST_DIR = "./logs/tunewrangler/manifests";
 
-// pass arg "--move" to write tags and move file
-// --no-clear does not clear out the backup directory
-Deno.args.forEach((value) => {
-  if (value === "--move") {
-    debug = false;
-    clear = true;
-  }
-  if (value === "--no-clear") {
-    clear = false;
-  }
+const args = parseArgs(Deno.args, {
+  string: ["apply", "manifest"],
+  boolean: ["move", "no-clear"],
+  default: { "no-clear": false },
 });
 
-// cache music
-const musicCache = await cacheMusic(cacheDir);
+if (args.apply) {
+  await runApply(args.apply);
+} else if (args.move) {
+  await runLegacyMove(!args["no-clear"]);
+} else {
+  await runDryRun(args.manifest);
+}
 
-// empty out the backup directory if necessary
-if (clear) await fs.emptyDir(backupDir);
-
-// run the program
-await main();
-
-async function main() {
-  let count = 0;
-  const moveOperations: Promise<void>[] = [];
+/**
+ * Default mode: parse + score every file, write a manifest, do not move.
+ * The user reviews the manifest, edits any "review" decisions, then runs --apply.
+ */
+async function runDryRun(manifestOverride?: string): Promise<void> {
+  const cache = await cacheMusic(cacheDir);
+  const entries: ManifestEntry[] = [];
 
   for await (const currEntry of Deno.readDir(startDir)) {
-    if (isProcessable(currEntry)) {
-      console.log("Processing: ", currEntry.name);
+    if (!isProcessable(currEntry)) continue;
+    const entry = buildEntry(currEntry.name, cache);
+    if (entry) entries.push(entry);
+  }
 
-      try {
-        let song = new DownloadedSong(currEntry.name, startDir);
+  const manifestPath = manifestOverride ?? defaultManifestPath();
+  const manifest: Manifest = {
+    version: 1,
+    generated_at: new Date().toISOString(),
+    source_dir: startDir,
+    move_dir: moveDir,
+    cache_dir: cacheDir,
+    entries,
+  };
+  await fs.ensureDir(MANIFEST_DIR);
+  await writeManifest(manifestPath, manifest);
 
-        if (!song.extension || song.extension === ".m3u" || song.extension === ".zip") {
-          logWithBreak(`Skipping: ${song.filename}`);
-          continue;
-        }
+  printSummary(entries, manifestPath);
+}
 
-        if (song.dashCount > 0) {
-          song = processDownloadedMusic(song);
-        }
+/**
+ * Apply mode: read a manifest the user has reviewed, move only entries
+ * marked decision: "apply". Skip "review" and "skip" entries silently.
+ */
+async function runApply(manifestPath: string): Promise<void> {
+  const manifest = await readManifest(manifestPath);
+  const cache = await cacheMusic(cacheDir);
+  await fs.emptyDir(backupDir);
 
-        try {
-          song = setFinalDownloadedSongName(song);
+  const moveOps: Promise<void>[] = [];
+  let applied = 0;
+  let skipped = 0;
 
-          song.duplicate = checkIfDuplicate(song, musicCache);
-          if (song.duplicate) {
-            throw "Duplicate Song";
-          }
-        } catch {
-          logWithBreak(`***Duplicate Song: ${song.finalFilename}***`);
-          continue;
-        }
-
-        musicCache.add(song);
-
-        logWithBreak(song.finalFilename);
-
-        count++;
-        if (!debug) {
-          const entryName = currEntry.name;
-          moveOperations.push(
-            backupFile(startDir, backupDir, entryName)
-              .then(() => renameAndMove(moveDir, song, undefined, clear))
-          );
-        }
-      } catch (error) {
-        logWithBreak(`Skipping: ${currEntry.name} - ${error}`);
-        continue;
-      }
+  for (const entry of manifest.entries) {
+    if (entry.decision !== "apply") {
+      skipped++;
+      continue;
     }
+
+    const song = new DownloadedSong(entry.src, startDir);
+    if (song.dashCount > 0) parseDownloadedSong(song);
+    setFinalDownloadedSongName(song);
+
+    // Honor user override: if the manifest's proposed name differs from what
+    // the parser produces, trust the manifest (the user may have edited it).
+    if (entry.proposed && entry.proposed !== song.finalFilename) {
+      song.finalFilename = entry.proposed;
+    }
+
+    if (checkIfDuplicate(song, cache)) {
+      logWithBreak(`***Duplicate, skipping: ${song.finalFilename}***`);
+      skipped++;
+      continue;
+    }
+    cache.add(song);
+
+    moveOps.push(
+      backupFile(startDir, backupDir, entry.src).then(() =>
+        renameAndMove(moveDir, song, undefined, true)
+      )
+    );
+    applied++;
   }
 
-  // Wait for all parallel backup + rename/move operations
-  if (moveOperations.length > 0) {
-    await Promise.all(moveOperations);
-  }
-
-  console.log(`Total Count: ${count}`);
+  await Promise.all(moveOps);
+  console.log(`\nApplied: ${applied}, skipped (review/skip/duplicate): ${skipped}`);
 }
 
-function processDownloadedMusic(song: DownloadedSong): DownloadedSong {
-  song.removeBadCharacters();
+/**
+ * Legacy mode: parse and immediately move all files in one shot.
+ * Preserved so existing workflows (deno task rM --move) keep working.
+ */
+async function runLegacyMove(clear: boolean): Promise<void> {
+  const cache = await cacheMusic(cacheDir);
+  if (clear) await fs.emptyDir(backupDir);
 
-  /* GRAB ARTIST */
-  grabDownloadedArtist(song);
+  const moveOps: Promise<void>[] = [];
+  let count = 0;
 
-  /* GRAB ALBUM */
-  if (!song.album && song.dashCount > 1) {
-    song.album = song.grabFirst();
+  for await (const currEntry of Deno.readDir(startDir)) {
+    if (!isProcessable(currEntry)) continue;
+
+    const entry = buildEntry(currEntry.name, cache);
+    if (!entry || entry.decision === "skip") continue;
+
+    const song = new DownloadedSong(entry.src, startDir);
+    if (song.dashCount > 0) parseDownloadedSong(song);
+    setFinalDownloadedSongName(song);
+    cache.add(song);
+
+    logWithBreak(song.finalFilename);
+    moveOps.push(
+      backupFile(startDir, backupDir, entry.src).then(() =>
+        renameAndMove(moveDir, song, undefined, clear)
+      )
+    );
+    count++;
   }
 
-  /* GRAB TITLE */
-  song.title = song.grabLast();
-
-  /* FINAL CHECK */
-  song.checkFeat();
-  song.removeAnd("artist", "album");
-  song.lastCheck();
-
-  return song;
+  await Promise.all(moveOps);
+  console.log(`\nTotal moved: ${count}`);
 }
 
-function grabDownloadedArtist(song: DownloadedSong): DownloadedSong {
-  song.checkRemix();
+/**
+ * Parse one file and produce a manifest entry, or null if the file should be skipped
+ * (unsupported extension, parser threw, etc.).
+ */
+function buildEntry(filename: string, cache: MusicCache): ManifestEntry | null {
+  console.log("Processing: ", filename);
+  try {
+    const song = new DownloadedSong(filename, startDir);
 
-  if (song.remix) {
-    /* if it's a remix, the original artist is assigned to album, remove &'s from it */
-    song.album = song.dashCount === 1 ? song.grabFirst() : song.grabSecond();
-    song.removeAnd("album");
-  } else {
-    /* otherwise the artist is straightforward */
-    song.artist = song.dashCount === 1 ? song.grabFirst() : song.grabSecond();
+    if (!song.extension || song.extension === ".m3u" || song.extension === ".zip") {
+      logWithBreak(`Skipping (unsupported extension): ${song.filename}`);
+      return null;
+    }
+
+    if (song.dashCount > 0) parseDownloadedSong(song);
+    setFinalDownloadedSongName(song);
+
+    const score = scoreConfidence(song, filename);
+    const isDuplicate = checkIfDuplicate(song, cache);
+
+    if (isDuplicate) {
+      return {
+        src: filename,
+        proposed: song.finalFilename,
+        confidence: score.level,
+        reasons: ["duplicate of an existing track in the DJ collection", ...score.reasons],
+        decision: "skip",
+      };
+    }
+
+    cache.add(song);
+    logWithBreak(`${song.finalFilename}  [${score.level}]`);
+
+    return {
+      src: filename,
+      proposed: song.finalFilename,
+      confidence: score.level,
+      reasons: score.reasons,
+      decision: score.decision,
+    };
+  } catch (error) {
+    logWithBreak(`Skipping (parse error): ${filename} - ${error}`);
+    return null;
   }
+}
 
-  song.checkWith();
+function printSummary(entries: ManifestEntry[], manifestPath: string): void {
+  const counts = { high: 0, medium: 0, low: 0, skip: 0 };
+  for (const e of entries) {
+    if (e.decision === "skip") counts.skip++;
+    else counts[e.confidence]++;
+  }
+  const willApply = counts.high + counts.medium;
+  const needsReview = counts.low;
 
-  return song;
+  console.log("\n========================================");
+  console.log(`Manifest written: ${manifestPath}`);
+  console.log("");
+  console.log(`  high confidence:   ${counts.high}  (will apply)`);
+  console.log(`  medium confidence: ${counts.medium}  (will apply)`);
+  console.log(`  low confidence:    ${counts.low}  (needs review)`);
+  console.log(`  duplicates:        ${counts.skip}  (will skip)`);
+  console.log("");
+  console.log(`Next steps:`);
+  console.log(`  1. Open ${manifestPath} and review the ${needsReview} low-confidence entries`);
+  console.log(`  2. Edit "decision" fields ("apply" to move, "skip" to leave alone)`);
+  console.log(`  3. Run: deno task rM --apply ${manifestPath}`);
+  console.log(`     (will move ${willApply} files)`);
+  console.log("========================================");
+}
+
+function defaultManifestPath(): string {
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
+  return `${MANIFEST_DIR}/rename-manifest-${stamp}.json`;
 }

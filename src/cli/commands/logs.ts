@@ -60,7 +60,7 @@ EXAMPLES:
 }
 
 async function listLogFiles(): Promise<void> {
-  const logDir = "./logs";
+  const logDir = "./logs/tunewrangler";
 
   try {
     const files: Array<{ name: string; size: number; modified: Date }> = [];
@@ -106,7 +106,7 @@ async function listLogFiles(): Promise<void> {
 }
 
 async function showLogFile(fileName: string): Promise<void> {
-  const logDir = "./logs";
+  const logDir = "./logs/tunewrangler";
   const filePath = join(logDir, fileName);
 
   try {
@@ -131,7 +131,7 @@ async function showLogFile(fileName: string): Promise<void> {
 async function tailLogFile(): Promise<void> {
   const date = new Date().toISOString().split("T")[0];
   const fileName = `tunewrangler-${date}.log`;
-  const logDir = "./logs";
+  const logDir = "./logs/tunewrangler";
   const filePath = join(logDir, fileName);
 
   try {
@@ -157,7 +157,7 @@ async function tailLogFile(): Promise<void> {
 }
 
 async function clearLogFiles(): Promise<void> {
-  const logDir = "./logs";
+  const logDir = "./logs/tunewrangler";
 
   try {
     let count = 0;

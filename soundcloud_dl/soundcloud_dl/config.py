@@ -85,20 +85,27 @@ PLAYLIST_CACHE_ENABLED = _playlist_cache not in ("0", "false", "no")
 # ── Path helpers ───────────────────────────────────────────────────────────────
 
 def get_log_dir() -> Path:
-    """Return project logs directory (created if needed)."""
-    log_dir = _PROJECT_ROOT / "logs"
+    """Return soundcloud_dl logs directory (created if needed)."""
+    log_dir = _PROJECT_ROOT / "logs" / "soundcloud_dl"
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir
 
 
+def get_debug_dir() -> Path:
+    """Return debug screenshot directory (created if needed)."""
+    debug_dir = get_log_dir() / "debug"
+    debug_dir.mkdir(parents=True, exist_ok=True)
+    return debug_dir
+
+
 def get_processed_file() -> Path:
     """Path to JSON file storing processed track URLs per playlist (for resume)."""
-    return get_log_dir() / "soundcloud_dl_processed.json"
+    return get_log_dir() / "processed.json"
 
 
 def get_playlist_cache_file() -> Path:
     """Path to JSON file storing cached playlist track lists (by playlist URL)."""
-    return get_log_dir() / "soundcloud_dl_playlist_cache.json"
+    return get_log_dir() / "playlist_cache.json"
 
 
 # ── Validation ─────────────────────────────────────────────────────────────────

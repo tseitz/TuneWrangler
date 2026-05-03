@@ -23,7 +23,7 @@ from soundcloud_dl.config import (
     SCROLL_BEFORE_CLICK,
     TUNEWRANGLER_SC_PLAYLIST_URL,
     TYPE_DELAY_MS,
-    get_log_dir,
+    get_debug_dir,
     validate_phase1_config,
     validate_phase2_config,
 )
@@ -61,10 +61,10 @@ def _sanitize_sc_title(title: str) -> str:
 
 
 async def _save_debug_screenshot(page: "Page", label: str) -> None:
-    """Save a screenshot to logs/debug_<label>.png for post-mortem inspection."""
+    """Save a screenshot to logs/soundcloud_dl/debug/<label>.png for post-mortem inspection."""
     try:
         safe = _UNSAFE_FILENAME_RE.sub("_", label)[:80]
-        path = get_log_dir() / f"debug_{safe}.png"
+        path = get_debug_dir() / f"{safe}.png"
         await page.screenshot(path=str(path), full_page=True)
         logger.info("DEBUG screenshot saved → %s", path)
     except Exception:  # noqa: BLE001

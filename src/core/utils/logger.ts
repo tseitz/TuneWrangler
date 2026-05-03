@@ -37,7 +37,7 @@ export class Logger {
       level: LogLevel.INFO,
       enableConsole: true,
       enableFile: false,
-      logDir: "./logs",
+      logDir: "./logs/tunewrangler",
       maxFileSize: 10 * 1024 * 1024, // 10MB
       maxFiles: 5,
       format: "text",

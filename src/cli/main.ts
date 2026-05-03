@@ -248,7 +248,7 @@ async function main(): Promise<void> {
     level: logLevel,
     enableConsole: !args.quiet,
     enableFile: true,
-    logDir: "./logs",
+    logDir: "./logs/tunewrangler",
     format: "text",
   });
 
