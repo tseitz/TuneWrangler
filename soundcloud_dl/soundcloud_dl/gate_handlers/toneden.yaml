@@ -2,15 +2,47 @@ gate: toneden
 url_pattern: "toneden.io"
 
 steps:
-  # Initial "Get Download" / unlock button
+  # toneden.io is a React SPA — wait up to 15s for any download button to render.
+  - id: wait_for_gate
+    trigger: >-
+      a:has-text('DOWNLOAD'), button:has-text('DOWNLOAD'),
+      button:has-text('Get Download'), button:has-text('Unlock'),
+      button:has-text('Free Download'), .unlock-btn
+    action: wait
+    timeout_ms: 8000
+    optional: true
+
+  # Click the DOWNLOAD / unlock button to start the gate flow.
+  # On some variants this opens a "Follow on SoundCloud" modal; on others it
+  # immediately reveals an email form. No download: true here — clicking this
+  # button opens a gate, it does not directly download a file.
   - id: click_unlock
     trigger: >-
+      a:has-text('DOWNLOAD'), button:has-text('DOWNLOAD'),
       button:has-text('Get Download'), button:has-text('Unlock'),
       button:has-text('Free Download'), .unlock-btn
     action: click
-    required: true
+    optional: true
 
-  # Email input
+  # "Follow on SoundCloud" gate (modal shown after clicking the locked DOWNLOAD button).
+  # Clicking this opens a SC OAuth popup which the handler auto-approves.
+  - id: follow_soundcloud
+    trigger: >-
+      a:has-text('FOLLOW ON SOUNDCLOUD'), button:has-text('FOLLOW ON SOUNDCLOUD'),
+      button:has-text('Follow'), a:has-text('Follow on SoundCloud'), .follow-btn
+    action: click
+    optional: true
+
+  # "Follow on Spotify" gate — ToneDen redirects through toneden.io/auth/spotify
+  # which eventually hits accounts.spotify.com; the popup handler closes it automatically.
+  - id: follow_spotify
+    trigger: >-
+      a:has-text('FOLLOW ON SPOTIFY'), button:has-text('FOLLOW ON SPOTIFY'),
+      a[href*='toneden.io/auth/spotify'], a[class*='spotify']
+    action: click
+    optional: true
+
+  # Email input (gate variant with email form)
   - id: fill_email
     trigger: "input[type='email'], input[placeholder*='email' i]"
     action: fill
@@ -31,24 +63,47 @@ steps:
     optional: true
     depends_on: fill_email
 
-  # Follow on SoundCloud gate
-  - id: follow_soundcloud
-    trigger: >-
-      button:has-text('Follow'), a:has-text('Follow on SoundCloud'),
-      .follow-btn
-    action: click
-    optional: true
-
   # Repost gate
   - id: repost_soundcloud
     trigger: "button:has-text('Repost'), a:has-text('Repost')"
     action: click
     optional: true
 
-  # Final download link
+  # Instagram follow gate — clicking opens a ToneDen auth/custom-url-visit popup that
+  # records the URL visit; the popup handler closes it automatically after ~1.5s.
+  - id: follow_instagram
+    trigger: >-
+      a:has-text('FOLLOW ON INSTAGRAM'), button:has-text('FOLLOW ON INSTAGRAM'),
+      a[class*='instagram'], button[class*='instagram']
+    action: click
+    optional: true
+
+  # Wait for ToneDen to update the IG button (confirms the visit was recorded server-side).
+  - id: wait_for_instagram_done
+    trigger: >-
+      a:has-text('FOLLOWED ON INSTAGRAM'), button:has-text('FOLLOWED ON INSTAGRAM')
+    action: wait
+    timeout_ms: 5000
+    optional: true
+    depends_on: follow_instagram
+
+  # Wait for the download to unlock after the SC follow / email submit.
+  # Toneden's JS updates the button state asynchronously after the gate step.
+  - id: wait_for_download_unlock
+    trigger: >-
+      a:has-text('DOWNLOAD'), button:has-text('Download'),
+      a:has-text('Download'), a:has-text('Click here to download'), .download-link
+    action: wait
+    timeout_ms: 5000
+    optional: true
+
+  # Final download — the DOWNLOAD button is now unlocked after the gate step.
+  # force: post-action div overlays the anchor during React state transitions.
   - id: final_download
     trigger: >-
-      a:has-text('Download'), button:has-text('Download'),
+      a:has-text('DOWNLOAD'), a:has-text('Download'), button:has-text('Download'),
       a:has-text('Click here to download'), .download-link
     action: click
-    required: true
+    download: true
+    force: true
+    optional: true
