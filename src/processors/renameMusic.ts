@@ -91,6 +91,12 @@ async function runDryRun(manifestOverride?: string): Promise<void> {
  */
 async function runApply(manifestPath: string): Promise<void> {
   const manifest = await readManifest(manifestPath);
+
+  // Use paths from the manifest so --apply works regardless of env vars set at
+  // the time of this invocation. Ensure trailing slash for string concatenation.
+  const sourceDir = trailingSlash(manifest.source_dir);
+  const destDir = trailingSlash(manifest.move_dir);
+
   const cache = await cacheMusic(cacheDir);
   await fs.emptyDir(backupDir);
 
@@ -104,7 +110,7 @@ async function runApply(manifestPath: string): Promise<void> {
       continue;
     }
 
-    const song = new DownloadedSong(entry.src, startDir);
+    const song = new DownloadedSong(entry.src, sourceDir);
     if (song.dashCount > 0) parseDownloadedSong(song);
     setFinalDownloadedSongName(song);
 
@@ -122,8 +128,8 @@ async function runApply(manifestPath: string): Promise<void> {
     cache.add(song);
 
     moveOps.push(
-      backupFile(startDir, backupDir, entry.src).then(() =>
-        renameAndMove(moveDir, song, undefined, true)
+      backupFile(sourceDir, backupDir, entry.src).then(() =>
+        renameAndMove(destDir, song, undefined, true)
       )
     );
     applied++;
@@ -131,6 +137,10 @@ async function runApply(manifestPath: string): Promise<void> {
 
   await Promise.all(moveOps);
   console.log(`\nApplied: ${applied}, skipped (review/skip/duplicate): ${skipped}`);
+}
+
+function trailingSlash(p: string): string {
+  return p.endsWith("/") ? p : p + "/";
 }
 
 /**
