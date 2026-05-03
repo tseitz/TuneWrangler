@@ -31,12 +31,7 @@ async def attached_browser() -> AsyncIterator[BrowserContext]:
 
     Ensures Chrome is running with --remote-debugging-port + dedicated profile,
     then connects via CDP. The Chrome process is left running on exit.
-
-    Usage::
-
-        async with attached_browser() as context:
-            page = await context.new_page()
-            await page.goto("https://soundcloud.com/...")
+    Chrome must be launched with --enable-automation for full CDP access.
     """
     ensure_chrome_running(
         chrome_path=CHROME_PATH,
@@ -46,8 +41,6 @@ async def attached_browser() -> AsyncIterator[BrowserContext]:
 
     async with async_playwright() as pw:
         browser = await pw.chromium.connect_over_cdp(f"http://localhost:{CHROME_DEBUG_PORT}")
-        # connect_over_cdp returns a Browser whose first context is Chrome's
-        # existing default context tied to the user-data-dir profile.
         if not browser.contexts:
             msg = "Connected to Chrome but no browser context found"
             raise RuntimeError(msg)
@@ -56,8 +49,6 @@ async def attached_browser() -> AsyncIterator[BrowserContext]:
         try:
             yield context
         finally:
-            # Disconnect, but leave Chrome running for inspection of any
-            # captcha tabs and faster re-attach on subsequent runs.
             await browser.close()
 
 

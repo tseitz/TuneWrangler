@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import signal
 import subprocess
 import time
 from typing import TYPE_CHECKING
@@ -14,8 +16,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("soundcloud_dl.chrome_bringup")
 
-#: Default time to wait for Chrome to expose its debug port after launch.
-DEFAULT_TIMEOUT_SECONDS = 10.0
+DEFAULT_TIMEOUT_SECONDS = 30.0
 DEFAULT_POLL_INTERVAL_SECONDS = 0.25
 HTTP_OK = 200
 
@@ -27,10 +28,32 @@ class ChromeBringupError(RuntimeError):
 def is_debug_port_open(port: int, *, timeout_seconds: float = 1.0) -> bool:
     """Probe the CDP debug port. True if Chrome is listening."""
     try:
-        resp = httpx.get(f"http://localhost:{port}/json/version", timeout=timeout_seconds)
+        with httpx.Client(trust_env=False) as client:
+            resp = client.get(f"http://localhost:{port}/json/version", timeout=timeout_seconds)
     except (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout):
         return False
     return resp.status_code == HTTP_OK
+
+
+def kill_chrome_on_port(port: int) -> None:
+    """Kill any process listening on the CDP debug port (best-effort, no error if none)."""
+    try:
+        result = subprocess.run(  # noqa: S603
+            ["lsof", "-ti", f":{port}"],  # noqa: S607
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=5,
+        )
+        pids = [int(p) for p in result.stdout.split() if p.strip().isdigit()]
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGKILL)
+                logger.info("Killed stale Chrome process (pid=%d) on port %d.", pid, port)
+            except ProcessLookupError:
+                pass
+    except (subprocess.TimeoutExpired, OSError, ValueError):
+        pass
 
 
 def ensure_chrome_running(
@@ -42,16 +65,16 @@ def ensure_chrome_running(
     poll_interval_seconds: float = DEFAULT_POLL_INTERVAL_SECONDS,
 ) -> None:
     """
-    Ensure a Chrome process is running with the given debug port.
-
-    If a process is already listening on `port`, this is a no-op (we attach to it).
-    Otherwise launch Chrome with the dedicated profile and wait for the port to open.
+    Attach to an existing Chrome debug session if one is already running on `port`,
+    otherwise kill any stale process and launch a fresh instance.
 
     Raises ChromeBringupError if the port doesn't open within `timeout_seconds`.
     """
     if is_debug_port_open(port):
-        logger.info("Chrome already running on debug port %d; will attach.", port)
+        logger.info("Chrome already running on port %d — reusing existing session.", port)
         return
+
+    kill_chrome_on_port(port)
 
     profile_dir.mkdir(parents=True, exist_ok=True)
     args = [
@@ -60,6 +83,11 @@ def ensure_chrome_running(
         f"--user-data-dir={profile_dir}",
         "--no-first-run",
         "--no-default-browser-check",
+        "--disable-sync",
+        "--enable-automation",
+        "--disable-blink-features=AutomationControlled",
+        "--disable-session-crashed-bubble",
+        "--disable-infobars",
     ]
     logger.info("Launching Chrome: %s", " ".join(args))
     subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # noqa: S603
