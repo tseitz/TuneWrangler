@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from playwright.async_api import async_playwright
 
-from soundcloud_dl.gate_handlers.base import CaptchaKind, detect_captcha
+from soundcloud_dl.gate_handlers.captcha import CaptchaKind, detect_captcha
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 

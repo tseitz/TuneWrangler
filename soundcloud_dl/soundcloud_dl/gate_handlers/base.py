@@ -1,4 +1,4 @@
-"""Base GateHandler: loads YAML step config and interprets steps presence-first."""
+"""GateHandler: loads YAML step config and interprets steps presence-first."""
 
 from __future__ import annotations
 
@@ -13,6 +13,9 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
+from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered, detect_captcha
+from soundcloud_dl.gate_handlers.oauth_popup import handle_oauth_popup
+
 if TYPE_CHECKING:
     from playwright.async_api import Page, Response
 
@@ -22,22 +25,6 @@ logger = logging.getLogger("soundcloud_dl.gate_handlers.base")
 class StepResult(StrEnum):
     EXECUTED = "EXECUTED"
     SKIPPED = "SKIPPED"
-
-
-class CaptchaKind(StrEnum):
-    HCAPTCHA = "hcaptcha"
-    RECAPTCHA = "recaptcha"
-    TURNSTILE = "turnstile"
-    CLOUDFLARE_INTERSTITIAL = "cloudflare_interstitial"
-
-
-class CaptchaEncountered(RuntimeError):  # noqa: N818
-    """Raised when a captcha is detected mid-flow. Track is left in captcha_pending state."""
-
-    def __init__(self, kind: CaptchaKind, gate_name: str) -> None:
-        super().__init__(f"[{gate_name}] Captcha encountered: {kind}")
-        self.kind = kind
-        self.gate_name = gate_name
 
 
 class StuckGate(RuntimeError):  # noqa: N818
@@ -53,62 +40,6 @@ class StuckGate(RuntimeError):  # noqa: N818
 
 class GateStepError(RuntimeError):
     """Raised when a required step cannot find its element."""
-
-
-_CAPTCHA_SELECTORS: tuple[tuple[CaptchaKind, str], ...] = (
-    (CaptchaKind.HCAPTCHA, 'iframe[src*="hcaptcha.com"]'),
-    (CaptchaKind.RECAPTCHA, 'iframe[src*="recaptcha"]'),
-    (CaptchaKind.TURNSTILE, '.cf-turnstile, iframe[src*="challenges.cloudflare.com"]'),
-)
-
-_CLOUDFLARE_TEXT_PATTERNS = (
-    "verify you are human",
-    "checking your browser",
-)
-
-# reCAPTCHA v3 background iframes have near-zero size; only iframes at least this
-# many pixels on each side are treated as a real, user-blocking challenge.
-_RECAPTCHA_VISIBLE_MIN_PX = 50
-
-
-async def detect_captcha(page: Page) -> CaptchaKind | None:
-    """
-    Return the first matching captcha kind on the page, or None.
-
-    Checks each known captcha vendor's selector. As a fallback, scans visible body
-    text for Cloudflare-style interstitial language.
-
-    reCAPTCHA v3 (invisible) embeds a hidden iframe that is always present on many
-    sites as background fraud detection — we skip it unless the iframe has a meaningful
-    bounding box (>50px), which indicates a blocking challenge. hCaptcha and Turnstile
-    widgets are always interactive so presence alone is enough for those.
-    """
-    for kind, selector in _CAPTCHA_SELECTORS:
-        el = await page.query_selector(selector)
-        if el is None:
-            continue
-        if kind == CaptchaKind.RECAPTCHA:
-            # reCAPTCHA v3 iframes are invisible (tiny/zero size). Only flag when
-            # the iframe is large enough to be a user-facing challenge.
-            try:
-                bbox = await el.bounding_box()
-            except Exception:  # noqa: BLE001
-                logger.debug("reCAPTCHA bounding_box() failed; treating as invisible")
-                continue
-            if (
-                bbox is None
-                or bbox["width"] < _RECAPTCHA_VISIBLE_MIN_PX
-                or bbox["height"] < _RECAPTCHA_VISIBLE_MIN_PX
-            ):
-                continue
-        return kind
-    try:
-        body_text = (await page.inner_text("body", timeout=500)).lower()
-    except Exception:  # noqa: BLE001
-        return None
-    if any(p in body_text for p in _CLOUDFLARE_TEXT_PATTERNS):
-        return CaptchaKind.CLOUDFLARE_INTERSTITIAL
-    return None
 
 
 class GateHandler:
@@ -481,100 +412,6 @@ class GateHandler:
         except Exception:  # noqa: BLE001
             logger.debug("[%s] could not dump page elements", self.gate_name, exc_info=True)
 
-    async def _handle_oauth_popup(self, popup: Page) -> None:  # noqa: C901, PLR0912, PLR0915
-        """Auto-approve SoundCloud/Spotify OAuth popups; close ToneDen URL-visit popups."""
-        try:
-            # Use "load" — SoundCloud's auth page is a React SPA; Spotify's is similar.
-            await popup.wait_for_load_state("load", timeout=15_000)
-            url = popup.url
-            is_sc = "soundcloud.com" in url
-            is_sp = "accounts.spotify.com" in url
-            is_toneden_visit = "toneden.io/auth/custom-url-visit" in url
-            is_instagram = "instagram.com" in url
-            if not is_sc and not is_sp and not is_toneden_visit and not is_instagram:
-                return
-
-            # Instagram follow and ToneDen URL-visit popups just need to be closed
-            # after they load — no OAuth interaction required.
-            if is_instagram:
-                logger.debug("[%s] Instagram follow popup: %s", self.gate_name, url)
-                try:
-                    await popup.wait_for_timeout(1_000)
-                    if not popup.is_closed():
-                        await popup.close()
-                except Exception:  # noqa: BLE001
-                    pass  # popup already closed itself
-                return
-
-            # ToneDen's Instagram (and other URL-visit) steps open a popup that just
-            # records the visit — no OAuth flow needed, just close it after it loads.
-            if is_toneden_visit:
-                logger.debug("[%s] ToneDen URL-visit popup: %s", self.gate_name, url)
-                await popup.wait_for_timeout(1_500)
-                if not popup.is_closed():
-                    await popup.close()
-                return
-
-            vendor = "SoundCloud" if is_sc else "Spotify"
-            logger.debug("[%s] %s OAuth popup: %s", self.gate_name, vendor, url)
-
-            if is_sc:
-                _allow_selector = (
-                    "button:has-text('Allow'), button:has-text('Authorize'), "
-                    "button:has-text('Connect'), input[type='submit'], button[type='submit']"
-                )
-            else:
-                # Spotify's consent screen uses data-testid="auth-accept" or text "Agree"/"Allow".
-                _allow_selector = (
-                    "button[data-testid='auth-accept'], "
-                    "button:has-text('Agree'), button:has-text('Allow'), "
-                    "button:has-text('Accept'), button:has-text('Authorize')"
-                )
-
-            try:
-                await popup.wait_for_selector(_allow_selector, state="visible", timeout=15_000)
-            except Exception:  # noqa: BLE001
-                pass  # fall through to query_selector; will log if still missing
-
-            allow = await popup.query_selector(_allow_selector)
-            if allow is not None:
-                logger.info("[%s] %s OAuth popup: clicking Allow", self.gate_name, vendor)
-                await popup.wait_for_timeout(500)
-                await allow.click()
-                logger.info("[%s] %s OAuth popup: clicked Allow", self.gate_name, vendor)
-                # Wait for the popup to redirect back to the gate host or close itself.
-                # ToneDen redirects to toneden.io/auth/spotify/callback then closes;
-                # Hypeddit redirects back to hypeddit.com. Either way the popup is done.
-                try:
-                    await popup.wait_for_url("*hypeddit.com*|*toneden.io*", timeout=8_000)
-                    await popup.wait_for_timeout(500)
-                except Exception:  # noqa: BLE001
-                    pass  # popup closed itself or redirected elsewhere — both OK
-            else:
-                try:
-                    btns = await popup.evaluate(
-                        "Array.from(document.querySelectorAll('button,input[type=submit],a'))"
-                        ".filter(el => el.offsetParent !== null)"
-                        ".map(el => el.outerHTML.slice(0, 200))"
-                    )
-                    logger.debug(
-                        "[%s] %s OAuth popup: Allow button not found. Visible elements: %s",
-                        self.gate_name,
-                        vendor,
-                        btns,
-                    )
-                except Exception:  # noqa: BLE001
-                    logger.debug(
-                        "[%s] %s OAuth popup: Allow button not found (could not dump)",
-                        self.gate_name,
-                        vendor,
-                    )
-        except Exception:  # noqa: BLE001
-            logger.debug("[%s] OAuth popup handler error", self.gate_name, exc_info=True)
-        finally:
-            if not popup.is_closed():
-                await popup.close()
-
     async def run(self, page: Page) -> dict[str, StepResult]:
         """
         Walk all steps. Return a dict of step_id → StepResult.
@@ -588,7 +425,7 @@ class GateHandler:
         _tasks: list[asyncio.Task] = []
 
         def _on_popup(popup: Page) -> None:
-            _tasks.append(asyncio.ensure_future(self._handle_oauth_popup(popup)))
+            _tasks.append(asyncio.ensure_future(handle_oauth_popup(popup, self.gate_name)))
 
         page.context.on("page", _on_popup)
         try:

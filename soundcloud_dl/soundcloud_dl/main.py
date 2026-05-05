@@ -34,11 +34,11 @@ from soundcloud_dl.gate_handlers import (
     is_url_blacklisted,
 )
 from soundcloud_dl.gate_handlers.base import (
-    CaptchaEncountered,
     GateStepError,
     StepResult,
     StuckGate,
 )
+from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered
 from soundcloud_dl.logger import setup_logging
 from soundcloud_dl.playlist import TrackItem, extract_track_urls
 from soundcloud_dl.playlist_cache import load_cached_tracks, save_cached_tracks

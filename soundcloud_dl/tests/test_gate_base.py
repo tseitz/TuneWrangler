@@ -6,12 +6,11 @@ import pytest
 import yaml
 
 from soundcloud_dl.gate_handlers.base import (
-    CaptchaEncountered,
-    CaptchaKind,
     GateHandler,
     GateStepError,
     StepResult,
 )
+from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered, CaptchaKind
 
 
 @pytest.fixture(autouse=True)
@@ -22,6 +21,7 @@ def _stub_detect_captcha(monkeypatch):
         return None
 
     monkeypatch.setattr("soundcloud_dl.gate_handlers.base.detect_captcha", _none)
+
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -52,7 +52,10 @@ steps:
 
 def make_handler(yaml_str: str, template_vars: dict | None = None) -> GateHandler:
     config = yaml.safe_load(yaml_str)
-    return GateHandler(config=config, template_vars={"email": "test@test.com"} if template_vars is None else template_vars)
+    return GateHandler(
+        config=config,
+        template_vars={"email": "test@test.com"} if template_vars is None else template_vars,
+    )
 
 
 def make_page(found_selectors: set[str]) -> MagicMock:
@@ -77,6 +80,7 @@ def make_page(found_selectors: set[str]) -> MagicMock:
 
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_required_step_passes_when_found():
@@ -116,8 +120,7 @@ async def test_depends_on_skipped_when_parent_skipped():
 async def test_depends_on_runs_when_parent_ran():
     handler = make_handler(SIMPLE_CONFIG)
     # optional_fill found → depends_step should run
-    page = make_page({"#submit", "input[name='email']", "textarea",
-                      "button:has-text('Download')"})
+    page = make_page({"#submit", "input[name='email']", "textarea", "button:has-text('Download')"})
     results = await handler.run(page)
     assert results["optional_fill"] == StepResult.EXECUTED
     assert results["depends_step"] == StepResult.EXECUTED
