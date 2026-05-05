@@ -20,6 +20,12 @@
     "ytRb": "deno run -A src/processors/addM3uToYoutubePlaylist.ts",
     "playlistImport": "deno run -A src/processors/betterM3uSearch.ts",
     "cF": "deno run -A src/processors/convertFlacs.ts",
-    "cli": "deno run -A src/cli/main.ts"
+    "cli": "deno run -A src/cli/main.ts",
+    "py": "uv run --project soundcloud_dl soundcloud-dl",
+    "py:test": "uv run --project soundcloud_dl pytest soundcloud_dl/tests/",
+    "py:check": "uv run --project soundcloud_dl ty check soundcloud_dl/soundcloud_dl",
+    "py:lint": "uv run --project soundcloud_dl ruff check soundcloud_dl/soundcloud_dl",
+    "py:fmt": "uv run --project soundcloud_dl ruff format soundcloud_dl/soundcloud_dl",
+    "py:fmt:check": "uv run --project soundcloud_dl ruff format --check soundcloud_dl/soundcloud_dl"
   }
 }

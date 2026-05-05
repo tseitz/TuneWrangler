@@ -41,3 +41,6 @@ ignore = ["D", "COM812", "ISC001"]
 
 [tool.ty.environment]
 python-version = "3.12"
+# Point ty at the project's own venv so it resolves third-party deps
+# (playwright, yaml, pytest) regardless of where ty is invoked from.
+python = ".venv"

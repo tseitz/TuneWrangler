@@ -29,13 +29,20 @@ deno task cli                      # full CLI entry point
 
 ### soundcloud_dl (Python)
 
+All Python tooling is wrapped as `deno task py:*` so everything runs from the
+repo root and there's a single discoverable entry point. Always use these —
+don't `cd soundcloud_dl/` and don't invoke `uv` directly:
+
 ```bash
-uv run --project soundcloud_dl soundcloud-dl   # run the downloader
-uv run --project soundcloud_dl ruff check soundcloud_dl/soundcloud_dl
-uv run --project soundcloud_dl ruff format soundcloud_dl/soundcloud_dl
-uv run --project soundcloud_dl ty check soundcloud_dl/soundcloud_dl
-uv run --project soundcloud_dl pytest soundcloud_dl/tests/
+deno task py                  # run the downloader (soundcloud-dl)
+deno task py:test             # pytest
+deno task py:check            # ty type-check
+deno task py:lint             # ruff lint
+deno task py:fmt              # ruff format (writes)
+deno task py:fmt:check        # ruff format --check
 ```
+
+The wrappers expand to `uv run --project soundcloud_dl <cmd>` — see `deno.json`.
 
 ## Rename workflow (the important one)
 
@@ -99,9 +106,9 @@ logs/
 
 ## Known tech debt
 
-- **`*Optimized.ts` duplicates** — `renameMusicOptimized.ts`, `renameBandcampOptimized.ts`, `convertFlacsOptimized.ts` all live alongside their non-Optimized originals. Pick one and delete the other when touching this code.
 - **`Song.ts` is doing too many jobs** — model + parser + regex stack + normalizer + dedup state, all with mutation. Refactor target. Wait until `tests/corpus/` has 50+ entries before touching it (so changes are testable). The `parser.ts` extraction is the first step in this direction.
 - **`checkRemix` has 7 near-identical regex branches** (REMIX/REFIX/FLIP/EDIT/BOOTLEG/REBOOT/DUB). Should be one data-driven loop.
+- **soundcloud_dl baseline lint/type/test backlog** — 14 ruff issues (mostly `S110`/`BLE001`), 9 ty issues, 8 real pytest failures (5 in `test_gate_base.py` from mocks not matching new `_find_element` visibility logic, 2 in `test_chrome_bringup.py`, 1 env-leak in `test_config.py::test_download_name_default`). Worth a focused cleanup pass.
 
 ## Conventions
 
@@ -109,7 +116,7 @@ logs/
 - **Env vars**: Main tool uses `TUNEWRANGLER_*_PATH`; soundcloud_dl uses `TUNEWRANGLER_SC_*`. Both load from repo-root `.env`.
 - **Python tooling**: uv, ruff (line-length 100, select ALL minus D/COM812/ISC001), ty.
 - **Markdown**: markdownlint enforced (`.markdownlint.json`). Lines under 100 chars; blank lines around code blocks and headers.
-- **Commits**: Conventional (`feat:`, `fix:`, `refactor:`, etc.).
+- **Commits**: Conventional (`feat:`, `fix:`, `refactor:`, etc.). **Land directly on `main`** — solo project, no feature branches unless explicitly requested.
 - **Testing**: `deno task test` for the main tool (unit + regression corpus). `pytest` for soundcloud_dl. New rename-pipeline changes should add a corpus entry rather than handwritten tests where possible.
 - **No summary docs**: Don't create post-task `*_SUMMARY.md` files. Document features in CLAUDE.md or README.md, not throwaway markdown.
 - **Sandbox quirk**: Writes to the Google Drive cloud-mount path (`/Users/tseitz/Library/CloudStorage/...`) require running with `dangerouslyDisableSandbox: true`.
