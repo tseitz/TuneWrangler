@@ -17,7 +17,6 @@ import {
   validate,
 } from "./commands/validate.ts";
 import { logs } from "./commands/logs.ts";
-import { performance } from "./commands/performance.ts";
 import { analyzeDj } from "./commands/analyze.ts";
 
 const VERSION = "1.0.0";
@@ -144,17 +143,6 @@ const commands: Record<string, Command> = {
     usage: "tunewrangler logs [options]",
     examples: ["tunewrangler logs --list", "tunewrangler logs --tail", "tunewrangler logs --help"],
     execute: logs,
-  },
-  performance: {
-    name: "performance",
-    description: "Monitor and optimize performance",
-    usage: "tunewrangler performance [options]",
-    examples: [
-      "tunewrangler performance --report",
-      "tunewrangler performance --monitor",
-      "tunewrangler performance --help",
-    ],
-    execute: performance,
   },
   "analyze-dj": {
     name: "analyze-dj",
@@ -294,8 +282,8 @@ async function main(): Promise<void> {
     Deno.exit(1);
   }
 
-  // For logs and performance commands, pass all remaining arguments including flags
-  if (commandName === "logs" || commandName === "performance") {
+  // For logs, pass all remaining arguments including flags
+  if (commandName === "logs") {
     const commandArgs = Deno.args.slice(Deno.args.indexOf(commandName) + 1);
     await command.execute(commandArgs);
     return;

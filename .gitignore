@@ -100,3 +100,6 @@ soundcloud_dl_chrome_profile/
 soundcloud_browser_profile/
 __pycache__/
 *.py[cod]
+
+# Playwright MCP scratch output
+.playwright-mcp/
