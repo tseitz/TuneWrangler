@@ -98,7 +98,7 @@ async function writeToCsv(filename: string, artistAnalysis: ArtistAnalysis[]): P
 if (import.meta.main) {
   const args = Deno.args;
   const musicDir = args[0];
-  const outputFile = args[1] || "output/dj-artist-analysis.csv";
+  const outputFile = args[1] || "logs/tunewrangler/analysis/dj-artist-analysis.csv";
   // const limit = parseInt(args[2]) || 50;
 
   try {

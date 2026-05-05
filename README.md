@@ -21,7 +21,7 @@ Built for personal use against a specific directory layout — see
 mise install
 
 # Configure paths (see "Configuration" below)
-cp examples/env.example .env
+cp .env.example .env
 $EDITOR .env
 
 # Verify config
@@ -126,7 +126,7 @@ soundcloud_dl/                Python subproject
 scripts/promote.ts            Promote manifest → corpus
 tests/corpus/                 Promoted manifests = regression coverage
 logs/                         Logs + state (see CLAUDE.md for layout)
-examples/                     Sample env file + helper scripts
+.env.example                  Template — copy to .env and fill in
 ```
 
 ## Development

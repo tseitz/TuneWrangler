@@ -21,7 +21,7 @@ USAGE:
 
 OPTIONS:
   --help, -h              Show this help message
-  --output <file>         Output CSV file path (default: output/dj-artist-analysis.csv)
+  --output <file>         Output CSV file path (default: logs/tunewrangler/analysis/dj-artist-analysis.csv)
   --limit <number>        Number of top artists to show (default: 50)
 
 EXAMPLES:
@@ -35,7 +35,7 @@ then displays artists with 3 or more songs in your collection, sorted by count.
   }
 
   try {
-    const outputFile = flags.output || "output/dj-artist-analysis.csv";
+    const outputFile = flags.output || "logs/tunewrangler/analysis/dj-artist-analysis.csv";
     const limit = flags.limit ? parseInt(flags.limit) : 50;
 
     // Get the music directory from config

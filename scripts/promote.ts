@@ -22,7 +22,9 @@ const CORPUS_DIR = "./tests/corpus";
 const sourcePath = Deno.args[0];
 if (!sourcePath) {
   console.error("Usage: deno task promote <path-to-manifest.json>");
-  console.error("Example: deno task promote ./logs/tunewrangler/manifests/rename-manifest-2026-05-03_15-35-10.json");
+  console.error(
+    "Example: deno task promote ./logs/tunewrangler/manifests/rename-manifest-2026-05-03_15-35-10.json",
+  );
   Deno.exit(1);
 }
 
@@ -43,9 +45,13 @@ const review = manifest.entries.filter((e) => e.decision === "review");
 console.log(`\n✓ Promoted: ${sourcePath}`);
 console.log(`  → ${destPath}\n`);
 console.log(`  Applied entries: ${applied.length}`);
-console.log(`    ${regressions.length} regression tests (parser output matches — locked in)`);
+console.log(
+  `    ${regressions.length} regression tests (parser output matches — locked in)`,
+);
 if (improvements.length > 0) {
-  console.log(`    ${improvements.length} improvement targets (you corrected the parser — documented)`);
+  console.log(
+    `    ${improvements.length} improvement targets (you corrected the parser — documented)`,
+  );
   for (const e of improvements) {
     console.log(`      • ${e.src}`);
     console.log(`        parser: ${e.parser_output}`);
@@ -54,6 +60,8 @@ if (improvements.length > 0) {
 }
 console.log(`  Skipped (duplicate): ${skipped.length}`);
 if (review.length > 0) {
-  console.log(`  Still needs review: ${review.length} (these were not applied)`);
+  console.log(
+    `  Still needs review: ${review.length} (these were not applied)`,
+  );
 }
 console.log(`\nRun \`deno task test\` to verify the corpus passes.`);

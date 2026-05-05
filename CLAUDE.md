@@ -60,20 +60,21 @@ Confidence model lives in `src/core/confidence.ts`. Low-confidence triggers: 3-p
 
 The corpus harness (`src/core/corpus_test.ts`) loads every promoted manifest and runs `parseDownloadedSong` against each entry. `proposed === parser_output` becomes a regression test; `proposed !== parser_output` (user override) is logged as a parser improvement target.
 
+When changing `parser.ts`, run `deno task test` and inspect the corpus output for entries where `proposed !== parser_output` — those are open improvement targets. If your change closes one (parser now matches the user's override), re-promote the affected manifest so the entry converts from "improvement target" to "regression test" and stays locked in.
+
 ## Architecture
 
 ### Deno/TypeScript (`src/`)
 
 - **`src/cli/main.ts`** — CLI entry. Args parsed via `@std/cli/parse-args`. Commands registered in a record with metadata.
-- **`src/cli/commands/`** — Command handlers (validate, logs, performance, analyze).
-- **`src/processors/`** — Per-source processors. `renameMusic.ts` is the manifest-driven flow; the rest (`renameBandcamp`, `renameItunes`, `renameBeatport`, `convertFlacs`) still use the older immediate-move pattern.
-- **`src/processors/*Optimized.ts`** — **Deprecated duplicates of their non-Optimized counterparts.** Drift hazard. Don't extend these; consolidate into one file when touched.
+- **`src/cli/commands/`** — Command handlers. `index.ts` is a barrel of small handlers (`renameMusic`, `renameBandcamp`, `renameItunes`, `renameBeatport`, `convertFlacs`, `addM3uToYoutube`, `playlistImport`, `validate`) that mostly delegate to a processor. `analyze.ts` and `logs.ts` are standalone handlers.
+- **`src/processors/`** — Per-source processors. `renameMusic.ts` is the manifest-driven flow; the rest (`renameBandcamp`, `renameItunes`, `renameBeatport`, `convertFlacs`, `addM3uToYoutubePlaylist`, `betterM3uSearch`, `analyzeDjCollection`) still use the older immediate-action pattern.
 - **`src/core/parser.ts`** — `parseDownloadedSong()`: extracted parsing pipeline. Pure-ish entry point used by both `renameMusic` and the corpus tests.
 - **`src/core/confidence.ts`** — `scoreConfidence()`: returns `{level, reasons, decision}`.
 - **`src/core/manifest.ts`** — `Manifest`/`ManifestEntry` types + `readManifest`/`writeManifest`. `parser_output` is immutable; `proposed` is user-editable.
 - **`src/core/models/Song.ts`** — Song data model. Heavy mutation, regex-based methods (`checkRemix`, `checkFeat`, `checkWith`). Refactor target — see "Known tech debt" below.
-- **`src/core/utils/`** — `common.ts` (move/cache/dedup), `logger.ts` (file-rotating), `unicode.ts`, `errors.ts`, `retry.ts`, `performance.ts`.
-- **`src/config/paths.ts`** — Platform-specific path defaults with `TUNEWRANGLER_*_PATH` env var overrides.
+- **`src/core/utils/`** — `common.ts` (move/cache/dedup/`validateConfiguration`), `logger.ts` (file-rotating), `unicode.ts`, `errors.ts`, `retry.ts`, `validation.ts`, `getYoutubeAuth.ts`.
+- **`src/config/paths.ts`** — Platform-specific path defaults with `TUNEWRANGLER_*_PATH` env var overrides. `validate.ts` is the entry point for `deno task validate`.
 - **`scripts/promote.ts`** — Copies an applied manifest into `tests/corpus/`.
 - **`tests/corpus/`** — Promoted manifests, loaded automatically by the corpus test.
 
@@ -90,12 +91,16 @@ The corpus harness (`src/core/corpus_test.ts`) loads every promoted manifest and
 
 ## Logs and state
 
+All generated content lives under `logs/` (gitignored). Don't reintroduce a top-level `output/` directory — analysis CSVs go under `logs/tunewrangler/analysis/`.
+
 ```
 logs/
 ├── tunewrangler/
 │   ├── tunewrangler-YYYY-MM-DD.log         # rotating Deno logger
-│   └── manifests/
-│       └── rename-manifest-<timestamp>.json # dry-run output
+│   ├── manifests/
+│   │   └── rename-manifest-<timestamp>.json # dry-run output
+│   └── analysis/
+│       └── *.csv                            # `analyze-dj` output
 └── soundcloud_dl/
     ├── soundcloud_dl.log                   # Python stdlib logging
     ├── processed.json                      # resume state per playlist
@@ -112,7 +117,7 @@ logs/
 ## Conventions
 
 - **Runtimes**: Deno 2.6.9, Python 3.12, FFmpeg 7.1.1 (managed via `.mise.toml`).
-- **Env vars**: Main tool uses `TUNEWRANGLER_*_PATH`; soundcloud_dl uses `TUNEWRANGLER_SC_*`. Both load from repo-root `.env`.
+- **Env vars**: Main tool uses `TUNEWRANGLER_*_PATH`; soundcloud_dl uses `TUNEWRANGLER_SC_*`. Both load from repo-root `.env`. Template lives at `.env.example` (root).
 - **Python tooling**: uv, ruff (line-length 100, select ALL minus D/COM812/ISC001), ty.
 - **Markdown**: markdownlint enforced (`.markdownlint.json`). Lines under 100 chars; blank lines around code blocks and headers.
 - **Commits**: Conventional (`feat:`, `fix:`, `refactor:`, etc.). **Land directly on `main`** — solo project, no feature branches unless explicitly requested.

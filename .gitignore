@@ -103,3 +103,6 @@ __pycache__/
 
 # Playwright MCP scratch output
 .playwright-mcp/
+
+# Generated analysis output (now lives under logs/tunewrangler/analysis/)
+output/
