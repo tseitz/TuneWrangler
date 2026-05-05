@@ -16,12 +16,14 @@ def _normalize_playlist_url(url: str) -> str:
     Uses scheme + host + path only so that the same playlist matches regardless
     of query params (e.g. utm_*, si=) or trailing slash.
     """
-    s = url.strip().rstrip("/")
+    s = url.strip()
     if "?" in s:
         s = s.split("?")[0]
     if "#" in s:
         s = s.split("#")[0]
-    return s
+    # Strip trailing slash AFTER splitting query/fragment so "p/?si=x" and "p?si=x"
+    # both normalize to the same key.
+    return s.rstrip("/")
 
 
 def _item_to_track(item: object) -> TrackItem | None:
