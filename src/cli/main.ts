@@ -15,7 +15,7 @@ import {
   playlistImport,
   convertFlacs,
   validate,
-} from "./commands/validate.ts";
+} from "./commands/index.ts";
 import { logs } from "./commands/logs.ts";
 import { analyzeDj } from "./commands/analyze.ts";
 
