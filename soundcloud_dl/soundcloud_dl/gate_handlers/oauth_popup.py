@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import TYPE_CHECKING
 
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("soundcloud_dl.gate_handlers.oauth_popup")
 
 
-async def handle_oauth_popup(popup: Page, gate_name: str) -> None:  # noqa: C901, PLR0912, PLR0915
+async def handle_oauth_popup(popup: Page, gate_name: str) -> None:  # noqa: C901, PLR0912
     """Auto-approve SoundCloud/Spotify OAuth popups; close ToneDen URL-visit popups.
 
     `gate_name` is only used for log message prefixes.
@@ -31,12 +32,11 @@ async def handle_oauth_popup(popup: Page, gate_name: str) -> None:  # noqa: C901
         # after they load — no OAuth interaction required.
         if is_instagram:
             logger.debug("[%s] Instagram follow popup: %s", gate_name, url)
-            try:
+            # Popup may close itself between is_closed() check and close() call.
+            with contextlib.suppress(Exception):
                 await popup.wait_for_timeout(1_000)
                 if not popup.is_closed():
                     await popup.close()
-            except Exception:  # noqa: BLE001
-                pass  # popup already closed itself
             return
 
         # ToneDen's Instagram (and other URL-visit) steps open a popup that just
@@ -64,10 +64,10 @@ async def handle_oauth_popup(popup: Page, gate_name: str) -> None:  # noqa: C901
                 "button:has-text('Accept'), button:has-text('Authorize')"
             )
 
-        try:
+        # Best-effort wait; on timeout fall through to query_selector below
+        # which logs explicitly if the Allow button is still missing.
+        with contextlib.suppress(Exception):
             await popup.wait_for_selector(_allow_selector, state="visible", timeout=15_000)
-        except Exception:  # noqa: BLE001
-            pass  # fall through to query_selector; will log if still missing
 
         allow = await popup.query_selector(_allow_selector)
         if allow is not None:
@@ -78,11 +78,11 @@ async def handle_oauth_popup(popup: Page, gate_name: str) -> None:  # noqa: C901
             # Wait for the popup to redirect back to the gate host or close itself.
             # ToneDen redirects to toneden.io/auth/spotify/callback then closes;
             # Hypeddit redirects back to hypeddit.com. Either way the popup is done.
-            try:
+            # Popup may close itself or redirect elsewhere — both are fine
+            # since the OAuth click already registered.
+            with contextlib.suppress(Exception):
                 await popup.wait_for_url("*hypeddit.com*|*toneden.io*", timeout=8_000)
                 await popup.wait_for_timeout(500)
-            except Exception:  # noqa: BLE001
-                pass  # popup closed itself or redirected elsewhere — both OK
         else:
             try:
                 btns = await popup.evaluate(

@@ -84,6 +84,7 @@ PLAYLIST_CACHE_ENABLED = _playlist_cache not in ("0", "false", "no")
 
 # ── Path helpers ───────────────────────────────────────────────────────────────
 
+
 def get_log_dir() -> Path:
     """Return soundcloud_dl logs directory (created if needed)."""
     log_dir = _PROJECT_ROOT / "logs" / "soundcloud_dl"
@@ -109,6 +110,7 @@ def get_playlist_cache_file() -> Path:
 
 
 # ── Validation ─────────────────────────────────────────────────────────────────
+
 
 def validate_phase1_config() -> None:
     """Raise if config required for Phase 1 (SoundCloud API) is missing."""

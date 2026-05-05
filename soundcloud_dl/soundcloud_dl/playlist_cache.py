@@ -2,6 +2,7 @@
 
 import json
 import logging
+from typing import cast
 
 from soundcloud_dl.config import get_playlist_cache_file
 from soundcloud_dl.playlist import TrackItem
@@ -26,33 +27,41 @@ def _normalize_playlist_url(url: str) -> str:
     return s.rstrip("/")
 
 
+def _str_or_none(value: object) -> str | None:
+    """Return value if it's a string, else None — used to filter optional cache fields."""
+    return value if isinstance(value, str) else None
+
+
 def _item_to_track(item: object) -> TrackItem | None:
     """Parse one cache list item into TrackItem; return None if invalid."""
-    if not isinstance(item, dict) or not isinstance(item.get("url"), str):
+    if not isinstance(item, dict):
         return None
-    url = (item["url"] or "").strip()
+    # Cast: ty narrows isinstance(item, dict) to dict[Unknown, Unknown] which rejects
+    # string-literal keys; cast restores expected JSON-shape for the lookups below.
+    d = cast("dict[str, object]", item)
+    url_value = d.get("url")
+    if not isinstance(url_value, str):
+        return None
+    url = url_value.strip()
     if not url:
         return None
-    title = item.get("title")
-    if title is not None and not isinstance(title, str):
-        title = None
-    purchase_url = item.get("purchase_url")
-    if purchase_url is not None and not isinstance(purchase_url, str):
-        purchase_url = None
-    artist = item.get("artist")
-    if artist is not None and not isinstance(artist, str):
-        artist = None
-    return TrackItem(url=url, title=title, purchase_url=purchase_url, artist=artist)
+    return TrackItem(
+        url=url,
+        title=_str_or_none(d.get("title")),
+        purchase_url=_str_or_none(d.get("purchase_url")),
+        artist=_str_or_none(d.get("artist")),
+    )
 
 
 def _get_stored_list(data: object, key: str) -> list | None:
     """Get stored list for key from cache data; support normalized key match."""
     if not isinstance(data, dict):
         return None
-    stored = data.get(key)
+    d = cast("dict[str, object]", data)
+    stored = d.get(key)
     if isinstance(stored, list):
         return stored
-    for k, v in data.items():
+    for k, v in d.items():
         if _normalize_playlist_url(k) == key and isinstance(v, list):
             return v
     return None

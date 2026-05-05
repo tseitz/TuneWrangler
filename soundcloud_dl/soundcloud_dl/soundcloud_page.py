@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -71,12 +72,11 @@ _SELECTORS = [
 
 def _decode_gate_sc(href: str) -> str | None:
     """Return the inner URL if this gate.sc href wraps a known gate domain, else None."""
-    try:
+    # urlparse + parse_qs are forgiving but malformed input can still raise.
+    with contextlib.suppress(Exception):
         inner = parse_qs(urlparse(href).query).get("url", [""])[0]
         if inner and any(d in inner.lower() for d in _GATE_DOMAINS):
             return inner
-    except Exception:
-        pass
     return None
 
 
@@ -266,17 +266,20 @@ async def try_native_sc_download(
             return False
         await more_btn.click()
 
+        # Covers Playwright TimeoutError when the button never appears — narrow catch
+        # would require importing playwright's exception type; this path is best-effort.
         try:
             dl_btn = await page.wait_for_selector(
                 "button.sc-button-download", state="visible", timeout=3_000
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             return False
         if dl_btn is None:
             return False
 
         dest = Path(download_dir)
-        dest.mkdir(parents=True, exist_ok=True)
+        # ASYNC240 suggests trio.Path here, but the codebase uses asyncio + Playwright.
+        dest.mkdir(parents=True, exist_ok=True)  # noqa: ASYNC240
 
         async with page.expect_download(timeout=60_000) as dl_info:
             await dl_btn.click()
@@ -292,10 +295,11 @@ async def try_native_sc_download(
         save_path = dest / save_name
         await dl.save_as(str(save_path))
         logger.info("Native SC download saved: %s", save_path)
-        return True
 
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.debug("Native SC download not available for %s", track_url, exc_info=True)
         return False
+    else:
+        return True
     finally:
         await page.close()

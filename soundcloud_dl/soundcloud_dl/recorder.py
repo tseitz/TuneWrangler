@@ -33,24 +33,28 @@ def _parse_codegen_output(code: str) -> list[dict]:
         if fill_match:
             selector = next(g for g in fill_match.groups()[:-1] if g)
             value = fill_match.group(3)
-            steps.append({
-                "id": f"fill_{len(steps)}",
-                "trigger": selector,
-                "action": "fill",
-                "value": value or "{{replace_me}}",
-                "optional": True,
-            })
+            steps.append(
+                {
+                    "id": f"fill_{len(steps)}",
+                    "trigger": selector,
+                    "action": "fill",
+                    "value": value or "{{replace_me}}",
+                    "optional": True,
+                }
+            )
             continue
 
         click_match = _CLICK_PATTERN.search(line)
         if click_match:
             selector = next(g for g in click_match.groups() if g)
-            steps.append({
-                "id": f"click_{len(steps)}",
-                "trigger": selector,
-                "action": "click",
-                "optional": True,
-            })
+            steps.append(
+                {
+                    "id": f"click_{len(steps)}",
+                    "trigger": selector,
+                    "action": "click",
+                    "optional": True,
+                }
+            )
 
     return steps
 
@@ -105,6 +109,4 @@ def record(gate_name: str, url: str) -> None:
     logger.info(
         "Next: annotate required/optional, add depends_on, replace values with {{template_vars}}."
     )
-    logger.info(
-        "Then register the handler in gate_handlers/__init__.py if it's a new service."
-    )
+    logger.info("Then register the handler in gate_handlers/__init__.py if it's a new service.")

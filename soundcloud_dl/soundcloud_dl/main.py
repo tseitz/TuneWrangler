@@ -44,7 +44,7 @@ from soundcloud_dl.playlist import TrackItem, extract_track_urls
 from soundcloud_dl.playlist_cache import load_cached_tracks, save_cached_tracks
 from soundcloud_dl.playwright_browser import attached_browser
 from soundcloud_dl.recorder import record
-from soundcloud_dl.resume import load_states, record_state, should_skip
+from soundcloud_dl.resume import TrackState, load_states, record_state, should_skip
 from soundcloud_dl.soundcloud_page import SoundCloudPageError, get_gate_url, try_native_sc_download
 
 logger = logging.getLogger("soundcloud_dl.main")
@@ -170,7 +170,7 @@ def _get_tracks_to_process(
 
 async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
     context: object, track: TrackItem, *, pause: bool = False
-) -> str:
+) -> TrackState:
     """Attempt the gate flow for one track; return outcome string."""
     track_label = track.title or track.url
     track_title = _sanitize_sc_title(track.title) if track.title else None

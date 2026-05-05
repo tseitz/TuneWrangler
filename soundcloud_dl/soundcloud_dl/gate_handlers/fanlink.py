@@ -10,12 +10,12 @@ if TYPE_CHECKING:
 
 from soundcloud_dl.gate_handlers.base import GateHandler, GateStepError, StepResult
 
-_FREE_DL_SELECTOR = ", ".join([
-    "a:has(img.link-option-row-img[alt*='Free Download' i])",
-    "a:has(img.link-option-row-img[alt*='Free DL' i])",
-    "a:has-text('FREE DOWNLOAD')",
-    "a:has-text('Free Download')",
-])
+_FREE_DL_SELECTOR = (
+    "a:has(img.link-option-row-img[alt*='Free Download' i]), "
+    "a:has(img.link-option-row-img[alt*='Free DL' i]), "
+    "a:has-text('FREE DOWNLOAD'), "
+    "a:has-text('Free Download')"
+)
 
 
 class FanLinkHandler(GateHandler):
@@ -32,12 +32,15 @@ class FanLinkHandler(GateHandler):
         """
         el = await page.query_selector(_FREE_DL_SELECTOR)
         if el is None:
-            raise GateStepError("No FREE DOWNLOAD link found on fanlink page")
+            msg = "No FREE DOWNLOAD link found on fanlink page"
+            raise GateStepError(msg)
 
         # Capture href before clicking — el becomes stale if the page navigates.
         href_before = await el.get_attribute("href") or ""
         original_url = page.url
 
+        # Broad catch covers expect_page timeout + Playwright click navigation errors
+        # — both fall through to the in-tab nav / href fallback paths below.
         try:
             async with page.context.expect_page(timeout=10_000) as new_page_info:
                 await el.click()
@@ -46,7 +49,7 @@ class FanLinkHandler(GateHandler):
             real_url = new_page.url
             await new_page.close()
             await page.goto(real_url, wait_until="domcontentloaded", timeout=30_000)
-        except Exception:
+        except Exception:  # noqa: BLE001
             current_url = page.url
             if current_url != original_url:
                 # Click navigated the current tab — already on the real gate.
