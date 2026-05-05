@@ -9,6 +9,10 @@ from playwright.async_api import async_playwright
 
 from soundcloud_dl.gate_handlers.captcha import CaptchaKind, detect_captcha
 
+# These tests launch a real headless Chromium against local HTML fixtures.
+# Auto-skipped under sandboxed environments where browser launch is blocked.
+pytestmark = pytest.mark.requires_browser
+
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 
 

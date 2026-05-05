@@ -71,6 +71,8 @@ def make_page(found_selectors: set[str]) -> MagicMock:
                 el.click = AsyncMock()
                 el.fill = AsyncMock()
                 el.type = AsyncMock()
+                # _find_element awaits is_visible() to filter hidden matches.
+                el.is_visible = AsyncMock(return_value=True)
                 return el
         return None
 
@@ -168,6 +170,7 @@ async def test_run_continues_when_no_captcha(monkeypatch):
     el.fill = AsyncMock()
     el.type = AsyncMock()
     el.scroll_into_view_if_needed = AsyncMock()
+    el.is_visible = AsyncMock(return_value=True)
     page = MagicMock()
     page.query_selector = AsyncMock(return_value=el)
     page.wait_for_timeout = AsyncMock()

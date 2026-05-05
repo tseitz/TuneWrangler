@@ -30,6 +30,9 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+markers = [
+    "requires_browser: test requires a real Chromium launch (auto-skipped under sandbox)",
+]
 
 [tool.ruff]
 line-length = 100
@@ -38,6 +41,19 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = ["D", "COM812", "ISC001"]
+
+[tool.ruff.lint.per-file-ignores]
+# pytest tests legitimately use bare assert, magic literals, and unannotated
+# fixtures. Private-member access is also expected — we test _foo helpers.
+"tests/**" = [
+    "S101",      # assert is pytest's whole job
+    "PLR2004",   # magic values are normal in test data
+    "ANN",       # type annotations not required on test fns/fixtures
+    "ARG",       # autouse fixtures and pytest hooks have unused params
+    "PLC0415",   # in-fixture imports are a normal pattern
+    "SLF001",    # tests reach into private (_foo) helpers
+    "INP001",    # tests/ has __init__.py; rule still flags conftest sometimes
+]
 
 [tool.ty.environment]
 python-version = "3.12"

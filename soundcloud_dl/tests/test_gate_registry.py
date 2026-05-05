@@ -18,7 +18,7 @@ def test_toneden_url_returns_handler():
 
 
 def test_unknown_url_raises():
-    with pytest.raises(GateNotSupportedError, match="unknown-gate.com"):
+    with pytest.raises(GateNotSupportedError, match=r"unknown-gate\.com"):
         get_handler_for_url("https://unknown-gate.com/track")
 
 
