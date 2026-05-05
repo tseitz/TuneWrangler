@@ -6,6 +6,7 @@ import asyncio
 import logging
 import random
 import re
+import urllib.parse
 from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -13,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 import yaml
 
 if TYPE_CHECKING:
-    from playwright.async_api import Page
+    from playwright.async_api import Page, Response
 
 logger = logging.getLogger("soundcloud_dl.gate_handlers.base")
 
@@ -65,6 +66,10 @@ _CLOUDFLARE_TEXT_PATTERNS = (
     "checking your browser",
 )
 
+# reCAPTCHA v3 background iframes have near-zero size; only iframes at least this
+# many pixels on each side are treated as a real, user-blocking challenge.
+_RECAPTCHA_VISIBLE_MIN_PX = 50
+
 
 async def detect_captcha(page: Page) -> CaptchaKind | None:
     """
@@ -72,14 +77,31 @@ async def detect_captcha(page: Page) -> CaptchaKind | None:
 
     Checks each known captcha vendor's selector. As a fallback, scans visible body
     text for Cloudflare-style interstitial language.
+
+    reCAPTCHA v3 (invisible) embeds a hidden iframe that is always present on many
+    sites as background fraud detection — we skip it unless the iframe has a meaningful
+    bounding box (>50px), which indicates a blocking challenge. hCaptcha and Turnstile
+    widgets are always interactive so presence alone is enough for those.
     """
     for kind, selector in _CAPTCHA_SELECTORS:
         el = await page.query_selector(selector)
-        if el is not None:
-            # Presence alone is enough: captcha widgets (especially Turnstile
-            # placeholders) often have zero size before their iframe mounts,
-            # and cross-origin iframes can throw on is_visible().
-            return kind
+        if el is None:
+            continue
+        if kind == CaptchaKind.RECAPTCHA:
+            # reCAPTCHA v3 iframes are invisible (tiny/zero size). Only flag when
+            # the iframe is large enough to be a user-facing challenge.
+            try:
+                bbox = await el.bounding_box()
+            except Exception:  # noqa: BLE001
+                logger.debug("reCAPTCHA bounding_box() failed; treating as invisible")
+                continue
+            if (
+                bbox is None
+                or bbox["width"] < _RECAPTCHA_VISIBLE_MIN_PX
+                or bbox["height"] < _RECAPTCHA_VISIBLE_MIN_PX
+            ):
+                continue
+        return kind
     try:
         body_text = (await page.inner_text("body", timeout=500)).lower()
     except Exception:  # noqa: BLE001
@@ -154,22 +176,20 @@ class GateHandler:
     async def _find_element(
         self, page: Page, trigger: str, *, allow_hidden: bool = False
     ) -> Any | None:  # noqa: ANN401
-        """Try each comma-separated selector; return first match or None.
+        """Try each comma-separated selector; return first VISIBLE match or None.
 
-        By default skips elements that are not visible — this prevents hidden
-        carousel slides or off-screen duplicates from being acted on. Pass
-        allow_hidden=True to return the first DOM match regardless of visibility
-        (used for force-click steps where the element may be in a slide that
-        Playwright considers not-visible due to CSS transforms).
+        Visible elements always win over hidden ones regardless of selector order.
+        If allow_hidden=True and no visible match is found, returns the first
+        DOM match found (used for force-click steps where the element may be
+        in a CSS slide/transform that Playwright considers not-visible).
         """
-        for selector in [s.strip() for s in trigger.split(",")]:
+        selectors = [s.strip() for s in trigger.split(",")]
+        hidden_fallback = None
+        for selector in selectors:
             el = await page.query_selector(selector)
             if el is None:
                 logger.debug("[%s] selector '%s' → not found", self.gate_name, selector)
                 continue
-            if allow_hidden:
-                logger.debug("[%s] selector '%s' → found (allow_hidden)", self.gate_name, selector)
-                return el
             try:
                 visible = await el.is_visible()
             except Exception:  # noqa: BLE001
@@ -177,14 +197,25 @@ class GateHandler:
             if visible:
                 logger.debug("[%s] selector '%s' → found, visible", self.gate_name, selector)
                 return el
-            logger.debug(
-                "[%s] selector '%s' → found but not visible, skipping",
-                self.gate_name,
-                selector,
-            )
+            if allow_hidden and hidden_fallback is None:
+                logger.debug(
+                    "[%s] selector '%s' → found (allow_hidden, hidden fallback)",
+                    self.gate_name,
+                    selector,
+                )
+                hidden_fallback = el
+            else:
+                logger.debug(
+                    "[%s] selector '%s' → found but not visible, skipping",
+                    self.gate_name,
+                    selector,
+                )
+        if hidden_fallback is not None:
+            logger.debug("[%s] no visible element; using hidden fallback", self.gate_name)
+            return hidden_fallback
         return None
 
-    async def _execute_step(self, page: Page, step: dict) -> None:  # noqa: C901, PLR0912
+    async def _execute_step(self, page: Page, step: dict) -> None:  # noqa: C901, PLR0912, PLR0915
         """Execute a single step action against the found element."""
         force = step.get("force", False)
         el = await self._find_element(page, step["trigger"], allow_hidden=force)
@@ -203,23 +234,147 @@ class GateHandler:
             if step.get("download") and self.download_dir is not None:
                 # 45s: SC OAuth popup can appear 15-20s after the click; allow ~25s for
                 # Hypeddit to process the auth callback and serve the download.
-                async with page.expect_download(timeout=45_000) as download_info:
-                    if force:
-                        if await el.is_visible():
-                            await el.click(force=True)
+                # On custom-domain gates the click may navigate instead of triggering
+                # a download event — fall back to fetching the href directly.
+                downloaded = False
+                try:
+                    async with page.expect_download(timeout=45_000) as download_info:
+                        if force:
+                            if await el.is_visible():
+                                await el.click(force=True)
+                            else:
+                                await el.evaluate("e => e.click()")
                         else:
-                            await el.evaluate("e => e.click()")
-                    else:
-                        await el.click()
-                download = await download_info.value
-                dest = self.download_dir / download.suggested_filename
-                await download.save_as(str(dest))
-                if self.track_title:
-                    ext = Path(dest).suffix
-                    renamed = dest.parent / f"{self.track_title}{ext}"
-                    dest.rename(renamed)
-                    dest = renamed
-                logger.info("[%s] Saved download → %s", self.gate_name, dest)
+                            await el.click()
+                    download = await download_info.value
+                    dest = self.download_dir / download.suggested_filename
+                    await download.save_as(str(dest))
+                    if self.track_title:
+                        ext = Path(dest).suffix
+                        renamed = dest.parent / f"{self.track_title}{ext}"
+                        dest.rename(renamed)
+                        dest = renamed
+                    logger.info("[%s] Saved download → %s", self.gate_name, dest)
+                    downloaded = True
+                except Exception:  # noqa: BLE001, S110
+                    pass
+                if not downloaded:
+                    # Fallback 1: fetch the href directly.
+                    # Handles both absolute URLs and relative paths (e.g. /download/6353).
+                    href = await el.get_attribute("href")
+                    if href and href not in ("", "#", "javascript:void(0)"):
+                        if not href.startswith("http"):
+                            href = urllib.parse.urljoin(page.url, href)
+                        logger.info(
+                            "[%s] expect_download timed out; fetching href directly: %s",
+                            self.gate_name,
+                            href,
+                        )
+                        try:
+                            response = await page.request.get(href)
+                            if not response.ok:
+                                logger.debug(
+                                    "[%s] href fetch HTTP %d — skipping to response intercept",
+                                    self.gate_name,
+                                    response.status,
+                                )
+                            else:
+                                ct = (response.headers.get("content-type") or "").lower()
+                                cd = (response.headers.get("content-disposition") or "").lower()
+                                is_file = (
+                                    "audio" in ct
+                                    or "octet-stream" in ct
+                                    or "force-download" in ct
+                                    or "attachment" in cd
+                                )
+                                if not is_file:
+                                    logger.debug(
+                                        "[%s] href fetch returned %s — not a file, skipping",
+                                        self.gate_name,
+                                        ct,
+                                    )
+                                else:
+                                    parsed = urllib.parse.urlparse(href)
+                                    filename = Path(parsed.path).name or "download"
+                                    content = await response.body()
+                                    dest = self.download_dir / filename
+                                    dest.write_bytes(content)
+                                    if self.track_title:
+                                        ext = Path(dest).suffix
+                                        renamed = dest.parent / f"{self.track_title}{ext}"
+                                        dest.rename(renamed)
+                                        dest = renamed
+                                    logger.info(
+                                        "[%s] Saved download (href fallback) → %s",
+                                        self.gate_name,
+                                        dest,
+                                    )
+                                    downloaded = True
+                        except Exception:  # noqa: BLE001
+                            logger.debug(
+                                "[%s] href fetch failed — falling through to response intercept",
+                                self.gate_name,
+                                exc_info=True,
+                            )
+                if not downloaded:
+                    # Fallback 2: JS-void href (e.g. Hypeddit white-label) — intercept the
+                    # network response that carries the audio file after the button click.
+                    captured: list[tuple[str, bytes]] = []
+
+                    async def _capture_audio(response: Response) -> None:
+                        ct = (await response.header_value("content-type") or "").lower()
+                        cd = (await response.header_value("content-disposition") or "").lower()
+                        url_lower = response.url.lower()
+                        is_audio = (
+                            "audio" in ct
+                            or "octet-stream" in ct
+                            or "force-download" in ct
+                            or "attachment" in cd
+                            or any(
+                                url_lower.endswith(ext)
+                                for ext in (".mp3", ".wav", ".flac", ".aiff", ".aac", ".ogg")
+                            )
+                        )
+                        if is_audio:
+                            try:
+                                body = await response.body()
+                                captured.append((response.url, body))
+                            except Exception:  # noqa: BLE001, S110
+                                pass
+
+                    page.on("response", _capture_audio)
+                    try:
+                        # Re-find element — may be stale after the 45s expect_download wait.
+                        el2 = await self._find_element(page, step["trigger"], allow_hidden=force)
+                        if el2 is not None:
+                            await el2.evaluate("e => e.click()")
+                        # Poll up to 20s for an audio response to land.
+                        for _ in range(40):
+                            if captured:
+                                break
+                            await page.wait_for_timeout(500)
+                    finally:
+                        page.remove_listener("response", _capture_audio)
+
+                    if not captured:
+                        msg = f"[{self.gate_name}] Download failed: no audio response intercepted"
+                        raise GateStepError(msg)
+
+                    dl_url, content = captured[0]
+                    parsed = urllib.parse.urlparse(dl_url)
+                    filename = Path(parsed.path).name or "download.mp3"
+                    if "." not in filename:
+                        filename += ".mp3"
+                    dest = self.download_dir / filename
+                    dest.write_bytes(content)
+                    if self.track_title:
+                        ext = Path(dest).suffix
+                        renamed = dest.parent / f"{self.track_title}{ext}"
+                        dest.rename(renamed)
+                        dest = renamed
+                    logger.info(
+                        "[%s] Saved download (response intercept) → %s", self.gate_name, dest
+                    )
             elif force:
                 # For visible elements, use a trusted Playwright click with force=True
                 # to bypass z-order pointer-intercept (carousel overlap).
@@ -230,15 +385,59 @@ class GateHandler:
                 else:
                     await el.evaluate("e => e.click()")
             else:
-                await el.click()
+                nav_from_click = False
+                try:
+                    await el.click()
+                except Exception as exc:
+                    if "not attached to the dom" in str(exc).lower():
+                        # Click triggered a page navigation; element detached during
+                        # Playwright's intercept-retry window, but the click registered.
+                        nav_from_click = True
+                        logger.debug(
+                            "[%s] '%s' click caused navigation (element detached — ok)",
+                            self.gate_name,
+                            step["trigger"],
+                        )
+                    else:
+                        raise
+                # Wait for any navigation triggered by the click to settle.
+                if step.get("await_navigation") or nav_from_click:
+                    try:  # noqa: SIM105
+                        await page.wait_for_load_state("domcontentloaded", timeout=10_000)
+                    except Exception:  # noqa: BLE001, S110
+                        pass
             await self._random_delay(page)  # let DOM settle after click (carousel transitions etc.)
         elif action == "fill":
             value = self.resolve_value(step.get("value", ""))
             await el.fill("")  # clear first
             await el.type(value, delay=self.type_delay_ms)
+        elif action == "download_from_attribute":
+            attr = step.get("attribute", "src")
+            url = await el.get_attribute(attr)
+            if not url:
+                msg = f"[{self.gate_name}] attribute '{attr}' not found or empty on element"
+                raise GateStepError(msg)
+            if step.get("download") and self.download_dir is not None:
+                response = await page.request.get(url)
+                if not response.ok:
+                    msg = f"[{self.gate_name}] HTTP {response.status} fetching {url}"
+                    raise GateStepError(msg)
+                parsed = urllib.parse.urlparse(url)
+                filename = Path(parsed.path).name or "download.mp3"
+                content = await response.body()
+                dest = self.download_dir / filename
+                dest.write_bytes(content)
+                if self.track_title:
+                    ext = Path(dest).suffix
+                    renamed = dest.parent / f"{self.track_title}{ext}"
+                    dest.rename(renamed)
+                    dest = renamed
+                logger.info("[%s] Saved download (from %s attr) → %s", self.gate_name, attr, dest)
         elif action == "navigate":
             href = await el.get_attribute("href")
-            if href and href.startswith("http"):
+            if href:
+                if not href.startswith("http"):
+                    href = urllib.parse.urljoin(page.url, href)
                 await page.goto(href, wait_until="domcontentloaded", timeout=30_000)
                 await self._random_delay(page)
         elif action == "wait":
@@ -282,7 +481,7 @@ class GateHandler:
         except Exception:  # noqa: BLE001
             logger.debug("[%s] could not dump page elements", self.gate_name, exc_info=True)
 
-    async def _handle_oauth_popup(self, popup: Page) -> None:  # noqa: C901, PLR0912
+    async def _handle_oauth_popup(self, popup: Page) -> None:  # noqa: C901, PLR0912, PLR0915
         """Auto-approve SoundCloud/Spotify OAuth popups; close ToneDen URL-visit popups."""
         try:
             # Use "load" — SoundCloud's auth page is a React SPA; Spotify's is similar.
@@ -291,7 +490,20 @@ class GateHandler:
             is_sc = "soundcloud.com" in url
             is_sp = "accounts.spotify.com" in url
             is_toneden_visit = "toneden.io/auth/custom-url-visit" in url
-            if not is_sc and not is_sp and not is_toneden_visit:
+            is_instagram = "instagram.com" in url
+            if not is_sc and not is_sp and not is_toneden_visit and not is_instagram:
+                return
+
+            # Instagram follow and ToneDen URL-visit popups just need to be closed
+            # after they load — no OAuth interaction required.
+            if is_instagram:
+                logger.debug("[%s] Instagram follow popup: %s", self.gate_name, url)
+                try:
+                    await popup.wait_for_timeout(1_000)
+                    if not popup.is_closed():
+                        await popup.close()
+                except Exception:  # noqa: BLE001
+                    pass  # popup already closed itself
                 return
 
             # ToneDen's Instagram (and other URL-visit) steps open a popup that just
@@ -334,9 +546,7 @@ class GateHandler:
                 # ToneDen redirects to toneden.io/auth/spotify/callback then closes;
                 # Hypeddit redirects back to hypeddit.com. Either way the popup is done.
                 try:
-                    await popup.wait_for_url(
-                        "*hypeddit.com*|*toneden.io*", timeout=8_000
-                    )
+                    await popup.wait_for_url("*hypeddit.com*|*toneden.io*", timeout=8_000)
                     await popup.wait_for_timeout(500)
                 except Exception:  # noqa: BLE001
                     pass  # popup closed itself or redirected elsewhere — both OK
@@ -400,7 +610,12 @@ class GateHandler:
             # Captcha check before each step. Real Chrome rarely triggers these,
             # but if one appears we abort cleanly so the orchestrator can mark
             # captcha_pending and move on.
-            captcha = await detect_captcha(page)
+            # Suppress navigation errors: some steps (e.g. Instagram follow) reload
+            # the main page, so the context may be destroyed briefly between steps.
+            try:
+                captcha = await detect_captcha(page)
+            except Exception:  # noqa: BLE001
+                captcha = None
             if captcha is not None:
                 raise CaptchaEncountered(captcha, self.gate_name)
 

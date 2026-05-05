@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 from playwright.async_api import BrowserContext, Page, async_playwright
 
-from soundcloud_dl.chrome_bringup import ensure_chrome_running
+from soundcloud_dl.chrome_bringup import ensure_chrome_running, kill_chrome_on_port
 from soundcloud_dl.config import (
     ACTION_DELAY_MAX_MS,
     ACTION_DELAY_MIN_MS,
@@ -23,6 +23,8 @@ from soundcloud_dl.config import (
 
 logger = logging.getLogger("soundcloud_dl.playwright_browser")
 
+_CDP_CONTEXT_ERROR = "Browser context management is not supported"
+
 
 @contextlib.asynccontextmanager
 async def attached_browser() -> AsyncIterator[BrowserContext]:
@@ -32,6 +34,9 @@ async def attached_browser() -> AsyncIterator[BrowserContext]:
     Ensures Chrome is running with --remote-debugging-port + dedicated profile,
     then connects via CDP. The Chrome process is left running on exit.
     Chrome must be launched with --enable-automation for full CDP access.
+
+    If the existing Chrome session rejects CDP context management (e.g. launched
+    without --enable-automation), kills it and relaunches before retrying once.
     """
     ensure_chrome_running(
         chrome_path=CHROME_PATH,
@@ -40,7 +45,24 @@ async def attached_browser() -> AsyncIterator[BrowserContext]:
     )
 
     async with async_playwright() as pw:
-        browser = await pw.chromium.connect_over_cdp(f"http://localhost:{CHROME_DEBUG_PORT}")
+        try:
+            browser = await pw.chromium.connect_over_cdp(f"http://localhost:{CHROME_DEBUG_PORT}")
+        except Exception as e:
+            if _CDP_CONTEXT_ERROR not in str(e):
+                raise
+            logger.warning(
+                "Existing Chrome on port %d rejected CDP context management — "
+                "killing and relaunching with required flags.",
+                CHROME_DEBUG_PORT,
+            )
+            kill_chrome_on_port(CHROME_DEBUG_PORT)
+            ensure_chrome_running(
+                chrome_path=CHROME_PATH,
+                profile_dir=CHROME_PROFILE_DIR,
+                port=CHROME_DEBUG_PORT,
+            )
+            browser = await pw.chromium.connect_over_cdp(f"http://localhost:{CHROME_DEBUG_PORT}")
+
         if not browser.contexts:
             msg = "Connected to Chrome but no browser context found"
             raise RuntimeError(msg)

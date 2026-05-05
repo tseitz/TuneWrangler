@@ -27,7 +27,12 @@ from soundcloud_dl.config import (
     validate_phase1_config,
     validate_phase2_config,
 )
-from soundcloud_dl.gate_handlers import GateNotSupportedError, get_handler_for_url
+from soundcloud_dl.gate_handlers import (
+    GateNotSupportedError,
+    detect_handler_from_page,
+    get_handler_for_url,
+    is_url_blacklisted,
+)
 from soundcloud_dl.gate_handlers.base import (
     CaptchaEncountered,
     GateStepError,
@@ -110,6 +115,14 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Pause before each gate step (waits for Enter) to inspect the page in DevTools.",
     )
+    p.add_argument(
+        "--retry-unsupported",
+        action="store_true",
+        help=(
+            "Re-queue tracks previously marked 'unsupported' so they can be retried. "
+            "Combine with --limit 1 to step through them one at a time."
+        ),
+    )
     return p.parse_args()
 
 
@@ -138,19 +151,24 @@ def _log_track_list(playlist_url: str, tracks: list[TrackItem]) -> None:
             logger.info("  %d. %s", i, t.url)
 
 
-def _get_tracks_to_process(tracks: list[TrackItem], playlist_url: str) -> list[TrackItem]:
+def _get_tracks_to_process(
+    tracks: list[TrackItem], playlist_url: str, *, retry_unsupported: bool = False
+) -> list[TrackItem]:
     """Apply resume filter: return only tracks whose state is not 'done'."""
     if not RESUME_ENABLED:
         return tracks
     states = load_states(playlist_url)
-    to_process = [t for t in tracks if not should_skip(t.url, states)]
+    if retry_unsupported:
+        to_process = [t for t in tracks if states.get(t.url) != "done"]
+    else:
+        to_process = [t for t in tracks if not should_skip(t.url, states)]
     skipped = len(tracks) - len(to_process)
     if skipped:
         logger.info("Resume: skipping %d already-done tracks.", skipped)
     return to_process
 
 
-async def _process_track(  # noqa: C901, PLR0911, PLR0912
+async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
     context: object, track: TrackItem, *, pause: bool = False
 ) -> str:
     """Attempt the gate flow for one track; return outcome string."""
@@ -165,11 +183,15 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912
     try:
         # SoundCloud tracks with a native download button (no gate) are handled here.
         # Try this before the gate flow so we don't waste time hunting for a gate link.
-        if not track.purchase_url and DOWNLOAD_DIR and await try_native_sc_download(
-            context,  # type: ignore[arg-type]
-            track.url,
-            DOWNLOAD_DIR,
-            track_title,
+        if (
+            not track.purchase_url
+            and DOWNLOAD_DIR
+            and await try_native_sc_download(
+                context,  # type: ignore[arg-type]
+                track.url,
+                DOWNLOAD_DIR,
+                track_title,
+            )
         ):
             logger.info("DOWNLOAD_SUCCESS | %s | native SC download", track_label)
             return "done"
@@ -179,12 +201,27 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912
             logger.info("Using purchase_url from API: %s", gate_url)
         else:
             gate_url = await get_gate_url(context, track.url)  # type: ignore[arg-type]
+        if is_url_blacklisted(gate_url):
+            logger.warning("UNSUPPORTED | %s | blacklisted gate: %s", track_label, gate_url)
+            return "unsupported"
         page = await context.new_page()  # type: ignore[union-attr]
         await page.goto(gate_url, wait_until="domcontentloaded", timeout=30_000)
         final_url = page.url
         if final_url != gate_url:
             logger.info("Gate URL redirected: %s → %s", gate_url, final_url)
-        handler_cls = get_handler_for_url(final_url)
+        try:
+            handler_cls = get_handler_for_url(final_url)
+        except GateNotSupportedError:
+            # URL not recognised — inspect page content for known gate structure
+            # (handles custom-domain / white-label gates, e.g. Hypeddit on own domain).
+            handler_cls = await detect_handler_from_page(page)
+            if handler_cls is None:
+                raise
+            logger.info(
+                "Content-detected handler %s for unrecognised URL: %s",
+                handler_cls.__name__,
+                final_url,
+            )
         handler = handler_cls(
             template_vars={
                 "email": DOWNLOAD_EMAIL,
@@ -337,7 +374,9 @@ async def _ensure_logged_in(context) -> None:  # noqa: ANN001
         await page.close()
 
 
-async def main_async(limit: int | None = None, *, pause: bool = False) -> None:
+async def main_async(
+    limit: int | None = None, *, pause: bool = False, retry_unsupported: bool = False
+) -> None:
     """Load config, run Phase 1 (API track list), then Phase 2 (stealth Playwright per track)."""
     validate_phase1_config()
     if not TUNEWRANGLER_SC_PLAYLIST_URL:
@@ -353,7 +392,7 @@ async def main_async(limit: int | None = None, *, pause: bool = False) -> None:
         logger.info("No tracks to process; skipping Phase 2.")
         return
 
-    to_process = _get_tracks_to_process(tracks, playlist_url)
+    to_process = _get_tracks_to_process(tracks, playlist_url, retry_unsupported=retry_unsupported)
     if not to_process:
         logger.info("No tracks left to process (all already done or none found).")
         return
@@ -389,7 +428,9 @@ def main() -> None:
     if args.login:
         asyncio.run(_run_login_bootstrap())
         return
-    asyncio.run(main_async(limit=args.limit, pause=args.pause))
+    asyncio.run(
+        main_async(limit=args.limit, pause=args.pause, retry_unsupported=args.retry_unsupported)
+    )
 
 
 if __name__ == "__main__":

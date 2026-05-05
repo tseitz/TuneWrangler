@@ -11,13 +11,25 @@ from urllib.parse import parse_qs, urlparse
 if TYPE_CHECKING:
     from playwright.async_api import BrowserContext, Page
 
-from soundcloud_dl.config import PAGE_LOAD_WAIT_SECONDS
+from soundcloud_dl.config import PAGE_LOAD_WAIT_SECONDS, get_debug_dir
 from soundcloud_dl.playwright_browser import new_page, random_delay
 
 logger = logging.getLogger("soundcloud_dl.soundcloud_page")
 
 # Known gate domains used to validate gate.sc proxy links.
-_GATE_DOMAINS = frozenset({"hypeddit.com", "toneden.io", "fanlink.tv", "fanlink.to"})
+_GATE_DOMAINS = frozenset(
+    {
+        "hypeddit.com",
+        "toneden.io",
+        "fanlink.tv",
+        "fanlink.to",
+        "pumpyoursound.com",
+        # Blacklisted domains — still extracted so the blacklist check in main.py
+        # can mark them 'unsupported' instead of falling through to 'manual_review'.
+        "followeb.de",
+        "laylo.com",
+    }
+)
 
 # Selectors checked in order. Gate-domain links are tried first since they're
 # unambiguous. Text-based selectors are broader and can match description links
@@ -68,26 +80,58 @@ def _decode_gate_sc(href: str) -> str | None:
     return None
 
 
-async def _poll_gate_sc_url(page: Page, timeout_ms: int = 8_000) -> str | None:
+async def _poll_gate_sc_url(page: Page, timeout_ms: int = 25_000) -> str | None:
     """
     Poll for a gate.sc link that wraps a known gate domain.
 
     SoundCloud renders some download buttons (e.g. MUI React components) after
-    the initial DOM is ready, so the gate.sc link may not exist on the first pass.
-    Polls every 500 ms up to timeout_ms before giving up.
+    the initial DOM is ready — sometimes via a deferred API call that takes 10-15s.
+    Polls every 500 ms up to timeout_ms. Scrolls the page at ~8s and ~16s to trigger
+    intersection-observer-based lazy rendering across the full render window.
     """
-    deadline = asyncio.get_event_loop().time() + timeout_ms / 1000
+    # JS that collects gate.sc hrefs from the main DOM and any same-origin iframes.
+    js_collect = (
+        "() => {"
+        " const links=[...document.querySelectorAll(\"a[href*='gate.sc']\")].map(a=>a.href);"
+        " for(const f of document.querySelectorAll('iframe')){"
+        "  try{const e=[...f.contentDocument.querySelectorAll(\"a[href*='gate.sc']\")]"
+        "  .map(a=>a.href);links.push(...e);}catch(_){}"
+        " } return links;}"
+    )
+    start = asyncio.get_event_loop().time()
+    deadline = start + timeout_ms / 1000
     last_seen: set[str] = set()
+    scroll_count = 0
+    # Scroll thresholds: 8s and 16s after poll start.
+    scroll_thresholds = [8.0, 16.0]
     while asyncio.get_event_loop().time() < deadline:
+        hrefs: list[str] = []
+        # Primary: Playwright selector (fast path)
         candidates = await page.query_selector_all("a[href*='gate.sc']")
         for c in candidates:
-            href = await c.get_attribute("href") or ""
+            h = await c.get_attribute("href") or ""
+            if h:
+                hrefs.append(h)
+        # Secondary: JS scan including iframes
+        try:
+            js_hrefs: list[str] = await page.evaluate(js_collect)
+            hrefs.extend(js_hrefs)
+        except Exception:  # noqa: BLE001, S110
+            pass
+        for href in hrefs:
             inner = _decode_gate_sc(href)
             if inner:
                 return inner
             if href not in last_seen:
                 logger.debug("gate.sc link (non-gate): %s", href[:120])
                 last_seen.add(href)
+        elapsed = asyncio.get_event_loop().time() - start
+        if scroll_count < len(scroll_thresholds) and elapsed >= scroll_thresholds[scroll_count]:
+            try:  # noqa: SIM105
+                await page.evaluate("window.scrollBy(0, 400)")
+            except Exception:  # noqa: BLE001, S110
+                pass
+            scroll_count += 1
         await asyncio.sleep(0.5)
     return None
 
@@ -96,7 +140,7 @@ class SoundCloudPageError(RuntimeError):
     """Raised when we can't find or trigger the free download on a SoundCloud page."""
 
 
-async def get_gate_url(context: BrowserContext, track_url: str) -> str:  # noqa: C901
+async def get_gate_url(context: BrowserContext, track_url: str) -> str:  # noqa: C901, PLR0915
     """
     Navigate to a SoundCloud track, click the free download button, and return
     the URL of the gate page that opens in the new tab.
@@ -120,9 +164,9 @@ async def get_gate_url(context: BrowserContext, track_url: str) -> str:  # noqa:
         for selector in _SELECTORS:
             if "gate.sc" in selector:
                 # Multiple gate.sc links can appear (download button + social follow links).
-                # Poll up to 8s for one whose inner URL targets a known gate domain,
-                # skipping social/Instagram proxy links. The MUI download button can
-                # render a second after the rest of the page.
+                # Poll up to 25s for one whose inner URL targets a known gate domain,
+                # skipping social/Instagram proxy links. MUI download buttons (above the
+                # description) can lazy-load via a deferred SC API call 12-15s after nav.
                 inner = await _poll_gate_sc_url(page)
                 if inner:
                     logger.info("Gate URL decoded from gate.sc proxy: %s", inner)
@@ -135,6 +179,14 @@ async def get_gate_url(context: BrowserContext, track_url: str) -> str:  # noqa:
                 break
 
         if el is None:
+            try:
+                slug = track_url.rstrip("/").split("/")[-1][:60]
+                safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in slug)
+                path = get_debug_dir() / f"no_gate_{safe}.png"
+                await page.screenshot(path=str(path), full_page=True)
+                logger.info("DEBUG screenshot saved → %s", path)
+            except Exception:  # noqa: BLE001, S110
+                pass
             msg = f"No free download button found on: {track_url}"
             raise SoundCloudPageError(msg)
 
@@ -176,10 +228,11 @@ async def get_gate_url(context: BrowserContext, track_url: str) -> str:  # noqa:
                 await el.click()
             gate_page = await new_page_info.value
         except Exception as e:
-            raise SoundCloudPageError(
+            msg = (
                 f"Clicked free download on {track_url} but no new tab opened "
-                f"(likely no gate link, just description text)"
-            ) from e
+                "(likely no gate link, just description text)"
+            )
+            raise SoundCloudPageError(msg) from e
 
         await gate_page.wait_for_load_state("domcontentloaded", timeout=15_000)
         gate_url = gate_page.url

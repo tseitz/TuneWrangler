@@ -1,0 +1,96 @@
+gate: pumpyoursound
+url_pattern: "pumpyoursound.com"
+
+steps:
+  # Step -1: Fanlink variant — /fanlink/ pages are link aggregators, not gates.
+  # Navigate to the actual gate URL via the Download button before running steps.
+  - id: navigate_to_gate
+    trigger: "a.fanlink-target__btn[href*='/f/']"
+    action: navigate
+    optional: true
+
+  # Step 0: Instagram Follow (optional — not all gates require it).
+  # Opens instagram.com popup (auto-closed), then the gate page reloads.
+  - id: ig_follow
+    trigger: "div.socBtn__instagram, div.sn-connect-with-instagram, a.socBtn__instagram"
+    action: click
+    await_navigation: true
+    optional: true
+
+  # Wait for the preloader overlay to clear after Instagram follow.
+  - id: wait_preloader_after_ig
+    trigger: "#preloader"
+    action: wait
+    state: "hidden"
+    timeout_ms: 10000
+    optional: true
+
+  # Step 1: SoundCloud Follow — opens SC OAuth popup, auto-handled.
+  - id: sc_follow
+    trigger: "div.socBtn__soundcloud, div.sn-connect-with-soundcloud.socBtn__soundcloud"
+    action: click
+    optional: true
+
+  # Wait for preloader after SC OAuth redirect and the comment field to appear.
+  - id: wait_preloader_after_sc
+    trigger: "#preloader"
+    action: wait
+    state: "hidden"
+    timeout_ms: 10000
+    optional: true
+
+  - id: wait_after_follow
+    trigger: "a#fangate-send-comment, a.fangate-send-comment"
+    action: wait
+    timeout_ms: 8000
+    optional: true
+
+  # Step 2: Clear the pre-filled comment and type ours.
+  - id: fill_comment
+    trigger: "input.fangatex__icomment, input[name='fangate_comment']"
+    action: fill
+    value: "{{comment}}"
+    optional: true
+
+  # Send Comment — opens SC OAuth popup for the comment action, auto-handled.
+  - id: send_comment
+    trigger: "a#fangate-send-comment, a.fangate-send-comment"
+    action: click
+    optional: true
+
+  # Wait for preloader after send_comment OAuth redirect.
+  - id: wait_preloader_after_comment
+    trigger: "#preloader"
+    action: wait
+    state: "hidden"
+    timeout_ms: 10000
+    optional: true
+
+  # Step 3: Click Download — form POST → 303 → page reload (no file event fires).
+  - id: click_download_button
+    trigger: "input[type='submit'][name='send'], input.btn.btn-primary[value='Download']"
+    action: click
+    optional: true
+
+  # Wait for preloader after Download form submit.
+  - id: wait_preloader_after_download
+    trigger: "#preloader"
+    action: wait
+    state: "hidden"
+    timeout_ms: 10000
+    optional: true
+
+  # Wait for the page to finish reloading after the form submit.
+  - id: wait_after_submit
+    trigger: "audio[data-stream], [data-stream]"
+    action: wait
+    timeout_ms: 10000
+    optional: true
+
+  # Step 4: Pull the actual MP3 directly from the audio player's data-stream S3 URL.
+  - id: final_download
+    trigger: "audio[data-stream], [data-stream]"
+    action: download_from_attribute
+    attribute: "data-stream"
+    download: true
+    required: true

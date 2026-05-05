@@ -1,0 +1,86 @@
+gate: followeb
+url_pattern: "followeb.de"
+
+steps:
+  # ── Landing page ────────────────────────────────────────────────────────────
+  # Two variants:
+  #   /download/<slug> — standard: JS in-page reveal, SC connect, then download.
+  #   /gate/<slug>     — alt: shows a pre-gate DOWNLOAD button; a real click (not
+  #                     page.goto) is required so the server sets session state that
+  #                     makes the sc_connect form visible on /download/<id>.
+
+  # Standard /download/ flow: click → JS reveals the form inline.
+  - id: reveal_gate
+    trigger: "a[href*='/download/']"
+    action: click
+    optional: true
+
+  # Alt /gate/ flow: target=_blank link — navigate current page to the gate URL.
+  - id: navigate_gate
+    trigger: "a[href*='/gate/']"
+    action: navigate
+    optional: true
+
+  # ── Pre-SC-connect download button (gate variant only) ────────────────────
+  # After navigating to /gate/<slug>, click (not navigate) the DOWNLOAD button so
+  # the browser follows the link naturally.  Direct navigation (page.goto) bypasses
+  # the server-side session state that makes the sc_connect form visible; a real
+  # click preserves it and lands us on /download/<id> with the form revealed.
+  # depends_on: navigate_gate so this only runs for the /gate/ variant.
+  - id: click_download_on_gate
+    trigger: "a#download_track"
+    action: click
+    await_navigation: true
+    depends_on: navigate_gate
+    optional: true
+
+  # ── Gate form ────────────────────────────────────────────────────────────────
+  # Fill comment before connecting.
+  - id: fill_comment
+    trigger: "input#comment, input.commento"
+    action: fill
+    value: "{{comment}}"
+    optional: true
+
+  # Connect to SoundCloud — opens SC OAuth popup (auto-handled by base handler).
+  # force=true so we can click if bounding-box isn't fully rendered.
+  - id: sc_connect
+    trigger: "h2 a#sc_connect, a#sc_connect"
+    action: click
+    force: true
+    optional: true
+
+  # Wait for SC OAuth to finish — either Instagram section or the download button
+  # with an absolute href (meaning JS has resolved the real download URL).
+  # Using a#download_track alone would resolve immediately (button is present from
+  # page load with a relative href); the [href^='http'] guard prevents a false hit.
+  - id: wait_after_sc_oauth
+    trigger: "a.instagram_share-skip, a#download_track[href^='http']"
+    action: wait
+    state: "visible"
+    timeout_ms: 45000
+    optional: true
+
+  # Instagram section appeared — click "I've already liked" to skip it.
+  - id: instagram_skip
+    trigger: "a.instagram_share-skip"
+    action: click
+    optional: true
+
+  # Wait for JavaScript to update the download button href from the initial
+  # relative path (/download/<id>) to an absolute audio URL.  The button is
+  # present in the DOM immediately after page load but with the wrong href;
+  # this selector only matches once JS has resolved the real download URL.
+  - id: wait_for_download_button
+    trigger: "a#download_track[href^='http']"
+    action: wait
+    state: "visible"
+    timeout_ms: 30000
+    optional: true
+
+  # ── Download ──────────────────────────────────────────────────────────────
+  - id: final_download
+    trigger: "a#download_track"
+    action: click
+    download: true
+    required: true

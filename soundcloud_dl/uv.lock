@@ -305,7 +305,7 @@ wheels = [
 [[package]]
 name = "soundcloud-dl"
 version = "0.2.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "httpx" },
     { name = "playwright" },
