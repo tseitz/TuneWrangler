@@ -108,7 +108,6 @@ logs/
 
 - **`Song.ts` is doing too many jobs** — model + parser + regex stack + normalizer + dedup state, all with mutation. Refactor target. Wait until `tests/corpus/` has 50+ entries before touching it (so changes are testable). The `parser.ts` extraction is the first step in this direction.
 - **`checkRemix` has 7 near-identical regex branches** (REMIX/REFIX/FLIP/EDIT/BOOTLEG/REBOOT/DUB). Should be one data-driven loop.
-- **soundcloud_dl baseline lint/type/test backlog** — 14 ruff issues (mostly `S110`/`BLE001`), 9 ty issues, 8 real pytest failures (5 in `test_gate_base.py` from mocks not matching new `_find_element` visibility logic, 2 in `test_chrome_bringup.py`, 1 env-leak in `test_config.py::test_download_name_default`). Worth a focused cleanup pass.
 
 ## Conventions
 
