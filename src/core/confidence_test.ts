@@ -117,3 +117,10 @@ Deno.test("default decision: low → review", () => {
   const result = scoreConfidence(song, song.filename);
   assertEquals(result.decision, "review");
 });
+
+Deno.test("m4s: MPEG-DASH segment auto-skipped", () => {
+  const song = buildSong("Jadon Woods - I Remember.m4s");
+  const result = scoreConfidence(song, song.filename);
+  assertEquals(result.decision, "skip");
+  assertEquals(result.level, "low");
+});

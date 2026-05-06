@@ -26,6 +26,11 @@ export function scoreConfidence(song: DownloadedSong, sourceFilename: string): C
 
   // --- Hard signals: low confidence ---
 
+  if (song.extension === ".m4s") {
+    reasons.push(".m4s is an MPEG-DASH segment — not a standalone audio file, cannot be converted");
+    return { level: "low", reasons, decision: "skip" };
+  }
+
   if (hasMangledExtension(song.finalFilename)) {
     reasons.push("finalFilename appears mangled (duplicate extension or extra characters past the first extension)");
     level = "low";
