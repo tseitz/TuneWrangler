@@ -49,11 +49,14 @@ export class Song {
   }
 
   grabLast(): string {
-    if (this.filename.lastIndexOf(".") === -1) {
-      return this.filename.slice(this.filename.lastIndexOf(" - ") + 3).trim();
-    } else {
-      return this.filename.slice(this.filename.lastIndexOf(" - ") + 3, this.filename.lastIndexOf(".")).trim();
+    const dashIdx = this.filename.lastIndexOf(" - ");
+    const dotIdx = this.filename.lastIndexOf(".");
+    // When dashIdx is -1, (+3) gives 2 — silently drops the first two chars. Use 0 instead.
+    const start = dashIdx >= 0 ? dashIdx + 3 : 0;
+    if (dotIdx === -1) {
+      return this.filename.slice(start).trim();
     }
+    return this.filename.slice(start, dotIdx).trim();
   }
 
   splitArtist(): string[] {
@@ -130,7 +133,8 @@ export class Song {
       this.artist = filename
         .slice(/(\(|\[)[^\)]+ REMIX\W/gi.exec(filename)!.index + 1, / REMIX\W/gi.exec(filename)!.index)
         .trim();
-      this.filename = filename.slice(0, filenameRegex!.index).trim().concat(this.extension);
+      this.filename = filename.slice(0, filenameRegex!.index).trim().replace(/\s*-\s*$/, "").trim().concat(this.extension);
+      this.dashCount = this.getDashCount();
     } else if (/(\(|\[)[^\)]+ REFIX\W/gi.test(filename)) {
       this.artist = filename
         .slice(/(\(|\[)[^\)]+ REFIX\W/gi.exec(filename)!.index + 1, / REFIX\W/gi.exec(filename)!.index)
@@ -138,7 +142,10 @@ export class Song {
       this.filename = filename
         .slice(0, /(\(|\[)[^\)]+ REFIX\W/gi.exec(filename)!.index)
         .trim()
+        .replace(/\s*-\s*$/, "")
+        .trim()
         .concat(this.extension);
+      this.dashCount = this.getDashCount();
     } else if (/(\(|\[)[^\)]+ FLIP\W/gi.test(filename)) {
       this.artist = filename
         .slice(/(\(|\[)[^\)]+ FLIP\W/gi.exec(filename)!.index + 1, / FLIP\W/gi.exec(filename)!.index)
@@ -146,7 +153,10 @@ export class Song {
       this.filename = filename
         .slice(0, /(\(|\[)[^\)]+ FLIP\W/gi.exec(filename)!.index)
         .trim()
+        .replace(/\s*-\s*$/, "")
+        .trim()
         .concat(this.extension);
+      this.dashCount = this.getDashCount();
     } else if (/(\(|\[)[^\)]+ EDIT\W/gi.test(filename)) {
       this.artist = filename
         .slice(/(\(|\[)[^\)]+ EDIT\W/gi.exec(filename)!.index + 1, / EDIT\W/gi.exec(filename)!.index)
@@ -154,7 +164,10 @@ export class Song {
       this.filename = filename
         .slice(0, /(\(|\[)[^\)]+ EDIT\W/gi.exec(filename)!.index)
         .trim()
+        .replace(/\s*-\s*$/, "")
+        .trim()
         .concat(this.extension);
+      this.dashCount = this.getDashCount();
     } else if (/(\(|\[)[^\)]+ BOOTLEG\W/gi.test(filename)) {
       this.artist = filename
         .slice(/(\(|\[)[^\)]+ BOOTLEG\W/gi.exec(filename)!.index + 1, / BOOTLEG\W/gi.exec(filename)!.index)
@@ -162,17 +175,22 @@ export class Song {
       this.filename = filename
         .slice(0, /(\(|\[)[^\)]+ BOOTLEG\W/gi.exec(filename)!.index)
         .trim()
+        .replace(/\s*-\s*$/, "")
+        .trim()
         .concat(this.extension);
+      this.dashCount = this.getDashCount();
     } else if (/(\(|\[)[^\)]+ REBOOT\W/gi.test(filename)) {
       this.artist = filename
         .slice(/(\(|\[)[^\)]+ REBOOT\W/gi.exec(filename)!.index + 1, / REBOOT\W/gi.exec(filename)!.index)
         .trim();
-      this.filename = filename.slice(0, /(\(|\[)[^\)]+ REBOOT\W/gi.exec(filename)!.index - 1).concat(this.extension);
+      this.filename = filename.slice(0, /(\(|\[)[^\)]+ REBOOT\W/gi.exec(filename)!.index - 1).replace(/\s*-\s*$/, "").trim().concat(this.extension);
+      this.dashCount = this.getDashCount();
     } else if (/(\(|\[)[^\)]+ DUB\W/gi.test(filename)) {
       this.artist = filename
         .slice(/(\(|\[)[^\)]+ DUB\W/gi.exec(filename)!.index + 1, / DUB\W/gi.exec(filename)!.index)
         .trim();
-      this.filename = filename.slice(0, /(\(|\[)[^\)]+ DUB\W/gi.exec(filename)!.index - 1).concat(this.extension);
+      this.filename = filename.slice(0, /(\(|\[)[^\)]+ DUB\W/gi.exec(filename)!.index - 1).replace(/\s*-\s*$/, "").trim().concat(this.extension);
+      this.dashCount = this.getDashCount();
     }
 
     if (origArtist !== this.artist) {
