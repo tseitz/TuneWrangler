@@ -218,4 +218,4 @@ exclude = [
 pioneer-install-dir = "/Applications/rekordbox 6"
 default-collection-path = "~/Music/Collection"
 default-playlist-data-path = "./playlist-data"
-default-backup-path = "~/Dropbox/DJ/Rekordbox DB Backup"
+default-backup-path = "~/Library/CloudStorage/GoogleDrive-tdseitz10@gmail.com/My Drive/DJ/Rekordbox DB Backup"

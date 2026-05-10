@@ -25,11 +25,15 @@ class Config:
 
     # Paths
     collection_path: str = field(
-        default_factory=lambda: os.path.expanduser("~/Dropbox/DJ/Dane Dubz DJ Music/Collection")
+        default_factory=lambda: os.path.expanduser(
+            "~/Library/CloudStorage/GoogleDrive-tdseitz10@gmail.com/My Drive/DJ/Dane Dubz DJ Music/Collection"
+        )
     )
     playlist_data_path: str = field(default_factory=lambda: "playlist-data")
     backup_base_path: str = field(
-        default_factory=lambda: os.path.expanduser("~/Dropbox/DJ/Rekordbox DB Backup")
+        default_factory=lambda: os.path.expanduser(
+            "~/Library/CloudStorage/GoogleDrive-tdseitz10@gmail.com/My Drive/DJ/Rekordbox DB Backup"
+        )
     )
     pioneer_install_dir: str = field(default_factory=lambda: "/Applications/rekordbox 6")
 

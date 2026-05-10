@@ -283,6 +283,70 @@ The base file defines playlists that are shared across all textures. It uses a d
 | `playlists[].link` | string | Path to linked JSON file (relative to `playlist-data/`) |
 | `playlists[].dateCreated` | object | Date filter with `time_period`, `time_unit`, `operator` |
 
+## Metadata Commands
+
+The metadata commands synchronize artist/title/album between the Rekordbox database and filenames. Files are expected to follow the `Artist - Title.ext` or `Artist - Album - Title.ext` naming convention.
+
+### Preview discrepancies (no changes)
+
+```bash
+rekordbox-smart-playlists metadata preview
+rekordbox-smart-playlists metadata preview --max-files 50
+```
+
+### Fix modes
+
+There are four modes for resolving mismatches:
+
+**Interactive** — prompts you for each discrepancy:
+```bash
+rekordbox-smart-playlists metadata fix --interactive
+```
+
+**Batch: database is authority** — renames files to match Rekordbox metadata:
+```bash
+rekordbox-smart-playlists --dry-run metadata fix --batch-database
+rekordbox-smart-playlists metadata fix --batch-database
+```
+
+**Batch: filename is authority** — updates the Rekordbox database to match filenames:
+```bash
+rekordbox-smart-playlists --dry-run metadata fix --batch-filename
+rekordbox-smart-playlists metadata fix --batch-filename
+```
+
+**Batch by age** — uses file age to choose the authority automatically:
+- Files **newer** than the cutoff → filename is authority (database gets updated)
+- Files **older** than the cutoff → database is authority (file gets renamed)
+
+```bash
+rekordbox-smart-playlists --dry-run metadata fix --batch-by-age --newer-than-days 30
+rekordbox-smart-playlists metadata fix --batch-by-age --newer-than-days 30
+```
+
+The cutoff is `now - newer_than_days`. For example, `--newer-than-days 1` treats anything imported today as new (filename wins) and everything before today as established (rekordbox wins). `--newer-than-days 0` is purely database authority.
+
+Age is determined from the Rekordbox `DateAdded` field first, falling back to the file's creation time on disk.
+
+### Validate filename formats
+
+Checks that filenames in your collection follow the expected `Artist - Title` pattern:
+
+```bash
+rekordbox-smart-playlists metadata validate
+rekordbox-smart-playlists metadata validate --max-files 100
+```
+
+### Typical workflow for new downloads
+
+```bash
+# 1. Preview what would change
+rekordbox-smart-playlists --dry-run metadata fix --batch-by-age --newer-than-days 1
+
+# 2. Apply the changes
+rekordbox-smart-playlists metadata fix --batch-by-age --newer-than-days 1
+```
+
 ## Configuration
 
 ### Environment Variables
