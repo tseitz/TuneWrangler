@@ -12,7 +12,7 @@
       { "name": "Feels", "operator": 1, "contains": ["Feels"] },
       { "name": "House", "operator": 1, "contains": ["House"] },
       { "name": "Jungle", "operator": 1, "contains": ["Jungle"] },
-      { "name": "Melters", "operator": 1, "contains": ["Melters"] },
+      { "name": "Weapons", "operator": 1, "contains": ["Weapons"] },
       { "name": "Riddim", "operator": 1, "contains": ["Riddim"] },
       { "name": "UKG", "operator": 1, "contains": ["UKG"] },
       { "name": "Vibes", "operator": 1, "contains": ["Vibes"] },

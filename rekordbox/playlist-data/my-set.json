@@ -4,6 +4,7 @@
       "parent": "My Set",
       "mainConditions": ["My Set"],
       "negativeConditions": ["Archive"],
+      "base": "helpers/_base.json",
       "playlists": [
         { "name": "GROOVY (The Pocket)", "operator": 1, "playlistType": "folder", "link": "helpers/groovy.json" },
         { "name": "DEEP (The Head)", "operator": 1, "playlistType": "folder", "link": "helpers/deep.json" },
