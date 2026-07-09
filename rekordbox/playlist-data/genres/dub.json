@@ -4,8 +4,8 @@
       "parent": "Dub",
       "mainConditions": ["Dub"],
       "negativeConditions": ["Archive"],
-      "base": "genres/_base.json",
       "playlists": [
+        { "name": "All", "operator": 1, "contains": [] },
         { "name": "Dub Doubles", "operator": 1, "contains": ["Dub Doubles"] },
         { "name": "Dub Wobblers", "operator": 1, "contains": ["Dub Wobblers"] },
         { "name": "Dub Sound System", "operator": 1, "contains": ["Dub Sound System"] },

@@ -2,10 +2,19 @@
   "data": [
     {
       "parent": "House",
-      "mainConditions": ["House"],
-      "negativeConditions": ["Archive"],
-      "base": "genres/_base.json",
-      "playlists": []
+      "mainConditions": [
+        "House"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "playlists": [
+        {
+          "name": "All",
+          "operator": 1,
+          "contains": []
+        }
+      ]
     }
   ]
 }

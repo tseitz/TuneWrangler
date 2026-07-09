@@ -3,18 +3,18 @@
     {
       "parent": "Genres",
       "mainConditions": [],
-      "negativeConditions": [],
+      "negativeConditions": ["Archive"],
       "playlists": [
         { "name": "Dub", "operator": 1, "playlistType": "folder", "link": "genres/dub.json" },
         { "name": "DnB", "operator": 1, "playlistType": "folder", "link": "genres/dnb.json" },
         { "name": "UKG", "operator": 1, "playlistType": "folder", "link": "genres/ukg.json" },
-        { "name": "Vibes", "operator": 1, "playlistType": "folder", "link": "genres/vibes.json" },
-        { "name": "Jungle", "operator": 1, "playlistType": "folder", "link": "genres/jungle.json" },
-        { "name": "Beats", "operator": 1, "playlistType": "folder", "link": "genres/beats.json" },
-        { "name": "Dubstep", "operator": 1, "playlistType": "folder", "link": "genres/dubstep.json" },
-        { "name": "Riddim", "operator": 1, "playlistType": "folder", "link": "genres/riddim.json" },
         { "name": "House", "operator": 1, "playlistType": "folder", "link": "genres/house.json" },
-        { "name": "Feels", "operator": 1, "playlistType": "folder", "link": "genres/feels.json" }
+        { "name": "Jungle", "operator": 1, "playlistType": "folder", "link": "genres/jungle.json" },
+        { "name": "Riddim", "operator": 1, "playlistType": "folder", "link": "genres/riddim.json" },
+        { "name": "Dubstep", "operator": 1, "playlistType": "folder", "link": "genres/dubstep.json" },
+        { "name": "Beats", "operator": 1, "playlistType": "folder", "link": "genres/beats.json" },
+        { "name": "Feels", "operator": 1, "playlistType": "folder", "link": "genres/feels.json" },
+        { "name": "Vibes", "operator": 1, "playlistType": "folder", "link": "genres/vibes.json" }
       ]
     }
   ]

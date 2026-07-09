@@ -2,10 +2,19 @@
   "data": [
     {
       "parent": "Jungle",
-      "mainConditions": ["Jungle"],
-      "negativeConditions": ["Archive"],
-      "base": "genres/_base.json",
-      "playlists": []
+      "mainConditions": [
+        "Jungle"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "playlists": [
+        {
+          "name": "All",
+          "operator": 1,
+          "contains": []
+        }
+      ]
     }
   ]
 }

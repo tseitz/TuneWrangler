@@ -2,17 +2,48 @@
   "data": [
     {
       "parent": "Crispy Speakers",
-      "mainConditions": ["Crispy Speakers"],
-      "negativeConditions": ["Archive"],
-      "base": "helpers/_base.json",
+      "mainConditions": [
+        "Crispy Speakers"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
       "playlists": [
-        { "name": "GROOVY (The Pocket)", "operator": 1, "playlistType": "folder", "link": "helpers/groovy.json" },
-        { "name": "DEEP (The Head)", "operator": 1, "playlistType": "folder", "link": "helpers/deep.json" },
-        { "name": "HEAVY (The Face)", "operator": 1, "playlistType": "folder", "link": "helpers/heavy.json" },
-        { "name": "ORGANIC (The Soul)", "operator": 1, "playlistType": "folder", "link": "helpers/organic.json" },
-        { "name": "WEIRD (The Brain)", "operator": 1, "playlistType": "folder", "link": "helpers/weird.json" },
-        { "name": "VOCALS", "operator": 1, "playlistType": "folder", "link": "helpers/vocal.json" },
-        { "name": "PALATE CLEANSER", "operator": 1, "playlistType": "folder", "link": "helpers/palate_cleanser.json" }
+        {
+          "name": "All",
+          "operator": 1,
+          "contains": []
+        },
+        {
+          "name": "Flow",
+          "operator": 1,
+          "playlistType": "folder",
+          "link": "helpers/lens-flow.json"
+        },
+        {
+          "name": "Genre",
+          "operator": 1,
+          "playlistType": "folder",
+          "link": "helpers/lens-genre.json"
+        },
+        {
+          "name": "Texture",
+          "operator": 1,
+          "playlistType": "folder",
+          "link": "helpers/lens-texture.json"
+        },
+        {
+          "name": "My Set",
+          "operator": 1,
+          "playlistType": "folder",
+          "link": "helpers/caliber-my-set.json"
+        },
+        {
+          "name": "The Rotation",
+          "operator": 1,
+          "playlistType": "folder",
+          "link": "helpers/caliber-rotation.json"
+        }
       ]
     }
   ]

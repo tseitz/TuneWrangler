@@ -2,10 +2,19 @@
   "data": [
     {
       "parent": "Vibes",
-      "mainConditions": ["Vibes"],
-      "negativeConditions": ["Archive"],
-      "base": "genres/_base.json",
-      "playlists": []
+      "mainConditions": [
+        "Vibes"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "playlists": [
+        {
+          "name": "All",
+          "operator": 1,
+          "contains": []
+        }
+      ]
     }
   ]
 }

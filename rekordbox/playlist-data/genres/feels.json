@@ -2,10 +2,19 @@
   "data": [
     {
       "parent": "Feels",
-      "mainConditions": ["Feels"],
-      "negativeConditions": ["Archive"],
-      "base": "genres/_base.json",
-      "playlists": []
+      "mainConditions": [
+        "Feels"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "playlists": [
+        {
+          "name": "All",
+          "operator": 1,
+          "contains": []
+        }
+      ]
     }
   ]
 }

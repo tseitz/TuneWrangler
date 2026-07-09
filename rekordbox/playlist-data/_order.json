@@ -1,10 +1,31 @@
 {
   "first": [
-    "go-through.json",
     "my-set.json",
-    "rotation.json"
+    "daytime.json",
+    "pool-party.json",
+    "frankys-beach.json",
+    "morningtime-vibes.json",
+    "sunrise.json",
+    "chillin.json",
+    "nighttime.json",
+    "late-night.json",
+    "frankys-after.json",
+    "afterparty.json",
+    "ketamine-music.json",
+    "silent-disco.json",
+    "crispy-speakers.json",
+    "missy.json",
+    "b2b.json",
+    "party-hits.json",
+    "trippin.json",
+    "lr-friends.json",
+    "new-years.json",
+    "halloween.json",
+    "shades.json"
   ],
   "last": [
-    "genres.json"
+    "recent-additions.json",
+    "genres.json",
+    "go-through.json"
   ]
 }

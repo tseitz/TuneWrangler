@@ -3,10 +3,8 @@
     {
       "parent": "My Set",
       "mainConditions": ["My Set"],
-      "negativeConditions": ["Archive"],
       "playlists": [
         { "name": "All", "operator": 1, "contains": [] },
-        { "name": "Flow", "operator": 1, "playlistType": "folder", "link": "helpers/lens-flow.json" },
         { "name": "Genre", "operator": 1, "playlistType": "folder", "link": "helpers/lens-genre.json" },
         { "name": "Texture", "operator": 1, "playlistType": "folder", "link": "helpers/lens-texture.json" }
       ]

@@ -1,9 +1,9 @@
 {
   "data": [
     {
-      "parent": "Sunrise",
+      "parent": "Frankys Beach",
       "mainConditions": [
-        "Sunrise"
+        "Frankys Beach"
       ],
       "negativeConditions": [
         "Archive"

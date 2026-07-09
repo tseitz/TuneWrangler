@@ -2,10 +2,19 @@
   "data": [
     {
       "parent": "Riddim",
-      "mainConditions": ["Riddim"],
-      "negativeConditions": ["Archive"],
-      "base": "genres/_base.json",
-      "playlists": []
+      "mainConditions": [
+        "Riddim"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "playlists": [
+        {
+          "name": "All",
+          "operator": 1,
+          "contains": []
+        }
+      ]
     }
   ]
 }

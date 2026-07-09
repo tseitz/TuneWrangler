@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "parent": "Halloween",
+      "mainConditions": [
+        "Halloween"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "base": "helpers/_texture-singles.json",
+      "playlists": []
+    }
+  ]
+}

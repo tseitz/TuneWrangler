@@ -1,0 +1,10 @@
+{
+  "data": [
+    {
+      "parent": "Genre",
+      "mainConditions": [],
+      "base": "helpers/_genres.json",
+      "playlists": []
+    }
+  ]
+}

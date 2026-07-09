@@ -4,3 +4,8 @@ __pycache__
 lib
 *.egg-info/
 .eggs/
+# Test coverage artifacts
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/

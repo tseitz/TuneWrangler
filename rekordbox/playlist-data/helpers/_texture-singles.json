@@ -1,0 +1,14 @@
+{
+  "data": {
+    "playlists": [
+      { "name": "All", "operator": 1, "contains": [] },
+      { "name": "Groovy", "operator": 1, "contains": ["GROOVY (The Pocket)"] },
+      { "name": "Deep", "operator": 1, "contains": ["DEEP (The Head)"] },
+      { "name": "Heavy", "operator": 1, "contains": ["HEAVY (The Face)"] },
+      { "name": "Organic", "operator": 1, "contains": ["ORGANIC (The Soul)"] },
+      { "name": "Vocals", "operator": 1, "contains": ["VOCALS"] },
+      { "name": "Weird", "operator": 1, "contains": ["WEIRD (The Brain)"] },
+      { "name": "Palate Cleanser", "operator": 1, "contains": ["PALATE CLEANSER"] }
+    ]
+  }
+}

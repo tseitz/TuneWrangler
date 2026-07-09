@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "parent": "SHADES",
+      "mainConditions": [
+        "SHADES"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "base": "helpers/_texture-singles.json",
+      "playlists": []
+    }
+  ]
+}

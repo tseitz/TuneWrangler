@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "parent": "Party Hits",
+      "mainConditions": [
+        "Party Hits"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "base": "helpers/_texture-singles.json",
+      "playlists": []
+    }
+  ]
+}

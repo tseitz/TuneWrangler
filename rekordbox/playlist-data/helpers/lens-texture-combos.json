@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "parent": "Combos",
+      "mainConditions": [],
+      "playlists": [
+        { "name": "Groovy + Deep", "operator": 1, "contains": ["GROOVY (The Pocket)", "DEEP (The Head)"] },
+        { "name": "Groovy + Heavy", "operator": 1, "contains": ["GROOVY (The Pocket)", "HEAVY (The Face)"] },
+        { "name": "Groovy + Organic", "operator": 1, "contains": ["GROOVY (The Pocket)", "ORGANIC (The Soul)"] },
+        { "name": "Groovy + Vocals", "operator": 1, "contains": ["GROOVY (The Pocket)", "VOCALS"] },
+        { "name": "Deep + Organic", "operator": 1, "contains": ["DEEP (The Head)", "ORGANIC (The Soul)"] },
+        { "name": "Deep + Heavy", "operator": 1, "contains": ["DEEP (The Head)", "HEAVY (The Face)"] },
+        { "name": "Deep + Weird", "operator": 1, "contains": ["DEEP (The Head)", "WEIRD (The Brain)"] },
+        { "name": "Heavy + Weird", "operator": 1, "contains": ["HEAVY (The Face)", "WEIRD (The Brain)"] },
+        { "name": "Heavy + Vocals", "operator": 1, "contains": ["HEAVY (The Face)", "VOCALS"] },
+        { "name": "Organic + Vocals", "operator": 1, "contains": ["ORGANIC (The Soul)", "VOCALS"] }
+      ]
+    }
+  ]
+}
