@@ -109,6 +109,41 @@ def test_db_not_empty_when_content_object_missing(fixer: MetadataFixer):
     assert fixer._db_metadata_is_empty(SimpleNamespace(content_object=None)) is False
 
 
+# --- _album_matches --------------------------------------------------------
+
+
+def test_album_matches_when_both_agree(fixer: MetadataFixer):
+    assert fixer._album_matches("Back160", "Back160") is True
+
+
+def test_album_differs_when_both_present_and_unequal(fixer: MetadataFixer):
+    assert fixer._album_matches("Back160", "Heart Of Darkness") is False
+
+
+def test_album_matches_when_neither_side_has_one(fixer: MetadataFixer):
+    assert fixer._album_matches(None, None) is True
+
+
+def test_two_segment_name_flags_a_dropped_album(fixer: MetadataFixer):
+    # The filename carries no album segment while the database holds one.
+    # That is real drift: renaming from the database would restore the album.
+    assert fixer._album_matches("Clutch EP", None) is False
+
+
+def test_two_segment_name_fine_when_db_album_is_blank(fixer: MetadataFixer):
+    assert fixer._album_matches("", None) is True
+    assert fixer._album_matches("   ", None) is True
+
+
+def test_unknown_db_album_is_treated_as_absent(fixer: MetadataFixer):
+    # "Unknown" is the sentinel used when the album attribute is missing.
+    assert fixer._album_matches("Unknown", None) is True
+
+
+def test_album_comparison_ignores_case_and_unicode_form(fixer: MetadataFixer):
+    assert fixer._album_matches("BACK160", "back160") is True
+
+
 # --- _commit_results -------------------------------------------------------
 
 
@@ -161,3 +196,16 @@ def test_no_commit_in_dry_run():
     f = _committing_fixer(dry_run=True)
     f._commit_results([_result(MetadataAction.UPDATE_FILENAME)])
     assert f.db.commits == 0
+
+
+# --- config ----------------------------------------------------------------
+
+
+def test_aif_is_scanned_like_aiff():
+    # ".aif" and ".aiff" are the same format. Omitting one hid those files from
+    # every scan the tool performs, so they were never checked for drift.
+    from rekordbox_smart_playlists.core.config import Config
+
+    exts = Config().audio_extensions
+    assert ".aif" in exts
+    assert ".aiff" in exts

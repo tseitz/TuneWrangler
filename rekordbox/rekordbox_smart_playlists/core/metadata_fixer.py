@@ -439,9 +439,7 @@ class MetadataFixer:
         # Compare metadata
         artist_matches = self._normalize_string(db_artist) == self._normalize_string(file_artist)
         title_matches = self._normalize_string(db_title) == self._normalize_string(file_title)
-        album_matches = file_album is None or self._normalize_string(
-            db_album
-        ) == self._normalize_string(file_album or "")
+        album_matches = self._album_matches(db_album, file_album)
 
         matches = artist_matches and title_matches and album_matches
 
@@ -518,6 +516,32 @@ class MetadataFixer:
             log_success(logger, f"Committed {len(pending)} database updates")
         except DatabaseError as e:
             log_error(logger, f"Failed to commit database changes: {e}")
+
+    def _album_matches(self, db_album: Optional[str], file_album: Optional[str]) -> bool:
+        """
+        Report whether the album agrees between the database and the filename.
+
+        A filename with only two segments carries no album at all. That used to
+        pass unconditionally, which hid every dropped album on the roughly three
+        thousand files named "Artist - Title". It now counts as a mismatch, but
+        only when the database actually holds an album to lose.
+
+        Args:
+            db_album: Album recorded in the database, if any
+            file_album: Album segment read from the filename, if any
+
+        Returns:
+            True if the two sides agree
+        """
+        db_value = (db_album or "").strip()
+        # "Unknown" is the sentinel used when the attribute is missing entirely.
+        if db_value == "Unknown":
+            db_value = ""
+
+        if file_album is None:
+            return not db_value
+
+        return self._normalize_string(db_value) == self._normalize_string(file_album)
 
     def _db_metadata_is_empty(self, comparison: MetadataComparison) -> bool:
         """

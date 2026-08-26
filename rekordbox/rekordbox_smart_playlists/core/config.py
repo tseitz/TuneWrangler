@@ -62,8 +62,10 @@ class Config:
     progress_interval: int = 10
 
     # Audio file extensions
+    # ".aif" is the same format as ".aiff". Leaving it out made those files
+    # invisible to every scan, so they were never checked for metadata drift.
     audio_extensions: set = field(
-        default_factory=lambda: {".mp3", ".wav", ".flac", ".aiff", ".m4a"}
+        default_factory=lambda: {".mp3", ".wav", ".flac", ".aiff", ".aif", ".m4a"}
     )
 
     # Logging
