@@ -114,11 +114,16 @@ Meanings:
 
 ## Global Genres tree (situation-independent, sub-styles)
 
-Genre-first browsing with sub-styles. Only Dub and DnB have sub-styles today; the rest
-show just `All`. `Weapons` is deliberately omitted (see above).
+Genre-first browsing with sub-styles. Only Dub, DnB, and Riddim have sub-styles today; the
+rest show just `All`. `Weapons` is deliberately omitted (see above).
+
+Most sub-styles come from a tag whose name already includes the genre (`Dub Wobblers`), so
+the playlist is just that one tag plus the parent genre. `Doubles` is the exception — it is
+genre-agnostic, so each genre pairs it with its own parent tag to get a genre-scoped
+Doubles playlist.
 
 **Dub sub-styles** ✅:
-- `Dub Doubles` — good songs you could double (overlap/mix two copies).
+- `Dub Doubles` — `Dub` + `Doubles`. Good songs you could double (overlap/mix two copies).
 - `Dub Wobblers` — wubbier songs; the stereotypical dub wobble.
 - `Dub Sound System` — like Crispy Speakers but dub-focused: songs that slap on a big system.
 - `Dub Slimzee` — a particular type of *new* dub; disorienting and crazy.
@@ -128,6 +133,9 @@ show just `All`. `Weapons` is deliberately omitted (see above).
 
 **DnB sub-styles** (standard DnB subgenres ✅):
 - `DnB Jump Up` · `DnB Rollers` · `DnB Liquid` · `DnB Dancefloor`
+
+**Riddim sub-styles** ✅:
+- `Riddim Doubles` — `Riddim` + `Doubles`.
 
 ---
 

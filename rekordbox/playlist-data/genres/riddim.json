@@ -13,6 +13,13 @@
           "name": "All",
           "operator": 1,
           "contains": []
+        },
+        {
+          "name": "Riddim Doubles",
+          "operator": 1,
+          "contains": [
+            "Doubles"
+          ]
         }
       ]
     }
