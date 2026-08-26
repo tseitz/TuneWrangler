@@ -164,17 +164,7 @@ class MetadataFixer:
 
         progress.finish("Interactive metadata fixing completed")
 
-        # Commit database changes if any were made
-        if not self.config.dry_run:
-            db_updates = [
-                r for r in results if r.action_taken == MetadataAction.UPDATE_DATABASE and r.success
-            ]
-            if db_updates:
-                try:
-                    self.db.commit()
-                    log_success(logger, f"Committed {len(db_updates)} database updates")
-                except DatabaseError as e:
-                    log_error(logger, f"Failed to commit database changes: {e}")
+        self._commit_results(results)
 
         self._print_results_summary(results)
         return results
@@ -236,17 +226,7 @@ class MetadataFixer:
 
         progress.finish("Batch metadata fixing completed")
 
-        # Commit database changes if any were made
-        if not self.config.dry_run:
-            db_updates = [
-                r for r in results if r.action_taken == MetadataAction.UPDATE_DATABASE and r.success
-            ]
-            if db_updates:
-                try:
-                    self.db.commit()
-                    log_success(logger, f"Committed {len(db_updates)} database updates")
-                except DatabaseError as e:
-                    log_error(logger, f"Failed to commit database changes: {e}")
+        self._commit_results(results)
 
         self._print_results_summary(results)
         return results
@@ -330,17 +310,7 @@ class MetadataFixer:
 
         progress.finish("Batch-by-age metadata fixing completed")
 
-        if not self.config.dry_run:
-            db_updates = [
-                r for r in results
-                if r.action_taken == MetadataAction.UPDATE_DATABASE and r.success
-            ]
-            if db_updates:
-                try:
-                    self.db.commit()
-                    log_success(logger, f"Committed {len(db_updates)} database updates")
-                except DatabaseError as e:
-                    log_error(logger, f"Failed to commit database changes: {e}")
+        self._commit_results(results)
 
         logger.info(
             f"Age split: {new_count} new file(s) (filename → DB), "
@@ -501,6 +471,36 @@ class MetadataFixer:
             return parts[0].strip(), parts[2].strip(), parts[1].strip()
         else:
             return None
+
+    def _commit_results(self, results: List[MetadataFixResult]) -> None:
+        """
+        Commit whatever database changes the given results produced.
+
+        Both fix directions write to the database. One sets artist/title/album;
+        the other renames the file on disk and rewrites the filename the
+        database stores for it. Leaving the second uncommitted makes Rekordbox
+        point at a name that no longer exists, so both must be committed.
+
+        Args:
+            results: Results produced by a fix run
+        """
+        if self.config.dry_run:
+            return
+
+        pending = [
+            r
+            for r in results
+            if r.success
+            and r.action_taken in (MetadataAction.UPDATE_DATABASE, MetadataAction.UPDATE_FILENAME)
+        ]
+        if not pending:
+            return
+
+        try:
+            self.db.commit()
+            log_success(logger, f"Committed {len(pending)} database updates")
+        except DatabaseError as e:
+            log_error(logger, f"Failed to commit database changes: {e}")
 
     def _normalize_string(self, text: str) -> str:
         """Normalize string for comparison."""
