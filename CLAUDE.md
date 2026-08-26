@@ -84,7 +84,7 @@ When changing `parser.ts`, run `deno task test` and inspect the corpus output fo
 - **`main.py`** — Entry. Phase 1 = pull track URLs from SoundCloud API. Phase 2 = iterate tracks through gate handlers in a CDP-attached Chrome.
 - **`playlist.py`** — SoundCloud API: extracts track URLs from a playlist URL.
 - **`chrome_bringup.py`** — Launches Chrome with `--remote-debugging-port`, attaches Playwright via CDP.
-- **`gate_handlers/`** — Per-host gate strategies. `base.py` defines `BaseGateHandler` with declarative steps (required/optional, depends_on). `registry.py` maps URL hosts to handlers. Add a new handler by subclassing and registering.
+- **`gate_handlers/`** — Per-host gate strategies. `base.py` defines `BaseGateHandler` with declarative steps (required/optional, depends_on). `__init__.py` maps URL hosts to handlers via `get_handler_for_url()`, with deferred imports. Handlers today: `hypeddit`, `toneden`, `fanlink`, `followeb`, `pumpyoursound`, plus `captcha` and `oauth_popup`. Add a new handler by subclassing and registering it there.
 - **`captcha.py`** — Detects Cloudflare/captcha walls; pauses for manual completion.
 - **`resume.py`** — Records each URL's terminal state (`done`/`unsupported`/`captcha_pending`/`manual_review`/`failed`) in `logs/soundcloud_dl/processed.json`.
 - **`playlist_cache.py`** — Caches playlist track lists in `logs/soundcloud_dl/playlist_cache.json` to skip API hits on re-runs.
