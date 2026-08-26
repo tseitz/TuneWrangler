@@ -698,6 +698,11 @@ class MetadataCommand(BaseCommand):
     def _fix_metadata(self, args: argparse.Namespace) -> int:
         """Fix metadata discrepancies."""
         try:
+            # The fixer creates its own backup from config, so --skip-backup has
+            # to be applied here or the flag is silently ignored.
+            if args.skip_backup:
+                self.config.backup_before_changes = False
+
             with RekordboxDatabase(self.config) as db:
                 metadata_fixer = MetadataFixer(db, self.config)
 
