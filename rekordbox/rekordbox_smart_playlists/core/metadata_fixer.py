@@ -82,6 +82,11 @@ class MetadataFixer:
     Handles metadata synchronization between Rekordbox database and file system.
     """
 
+    # Some downloads arrive with the word "Unknown" sitting where the artist
+    # should be. It is a placeholder, not a name, so it is dropped before the
+    # rest of the filename is read.
+    UNKNOWN_ARTIST_PLACEHOLDER = "unknown"
+
     def __init__(self, database: RekordboxDatabase, config: Config):
         """
         Initialize metadata fixer.
@@ -280,7 +285,13 @@ class MetadataFixer:
                     comparison.content_object, comparison.file_path
                 )
 
-                if track_date >= cutoff:
+                if self._db_metadata_is_empty(comparison):
+                    # Age cannot decide this one. The database holds no artist,
+                    # so it has nothing to be authoritative with.
+                    result = self._update_database_metadata(comparison)
+                    new_count += 1
+                    logger.debug(f"Empty DB artist: filename → DB for {comparison.filename}")
+                elif track_date >= cutoff:
                     result = self._update_database_metadata(comparison)
                     new_count += 1
                     logger.debug(
@@ -463,6 +474,12 @@ class MetadataFixer:
         # Split by " - " separator
         parts = stem.split(" - ")
 
+        # Drop a leading "Unknown" placeholder so the real artist is read from
+        # the next segment. Only the first segment is checked, so a track
+        # actually called "Unknown" keeps its title.
+        if len(parts) > 1 and parts[0].strip().lower() == self.UNKNOWN_ARTIST_PLACEHOLDER:
+            parts = parts[1:]
+
         if len(parts) == 2:
             # Format: Artist - Title
             return parts[0].strip(), parts[1].strip(), None
@@ -501,6 +518,28 @@ class MetadataFixer:
             log_success(logger, f"Committed {len(pending)} database updates")
         except DatabaseError as e:
             log_error(logger, f"Failed to commit database changes: {e}")
+
+    def _db_metadata_is_empty(self, comparison: MetadataComparison) -> bool:
+        """
+        Report whether the database has no usable artist for this track.
+
+        A blank artist means the database side has nothing to be authoritative
+        with. Renaming the file to match it would only copy the emptiness onto
+        disk, so callers should prefer the filename in that case.
+
+        Args:
+            comparison: Metadata comparison object
+
+        Returns:
+            True if the database artist is missing or blank
+        """
+        content = comparison.content_object
+        if not content:
+            return False
+
+        artist = getattr(content, "Artist", None)
+        name = getattr(artist, "Name", None) if artist else None
+        return not name or not str(name).strip()
 
     def _normalize_string(self, text: str) -> str:
         """Normalize string for comparison."""

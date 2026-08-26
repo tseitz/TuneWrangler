@@ -1,12 +1,112 @@
-"""Tests for MetadataFixer."""
+"""Tests for filename parsing and authority selection in MetadataFixer."""
 
 from types import SimpleNamespace
+
+import pytest
 
 from rekordbox_smart_playlists.core.metadata_fixer import (
     MetadataAction,
     MetadataFixResult,
     MetadataFixer,
 )
+
+
+@pytest.fixture
+def fixer() -> MetadataFixer:
+    """A MetadataFixer with no real database or config behind it.
+
+    Every method under test here is pure string handling, so the collaborators
+    are never touched.
+    """
+    return MetadataFixer.__new__(MetadataFixer)
+
+
+# --- _parse_filename -------------------------------------------------------
+
+
+def test_parses_artist_title(fixer: MetadataFixer):
+    assert fixer._parse_filename("Jamzigg - Doomsday.mp3") == ("Jamzigg", "Doomsday", None)
+
+
+def test_parses_artist_album_title(fixer: MetadataFixer):
+    assert fixer._parse_filename("Gunnar Nash - Sweet Sounds Collective - Suddenly.mp3") == (
+        "Gunnar Nash",
+        "Suddenly",
+        "Sweet Sounds Collective",
+    )
+
+
+def test_single_segment_is_unparsable(fixer: MetadataFixer):
+    # Sample-pack files like "MergeFX Sample Sound 101.wav" carry no separator,
+    # so there is no artist to recover.
+    assert fixer._parse_filename("MergeFX Sample Sound 101.wav") is None
+
+
+def test_strips_unknown_placeholder_leaving_artist_title(fixer: MetadataFixer):
+    # "Unknown" is a placeholder written when the downloader could not identify
+    # the artist. It is not an artist name, so it must not be treated as one.
+    assert fixer._parse_filename("Unknown - LV vs LAZ-R vs KHOLD - ATOMICFLANGWARE.aiff") == (
+        "LV vs LAZ-R vs KHOLD",
+        "ATOMICFLANGWARE",
+        None,
+    )
+
+
+def test_strips_unknown_placeholder_leaving_artist_album_title(fixer: MetadataFixer):
+    assert fixer._parse_filename("Unknown - James Hype - Eminem - Lose Yourself.aiff") == (
+        "James Hype",
+        "Lose Yourself",
+        "Eminem",
+    )
+
+
+def test_unknown_placeholder_is_case_insensitive(fixer: MetadataFixer):
+    assert fixer._parse_filename("unknown - SENRI - CLASS SESSION.aiff") == (
+        "SENRI",
+        "CLASS SESSION",
+        None,
+    )
+
+
+def test_unknown_only_stripped_from_the_front(fixer: MetadataFixer):
+    # A track genuinely titled "Unknown" keeps it.
+    assert fixer._parse_filename("Raucous - Unknown.mp3") == ("Raucous", "Unknown", None)
+
+
+def test_unknown_alone_is_unparsable(fixer: MetadataFixer):
+    # Nothing left after stripping the placeholder.
+    assert fixer._parse_filename("Unknown.aiff") is None
+
+
+def test_five_segments_still_unparsable(fixer: MetadataFixer):
+    # Stripping the placeholder leaves 4 segments, which remains ambiguous.
+    assert fixer._parse_filename("Unknown - A - B - C - D.aiff") is None
+
+
+# --- _db_metadata_is_empty -------------------------------------------------
+
+
+def _comparison(artist_name):
+    """A stand-in comparison whose content object carries the given artist."""
+    artist = None if artist_name is None else SimpleNamespace(Name=artist_name)
+    return SimpleNamespace(content_object=SimpleNamespace(Artist=artist))
+
+
+def test_db_empty_when_artist_relation_missing(fixer: MetadataFixer):
+    assert fixer._db_metadata_is_empty(_comparison(None)) is True
+
+
+def test_db_empty_when_artist_name_blank(fixer: MetadataFixer):
+    assert fixer._db_metadata_is_empty(_comparison("   ")) is True
+
+
+def test_db_not_empty_when_artist_present(fixer: MetadataFixer):
+    assert fixer._db_metadata_is_empty(_comparison("Jamzigg")) is False
+
+
+def test_db_not_empty_when_content_object_missing(fixer: MetadataFixer):
+    # No content object means we cannot claim the database side is empty.
+    assert fixer._db_metadata_is_empty(SimpleNamespace(content_object=None)) is False
 
 
 # --- _commit_results -------------------------------------------------------
@@ -21,7 +121,6 @@ class _SpyDatabase:
 
 
 def _committing_fixer(dry_run: bool = False):
-    """A MetadataFixer with a spy database and no real config behind it."""
     f = MetadataFixer.__new__(MetadataFixer)
     f.db = _SpyDatabase()
     f.config = SimpleNamespace(dry_run=dry_run)
