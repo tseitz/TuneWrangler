@@ -87,6 +87,10 @@ class MetadataFixer:
     # rest of the filename is read.
     UNKNOWN_ARTIST_PLACEHOLDER = "unknown"
 
+    # The same word stands in for a missing album, both as the database's
+    # fallback and written literally into some filenames.
+    UNKNOWN_ALBUM_PLACEHOLDER = "Unknown"
+
     def __init__(self, database: RekordboxDatabase, config: Config):
         """
         Initialize metadata fixer.
@@ -521,10 +525,11 @@ class MetadataFixer:
         """
         Report whether the album agrees between the database and the filename.
 
-        A filename with only two segments carries no album at all. That used to
-        pass unconditionally, which hid every dropped album on the roughly three
-        thousand files named "Artist - Title". It now counts as a mismatch, but
-        only when the database actually holds an album to lose.
+        A filename with only two segments carries no album, and that is a naming
+        choice in this collection rather than drift: the album still lives in the
+        file's tags and in the database. Comparing it flagged 77 tracks that no
+        fix direction could settle, so a missing album segment is not compared.
+        Real drift, where both sides name an album and the names differ, is.
 
         Args:
             db_album: Album recorded in the database, if any
@@ -533,15 +538,21 @@ class MetadataFixer:
         Returns:
             True if the two sides agree
         """
-        db_value = (db_album or "").strip()
-        # "Unknown" is the sentinel used when the attribute is missing entirely.
-        if db_value == "Unknown":
-            db_value = ""
+
+        def usable(value: Optional[str]) -> str:
+            # "Unknown" means "no album" on both sides: the database uses it when
+            # the attribute is missing, and some filenames carry it literally in
+            # the album slot. Reading it differently per side reports drift that
+            # no fix direction can settle.
+            cleaned = (value or "").strip()
+            return "" if cleaned == self.UNKNOWN_ALBUM_PLACEHOLDER else cleaned
 
         if file_album is None:
-            return not db_value
+            return True
 
-        return self._normalize_string(db_value) == self._normalize_string(file_album)
+        return self._normalize_string(usable(db_album)) == self._normalize_string(
+            usable(file_album)
+        )
 
     def _db_metadata_is_empty(self, comparison: MetadataComparison) -> bool:
         """

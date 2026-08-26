@@ -124,10 +124,11 @@ def test_album_matches_when_neither_side_has_one(fixer: MetadataFixer):
     assert fixer._album_matches(None, None) is True
 
 
-def test_two_segment_name_flags_a_dropped_album(fixer: MetadataFixer):
-    # The filename carries no album segment while the database holds one.
-    # That is real drift: renaming from the database would restore the album.
-    assert fixer._album_matches("Clutch EP", None) is False
+def test_two_segment_name_is_not_treated_as_drift(fixer: MetadataFixer):
+    # A filename with no album segment is a naming choice, not a lost album:
+    # the value still lives in the file's tags and in the database. Comparing
+    # it flagged 77 tracks that neither fix direction could sensibly settle.
+    assert fixer._album_matches("Clutch EP", None) is True
 
 
 def test_two_segment_name_fine_when_db_album_is_blank(fixer: MetadataFixer):
@@ -142,6 +143,22 @@ def test_unknown_db_album_is_treated_as_absent(fixer: MetadataFixer):
 
 def test_album_comparison_ignores_case_and_unicode_form(fixer: MetadataFixer):
     assert fixer._album_matches("BACK160", "back160") is True
+
+
+def test_unknown_on_both_sides_agrees(fixer: MetadataFixer):
+    # Files named "Artist - Unknown - Title" carry the placeholder in the album
+    # slot. It has to be read the same way on both sides, or every one of them
+    # is reported as drift that no fix direction can settle.
+    assert fixer._album_matches("Unknown", "Unknown") is True
+
+
+def test_unknown_in_filename_matches_absent_db_album(fixer: MetadataFixer):
+    assert fixer._album_matches(None, "Unknown") is True
+    assert fixer._album_matches("", "Unknown") is True
+
+
+def test_unknown_in_filename_still_differs_from_a_real_album(fixer: MetadataFixer):
+    assert fixer._album_matches("Back160", "Unknown") is False
 
 
 # --- _commit_results -------------------------------------------------------
