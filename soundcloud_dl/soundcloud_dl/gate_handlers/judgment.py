@@ -7,7 +7,6 @@ CaptchaEncountered/StuckGate/GateStepError exceptions main.py already dispatches
 
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import logging
 import urllib.parse
@@ -150,13 +149,10 @@ class JudgmentGateHandler(GateHandler):
         return answer.choice
 
     async def _maybe_pause(self, action: str, target: dict[str, Any]) -> None:
-        if not self.pause:
-            return
-        await asyncio.to_thread(
-            input,
+        await self._pause_prompt(
             f"\n[PAUSE] [{self.gate_name}] Next: {action} on {target['key']!r} "
             f"(<{target['tag']}> text={target['text']!r} class={target['cls']!r}). "
-            "Press Enter to run, Ctrl+C to abort: ",
+            "Press Enter to run, Ctrl+C to abort: "
         )
 
     async def _click_with_force_fallback(
@@ -425,6 +421,13 @@ class JudgmentGateHandler(GateHandler):
                 raise CaptchaEncountered(captcha, self.gate_name)
 
             snapshot = await self._snapshot(page)
+            logger.info(
+                "[%s] turn %d: %d elements offered; gate actions=%s",
+                self.gate_name,
+                i,
+                len(snapshot),
+                {k: el["cls"].split()[-1] for k, el in snapshot.items() if el["step"]} or "NONE",
+            )
             if self.recorder is not None:
                 await self.recorder.screenshot(page, f"turn-{i:02d}-before")
 

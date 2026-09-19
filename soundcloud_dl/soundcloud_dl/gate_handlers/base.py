@@ -6,6 +6,7 @@ import asyncio
 import logging
 import random
 import re
+import sys
 import urllib.parse
 from enum import StrEnum
 from pathlib import Path
@@ -87,6 +88,7 @@ class GateHandler:
         self.pause = pause
         self.download_dir = download_dir
         self.track_title = track_title
+        self._pause_warned = False
 
     def resolve_value(self, value: str) -> str:
         """Substitute {{var}} placeholders from template_vars. Raises KeyError if missing."""
@@ -99,6 +101,21 @@ class GateHandler:
             return self.template_vars[key]
 
         return re.sub(r"\{\{(\w+)\}\}", replace, value)
+
+    async def _pause_prompt(self, message: str) -> None:
+        """Block for Enter, unless there is no terminal to read it from."""
+        if not self.pause:
+            return
+        if not sys.stdin.isatty():
+            if not self._pause_warned:
+                logger.warning(
+                    "[%s] --pause ignored: stdin is not a terminal. Run from a real shell "
+                    "to step through actions.",
+                    self.gate_name,
+                )
+                self._pause_warned = True
+            return
+        await asyncio.to_thread(input, message)
 
     async def _random_delay(self, page: Page) -> None:
         ms = random.randint(self.action_delay_min_ms, self.action_delay_max_ms)  # noqa: S311
@@ -471,13 +488,10 @@ class GateHandler:
                 results[step_id] = StepResult.SKIPPED
                 continue
 
-            # Pause mode: wait for user to press Enter before each step.
-            if self.pause:
-                await asyncio.to_thread(
-                    input,
-                    f"\n[PAUSE] [{self.gate_name}] Next: '{step_id}' ({action}). "
-                    "Press Enter to run, Ctrl+C to abort: ",
-                )
+            await self._pause_prompt(
+                f"\n[PAUSE] [{self.gate_name}] Next: '{step_id}' ({action}). "
+                "Press Enter to run, Ctrl+C to abort: "
+            )
 
             # 'wait' steps use wait_for_selector directly — they don't need _find_element.
             if action == "wait":
