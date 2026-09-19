@@ -17,6 +17,7 @@ class CaptchaKind(StrEnum):
     RECAPTCHA = "recaptcha"
     TURNSTILE = "turnstile"
     CLOUDFLARE_INTERSTITIAL = "cloudflare_interstitial"
+    DATADOME = "datadome"
 
 
 class CaptchaEncountered(RuntimeError):  # noqa: N818
@@ -32,6 +33,10 @@ _CAPTCHA_SELECTORS: tuple[tuple[CaptchaKind, str], ...] = (
     (CaptchaKind.HCAPTCHA, 'iframe[src*="hcaptcha.com"]'),
     (CaptchaKind.RECAPTCHA, 'iframe[src*="recaptcha"]'),
     (CaptchaKind.TURNSTILE, '.cf-turnstile, iframe[src*="challenges.cloudflare.com"]'),
+    # SoundCloud's bot protection. It challenges the api-v2 calls a page makes, so it can
+    # appear as an overlay on a page that otherwise looks fine — and a challenged API call
+    # leaves the page rendering nothing at all.
+    (CaptchaKind.DATADOME, 'iframe[src*="captcha-delivery.com"], [id^="ddChallenge"]'),
 )
 
 _CLOUDFLARE_TEXT_PATTERNS = (

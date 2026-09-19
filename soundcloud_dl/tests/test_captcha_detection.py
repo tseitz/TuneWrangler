@@ -54,3 +54,14 @@ async def test_no_captcha_returns_none() -> None:
         await page.goto((FIXTURE_DIR / "no_captcha.html").as_uri())
         assert await detect_captcha(page) is None
         await browser.close()
+
+
+@pytest.mark.asyncio
+async def test_detects_datadome() -> None:
+    """SoundCloud's bot wall — an overlay a click would otherwise retry against for 30s."""
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch()
+        page = await browser.new_page()
+        await page.goto((FIXTURE_DIR / "captcha_datadome.html").as_uri())
+        assert await detect_captcha(page) == CaptchaKind.DATADOME
+        await browser.close()

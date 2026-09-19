@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from playwright.async_api import BrowserContext, Page
 
 from soundcloud_dl.config import PAGE_LOAD_WAIT_SECONDS
+from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered, detect_captcha
 from soundcloud_dl.playwright_browser import new_page
 
 logger = logging.getLogger("soundcloud_dl.soundcloud_actions")
@@ -186,6 +187,17 @@ async def probe(context: BrowserContext, url: str) -> None:
         await page.close()
 
 
+async def _raise_on_captcha(page: Page) -> None:
+    """Stop the moment SoundCloud challenges us, rather than clicking at an overlay.
+
+    Playwright will happily retry a click for 30s against a DataDome iframe and then
+    report a pointer-intercept, which reads as a selector problem instead of a block.
+    """
+    kind = await detect_captcha(page)
+    if kind is not None:
+        raise CaptchaEncountered(kind, "soundcloud")
+
+
 @dataclass(frozen=True)
 class ActionResult:
     """Outcome of one action, judged by SoundCloud's own control state afterwards."""
@@ -293,26 +305,35 @@ async def perform(
         await page.goto(artist_url_for(track_url), wait_until="domcontentloaded", timeout=30_000)
         await _wait_for_actions(page)
 
+        def record(r: ActionResult) -> None:
+            # Logged as each one lands, not in a summary at the end: a later action that
+            # throws must not take the record of the earlier successes down with it.
+            results[r.action] = r
+            log = logger.info if r.ok else logger.warning
+            log("%s %-7s — %s", "OK  " if r.ok else "FAIL", r.action, r.detail)
+
+        await _raise_on_captcha(page)
+
         bar = await page.query_selector(".userInfoBar__buttons")
         if bar is None:
-            results["follow"] = ActionResult("follow", ok=False, detail="artist page did not load")
+            record(ActionResult("follow", ok=False, detail="artist page did not load"))
         else:
-            results["follow"] = await _toggle(page, bar, "follow", want_on=not undo)
+            record(await _toggle(page, bar, "follow", want_on=not undo))
 
         item = await _find_track_item(page, track_url)
         if item is None:
             detail = f"{track_path_for(track_url)} not in the artist's listing"
             for kind in ("like", "repost"):
-                results[kind] = ActionResult(kind, ok=False, detail=detail)
-        else:
-            for kind in ("like", "repost"):
-                results[kind] = await _toggle(page, item, kind, want_on=not undo)
-            if comment_text and not undo:
-                results["comment"] = await _post_comment(page, item, comment_text)
+                record(ActionResult(kind, ok=False, detail=detail))
+            return results
 
-        for r in results.values():
-            log = logger.info if r.ok else logger.warning
-            log("%s %s — %s", "OK  " if r.ok else "FAIL", r.action, r.detail)
+        for kind in ("like", "repost"):
+            await _raise_on_captcha(page)
+            record(await _toggle(page, item, kind, want_on=not undo))
+
+        if comment_text and not undo:
+            await _raise_on_captcha(page)
+            record(await _post_comment(page, item, comment_text))
         return results
     finally:
         await page.close()
@@ -323,7 +344,14 @@ async def run_actions(track_url: str, comment_text: str | None, *, undo: bool = 
     from soundcloud_dl.playwright_browser import attached_browser  # noqa: PLC0415
 
     async with attached_browser() as context:
-        await perform(context, track_url, comment_text=comment_text, undo=undo)
+        try:
+            await perform(context, track_url, comment_text=comment_text, undo=undo)
+        except CaptchaEncountered as e:
+            logger.warning(
+                "BLOCKED | %s — SoundCloud is challenging this browser. Solve it by hand in "
+                "the Chrome window, then re-run. Anything reported OK above already landed.",
+                e.kind,
+            )
 
 
 async def probe_urls(track_url: str) -> None:
