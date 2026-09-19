@@ -40,6 +40,7 @@ from soundcloud_dl.gate_handlers.base import (
     StuckGate,
 )
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered
+from soundcloud_dl.gate_handlers.login_wall import LoginWallEncountered
 from soundcloud_dl.inspect_gate import inspect_gate
 from soundcloud_dl.logger import setup_logging
 from soundcloud_dl.playlist import TrackItem, extract_track_urls
@@ -139,6 +140,15 @@ def _parse_args() -> argparse.Namespace:
         "--sc-undo",
         metavar="TRACK_URL",
         help="Reverse --sc-do: unfollow, unlike, unrepost (comments are not removed).",
+    )
+    p.add_argument(
+        "--sc-actions",
+        action="store_true",
+        help=(
+            "With --jev: do the SoundCloud follow/like/repost/comment for real before "
+            "opening the gate, so a gate that verifies against SoundCloud finds them done. "
+            "Needs a SoundCloud track URL, not a bare gate URL."
+        ),
     )
     p.add_argument(
         "--login",
@@ -337,6 +347,13 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             e.kind,
         )
         return "captcha_pending"
+    except LoginWallEncountered as e:
+        logger.warning(
+            "LOGIN_REQUIRED | %s | %s — tab left open, sign in there and re-run",
+            track_label,
+            e.reason,
+        )
+        return "login_required"
     except StuckGate as e:
         if page:
             await _save_debug_artifacts(page, track_label)
@@ -376,7 +393,14 @@ async def _run_phase2(
 ) -> None:
     """Run gate handler against each track via CDP-attached Chrome; track outcomes."""
     validate_phase2_config()
-    counts = {"done": 0, "unsupported": 0, "captcha_pending": 0, "manual_review": 0, "failed": 0}
+    counts = {
+        "done": 0,
+        "unsupported": 0,
+        "captcha_pending": 0,
+        "login_required": 0,
+        "manual_review": 0,
+        "failed": 0,
+    }
 
     async with attached_browser() as context:
         await _ensure_logged_in(context)
@@ -399,6 +423,7 @@ def _print_summary(counts: dict[str, int]) -> None:
     logger.info("✓  %d downloaded", counts["done"])
     logger.info("⊘  %d unsupported gate (skipped permanently)", counts["unsupported"])
     logger.info("⚠   %d captcha_pending (tabs open: see Chrome)", counts["captcha_pending"])
+    logger.info("🔒  %d login_required (sign in yourself, then re-run)", counts["login_required"])
     logger.info("?   %d manual_review (gate variant — consider --record)", counts["manual_review"])
     logger.info("✗   %d failed", counts["failed"])
     logger.info("─" * 50)
@@ -492,7 +517,7 @@ def main() -> None:
     if args.jev:
         from soundcloud_dl.jev_pilot import run_jev_pilot  # noqa: PLC0415
 
-        asyncio.run(run_jev_pilot(args.jev, pause=args.pause))
+        asyncio.run(run_jev_pilot(args.jev, pause=args.pause, sc_actions=args.sc_actions))
         return
     if args.login:
         asyncio.run(_run_login_bootstrap())

@@ -11,7 +11,9 @@ from soundcloud_dl.config import get_processed_file
 logger = logging.getLogger("soundcloud_dl.resume")
 
 #: Track state. "done" and "unsupported" are skipped on re-runs; all others are retried.
-TrackState = Literal["done", "unsupported", "captcha_pending", "manual_review", "failed"]
+TrackState = Literal[
+    "done", "unsupported", "captcha_pending", "login_required", "manual_review", "failed"
+]
 
 #: States that should NOT be retried on re-run.
 _SKIP_STATES: frozenset[str] = frozenset({"done", "unsupported"})

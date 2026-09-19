@@ -44,9 +44,33 @@ const isVisible = (el) => (
   && getComputedStyle(el).display !== 'none'
   && el.closest('.upcomming-slide') === null
 );
+const TOGGLE_SEL = 'input[type="checkbox"], input[type="radio"]';
+// A styled checkbox hides the real input (droploud: display:none, 0x0) and paints a span
+// inside the wrapping label. The input therefore fails isVisible and is never offered, so
+// the label is the only thing that can be clicked — and clicking it toggles the input
+// natively, with a trusted event.
+const toggleOf = (el) => (
+  el.matches(TOGGLE_SEL) ? el : el.querySelector(TOGGLE_SEL)
+);
+// Site furniture, never the gate. Recorded rather than dropped so a gate that does put a
+// control in its own header is still reachable through judgment.py's fallback.
+const CHROME_SEL = 'nav, header, footer, [role="navigation"], [role="contentinfo"],'
+  + ' [role="banner"]';
+const isChrome = (el) => el.closest(CHROME_SEL) !== null;
+// A gate is a small card; the page around it can run for thousands of pixels. Droploud's
+// FAQ accordions are interactive, far below the fold, and every expand counts as the page
+// changing — enough to keep the stuck-detector quiet while a run burns all its turns.
+const ON_SCREEN_MARGIN = 150;
+const onScreen = (el) => {
+  const r = el.getBoundingClientRect();
+  if (r.width === 0 && r.height === 0) return false;
+  const m = ON_SCREEN_MARGIN;
+  return r.bottom > -m && r.top < window.innerHeight + m
+    && r.right > -m && r.left < window.innerWidth + m;
+};
 """
 
-_SELECTOR = "a, button, input, form"
+_SELECTOR = "a, button, input, textarea, form, label"
 
 
 def _js(body: str) -> str:
@@ -56,19 +80,31 @@ def _js(body: str) -> str:
 SNAPSHOT_JS = _js("""
 () => {
   __HELPERS__
-  return Array.from(document.querySelectorAll('__SELECTOR__')).map((el) => ({
-    key: elKey(el),
-    id: el.id || '',
-    step: el.getAttribute('data-step') || '',
-    tag: el.tagName.toLowerCase(),
-    cls: el.className || '',
-    href: el.getAttribute('href') || '',
-    disabled: el.disabled === true || el.hasAttribute('disabled'),
-    visible: isVisible(el),
-    text: (el.innerText || el.value || '').trim().slice(0, 60),
-    placeholder: el.getAttribute('placeholder') || '',
-    name: el.getAttribute('name') || '',
-  }));
+  return Array.from(document.querySelectorAll('__SELECTOR__')).map((el) => {
+    const toggle = toggleOf(el);
+    // Only a label that wraps a checkbox or radio is a control. Every other label is
+    // caption text for a field already offered in its own right.
+    if (el.tagName === 'LABEL' && toggle === null) return null;
+    return {
+      key: elKey(el),
+      id: el.id || '',
+      step: el.getAttribute('data-step') || '',
+      tag: el.tagName.toLowerCase(),
+      cls: el.className || '',
+      href: el.getAttribute('href') || '',
+      type: ((toggle || el).getAttribute('type') || '').toLowerCase(),
+      // Without this a tick is invisible to the snapshot diff, so _did_it_move reports
+      // changed=False and the only control that opens the gate is banned as dead.
+      checked: toggle !== null && toggle.checked === true,
+      disabled: el.disabled === true || el.hasAttribute('disabled'),
+      visible: isVisible(el),
+      chrome: isChrome(el),
+      onscreen: onScreen(el),
+      text: (el.innerText || el.value || '').trim().slice(0, 60),
+      placeholder: el.getAttribute('placeholder') || '',
+      name: el.getAttribute('name') || '',
+    };
+  }).filter((rec) => rec !== null);
 }
 """)
 

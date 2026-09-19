@@ -24,6 +24,11 @@ from soundcloud_dl.downloads import (
 from soundcloud_dl.gate_handlers.base import GateHandler, StepResult, StuckGate
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered, detect_captcha
 from soundcloud_dl.gate_handlers.dom_snapshot import find_element_by_key, snapshot_elements
+from soundcloud_dl.gate_handlers.login_wall import (
+    LoginWallEncountered,
+    detect_login_wall,
+    normalize_host,
+)
 from soundcloud_dl.gate_handlers.unlock import (
     find_download_target,
     is_download_element,
@@ -57,6 +62,9 @@ _MAX_IDLE_TURNS = 3
 # Long enough for a carousel slide to finish moving before the next click.
 _TRANSITION_MS = 1_500
 
+# Viewport heights of drift before the page is judged to have left the gate behind.
+_SCROLL_DRIFT_FACTOR = 1.5
+
 # Domain knowledge ported from hypeddit.yaml's comments (lines 200-327): the download
 # button is usually visible from the start but stays locked — class contains "disable" or
 # "disabled", href stays "javascript:void(0)" — until required actions are completed first.
@@ -75,7 +83,12 @@ _DEFAULT_GOAL = (
     "to the following page. That is usually a 'Next' button, but some pages have no Next "
     "and can only be passed by doing the thing they ask — a Spotify or Instagram 'Connect' "
     "button, for instance. When a page has empty text fields, fill every one of them before "
-    "you press that page's continue button. If a Next button has already been clicked and "
+    "you press that page's continue button. A consent or agreement checkbox — type='checkbox' "
+    "with checked=False, often a <label> whose text begins 'I agree' — keeps that page's "
+    "continue button disabled until it is ticked, so tick every unchecked one before pressing "
+    "continue. Never pick a checkbox that is already checked=True; clicking it unticks it. "
+    "Never pick anything that signs in, signs up, logs in, or creates an account: those lead "
+    "off the gate and away from the download. If a Next button has already been clicked and "
     "the page did not "
     "change, it belongs to a finished step: choose something else. Only pick the download "
     "button once it is actually on the page and no longer disabled."
@@ -145,7 +158,19 @@ _REPAIR_CAROUSEL_JS = """
 
 
 def _on_screen(snapshot: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    return {k: el for k, el in snapshot.items() if el["visible"]}
+    """What a person looking at the page right now could actually click.
+
+    Narrowed in stages, each stage kept only if it leaves something. A gate is a small card
+    on a page that can run for thousands of pixels: offering the whole document let a
+    droploud run spend eight turns opening the FAQ accordions in the footer area, and
+    because every expand redraws the page the stuck-detector never fired.
+    """
+    visible = {k: el for k, el in snapshot.items() if el["visible"]}
+    # Older snapshots (and the tests' hand-built elements) carry neither field; .get keeps
+    # this a no-op for them rather than hiding everything.
+    body = {k: el for k, el in visible.items() if not el.get("chrome", False)}
+    near = {k: el for k, el in body.items() if el.get("onscreen", True)}
+    return near or body or visible
 
 
 class JudgmentGateHandler(GateHandler):
@@ -162,6 +187,11 @@ class JudgmentGateHandler(GateHandler):
         super().__init__(**kwargs)
         self.goal = goal
         self.recorder = recorder
+        # Learned from the page at run start rather than passed in, so a gate that
+        # redirects on load (droploud: /gate/<id> → /track/<id>) anchors on where it
+        # actually settled instead of where we aimed.
+        self._gate_host: str | None = None
+        self._gate_scroll_y: int = 0
         # Constructed lazily so importing this module never requires TYPESAFE_API_KEY.
         self._client: AsyncTypeSafeClient | None = None
 
@@ -208,6 +238,17 @@ class JudgmentGateHandler(GateHandler):
                     best = (at, len(hint), var_key)
         return best[2] if best is not None else None
 
+    @staticmethod
+    def _describe(el: dict[str, Any]) -> str:
+        desc = f"<{el['tag']}> text={el['text']!r} class={el['cls']!r} href={el['href']!r}"
+        if el.get("type"):
+            desc += f" type={el['type']!r}"
+        # Without the state, an unticked consent box and a ticked one read identically, and
+        # the model has no reason to prefer the one still blocking the continue button.
+        if el.get("type") in ("checkbox", "radio"):
+            desc += f" checked={el.get('checked', False)}"
+        return desc
+
     async def _ask_choice(
         self,
         page: Page,
@@ -223,8 +264,7 @@ class JudgmentGateHandler(GateHandler):
         # describing them and hoping the model discounts them.
         live = {k: el for k, el in offered.items() if k not in dead_keys}
         criteria: dict[str, str | None] = {
-            key: f"<{el['tag']}> text={el['text']!r} class={el['cls']!r} href={el['href']!r}"
-            for key, el in (live or offered).items()
+            key: self._describe(el) for key, el in (live or offered).items()
         }
         # Only offered when a download control is actually on screen. Left always-available,
         # the model picked it once the page's actions were done — which on a carousel gate
@@ -590,6 +630,32 @@ class JudgmentGateHandler(GateHandler):
             await self.recorder.screenshot(page, f"turn-{i:02d}-after")
         return changed
 
+    async def _reanchor_scroll(self, page: Page) -> None:
+        """Scroll back to where the gate sat at load, if an action wandered far off it.
+
+        Only a long drift counts. A gate that nudges the page as a step opens must be left
+        alone; what this undoes is a footer link or an in-page anchor jumping to marketing
+        content, which leaves the viewport filter with nothing but marketing to offer.
+        """
+        try:
+            drifted = await page.evaluate(
+                "([y, f]) => { if (Math.abs(window.scrollY - y) > window.innerHeight * f) "
+                "{ window.scrollTo(0, y); return true; } return false; }",
+                [self._gate_scroll_y, _SCROLL_DRIFT_FACTOR],
+            )
+        except Exception:  # noqa: BLE001
+            logger.debug("[%s] could not re-anchor scroll", self.gate_name, exc_info=True)
+            return
+        if drifted:
+            logger.info("[%s] page had scrolled off the gate; scrolled back", self.gate_name)
+
+    async def _raise_on_login_wall(self, page: Page) -> None:
+        if self._gate_host is None:
+            return
+        reason = detect_login_wall(page.url, self._gate_host)
+        if reason is not None:
+            raise LoginWallEncountered(page.url, reason, self.gate_name)
+
     async def _raise_on_captcha(self, page: Page) -> None:
         try:
             captcha = await detect_captcha(page)
@@ -625,6 +691,10 @@ class JudgmentGateHandler(GateHandler):
         # real download button when it appears later.
         tried_downloads: set[str] = set()
         await self._wait_for_gate_ready(page)
+        self._gate_host = normalize_host(page.url)
+        with contextlib.suppress(Exception):
+            self._gate_scroll_y = await page.evaluate("() => window.scrollY")
+        logger.info("[%s] gate host anchored to %r", self.gate_name, self._gate_host)
 
         for i in range(1, _MAX_ITERATIONS + 1):
             # A closed OAuth popup doesn't reliably return focus to this tab, and each
@@ -634,6 +704,8 @@ class JudgmentGateHandler(GateHandler):
             with contextlib.suppress(Exception):
                 await page.bring_to_front()
 
+            await self._raise_on_login_wall(page)
+            await self._reanchor_scroll(page)
             await self._raise_on_captcha(page)
             snapshot = await self._begin_turn(page, i)
 

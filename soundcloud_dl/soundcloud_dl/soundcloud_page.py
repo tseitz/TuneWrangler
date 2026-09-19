@@ -25,6 +25,7 @@ _GATE_DOMAINS = frozenset(
         "fanlink.tv",
         "fanlink.to",
         "pumpyoursound.com",
+        "droploud.com",
         # Blacklisted domains — still extracted so the blacklist check in main.py
         # can mark them 'unsupported' instead of falling through to 'manual_review'.
         "followeb.de",
@@ -41,6 +42,7 @@ _SELECTORS = [
     "a[href*='toneden.io']",
     "a[href*='fanlink.tv']",
     "a[href*='fanlink.to']",
+    "a[href*='droploud.com']",
     "a[href*='distrokid.com']",
     "a[href*='smarturl.it']",
     # gate.sc is SoundCloud's buy-link URL proxy (wraps the real gate URL in a

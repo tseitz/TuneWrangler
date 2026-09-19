@@ -24,7 +24,7 @@ logger = logging.getLogger("soundcloud_dl.inspect_gate")
 # Fields worth diffing. A gate unlock nearly always shows up as a class change
 # (e.g. losing "disabled"), an href changing off the javascript:void(0) placeholder,
 # or a previously hidden element becoming visible.
-_TRACKED_FIELDS = ("cls", "href", "disabled", "visible", "text")
+_TRACKED_FIELDS = ("cls", "href", "disabled", "visible", "text", "checked")
 
 
 async def _snapshot(page: Page) -> dict[str, dict[str, Any]]:

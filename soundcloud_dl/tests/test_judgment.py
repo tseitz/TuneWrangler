@@ -11,6 +11,7 @@ import pytest
 from soundcloud_dl.gate_handlers import dom_snapshot
 from soundcloud_dl.gate_handlers.base import StepResult, StuckGate
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered, CaptchaKind
+from soundcloud_dl.gate_handlers import judgment as judgment_module
 from soundcloud_dl.gate_handlers.judgment import JudgmentGateHandler
 
 
@@ -360,3 +361,98 @@ def test_match_template_field_picks_the_role_not_the_prefix(name, placeholder, e
     handler = make_handler()
     el = {"name": name, "id": name, "placeholder": placeholder}
     assert handler._match_template_field(el) == expected  # noqa: SLF001
+
+
+def test_describe_surfaces_checkbox_state_to_the_model():
+    """droploud's continue button stays disabled until a consent box is ticked.
+
+    Without type and checked in the per-choice text, a blocking unticked box and a
+    finished ticked one read identically.
+    """
+    handler = make_handler()
+    box = {
+        "tag": "label",
+        "text": "I agree to receive this track",
+        "cls": "ds-check",
+        "href": "",
+        "type": "checkbox",
+        "checked": False,
+    }
+    desc = handler._describe(box)  # noqa: SLF001
+    assert "type='checkbox'" in desc
+    assert "checked=False" in desc
+
+
+def test_describe_omits_checked_for_things_that_cannot_be_checked():
+    handler = make_handler()
+    btn = {"tag": "button", "text": "Continue", "cls": "", "href": "", "type": "", "checked": False}
+    assert "checked=" not in handler._describe(btn)  # noqa: SLF001
+
+
+def test_snapshot_offers_the_label_that_wraps_a_styled_checkbox():
+    """droploud hides the real input (display:none, 0x0) inside a visible <label>.
+
+    The input fails isVisible and is never offered, so the label is the only thing that
+    can be clicked — and clicking it toggles the input natively.
+    """
+    assert "label" in dom_snapshot._SELECTOR  # noqa: SLF001
+    assert "checked:" in dom_snapshot.SNAPSHOT_JS
+    assert "type:" in dom_snapshot.SNAPSHOT_JS
+    # A label with no toggle inside it is caption text, not a control.
+    assert "el.tagName === 'LABEL' && toggle === null" in dom_snapshot.SNAPSHOT_JS
+
+
+def _el(key, **over):
+    base = {
+        "key": key,
+        "tag": "button",
+        "text": key,
+        "cls": "",
+        "href": "",
+        "type": "",
+        "checked": False,
+        "disabled": False,
+        "visible": True,
+        "chrome": False,
+        "onscreen": True,
+    }
+    base.update(over)
+    return base
+
+
+def _snap(*els):
+    return {el["key"]: el for el in els}
+
+
+def test_on_screen_drops_site_chrome_and_anything_below_the_fold():
+    """The real miss: a droploud run spent eight turns opening FAQ accordions.
+
+    Every expand redrew the page, so the stuck-detector stayed quiet while the run burned
+    all fifteen turns on marketing content.
+    """
+    offered = judgment_module._on_screen(  # noqa: SLF001
+        _snap(
+            _el("gate_continue"),
+            _el("footer_terms", chrome=True),
+            _el("faq_accordion", onscreen=False),
+            _el("hidden_thing", visible=False),
+        )
+    )
+    assert set(offered) == {"gate_continue"}
+
+
+def test_on_screen_keeps_chrome_rather_than_offering_nothing():
+    """A gate that does put its control in a header must still be reachable."""
+    offered = judgment_module._on_screen(_snap(_el("header_dl", chrome=True)))  # noqa: SLF001
+    assert set(offered) == {"header_dl"}
+
+
+def test_on_screen_falls_back_when_the_whole_gate_is_off_screen():
+    offered = judgment_module._on_screen(_snap(_el("gate_dl", onscreen=False)))  # noqa: SLF001
+    assert set(offered) == {"gate_dl"}
+
+
+def test_on_screen_tolerates_elements_without_the_new_fields():
+    """Hand-built elements elsewhere in these tests carry neither field."""
+    bare = {"key": "b", "visible": True}
+    assert set(judgment_module._on_screen({"b": bare})) == {"b"}  # noqa: SLF001
