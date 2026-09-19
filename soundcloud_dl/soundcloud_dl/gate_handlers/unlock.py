@@ -18,14 +18,17 @@ _DEAD_HREFS = frozenset({"", "#", "javascript:void(0)"})
 
 
 def is_download_element(el: dict[str, Any]) -> bool:
-    """Identity only — is this the download control, regardless of whether it works yet."""
+    """Identity only — is this the download control, regardless of whether it works yet.
+
+    Deliberately id and class only. Matching on the word "download" in the text also
+    matched Hypeddit's own site navigation, and because those nav links carry real hrefs
+    they outranked the actual button; one run clicked through to a genre listing page.
+    """
     if el["tag"] != "a":
         return False
     if (el.get("id") or "").lower() in _DOWNLOAD_IDS:
         return True
-    if set(el["cls"].lower().split()) & _DOWNLOAD_CLASSES:
-        return True
-    return "download" in el["text"].lower()
+    return bool(set(el["cls"].lower().split()) & _DOWNLOAD_CLASSES)
 
 
 def is_download_enabled(el: dict[str, Any]) -> bool:

@@ -118,3 +118,12 @@ def test_find_download_target_falls_back_to_the_enabled_button():
 
 def test_find_download_target_ignores_a_locked_button():
     assert find_download_target({"gateDownloadButton": LOCKED_BUTTON}) is None
+
+
+def test_hypeddit_site_nav_is_not_the_download_button():
+    """A nav link with a real href once outranked the real button and navigated away."""
+    nav = el(tag="a", href="https://hypeddit.com/music/genre/dubstep", text="Free Downloads")
+    assert is_download_element(nav) is False
+    assert find_download_target({"nav": nav, "gateDownloadButton": UNLOCKED_BUTTON}) == (
+        UNLOCKED_BUTTON
+    )

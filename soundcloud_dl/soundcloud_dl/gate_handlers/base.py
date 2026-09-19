@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
+from soundcloud_dl.downloads import looks_like_audio, rename_to_track, save_bytes
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered, detect_captcha
 from soundcloud_dl.gate_handlers.oauth_popup import handle_oauth_popup
 
@@ -196,12 +197,9 @@ class GateHandler:
                             await el.click()
                     download = await download_info.value
                     dest = self.download_dir / download.suggested_filename
+                    dest.parent.mkdir(parents=True, exist_ok=True)
                     await download.save_as(str(dest))
-                    if self.track_title:
-                        ext = Path(dest).suffix
-                        renamed = dest.parent / f"{self.track_title}{ext}"
-                        dest.rename(renamed)
-                        dest = renamed
+                    dest = rename_to_track(dest, self.track_title)
                     logger.info("[%s] Saved download → %s", self.gate_name, dest)
                     downloaded = True
                 except Exception:  # noqa: BLE001, S110
@@ -226,38 +224,29 @@ class GateHandler:
                                     self.gate_name,
                                     response.status,
                                 )
-                            else:
-                                ct = (response.headers.get("content-type") or "").lower()
-                                cd = (response.headers.get("content-disposition") or "").lower()
-                                is_file = (
-                                    "audio" in ct
-                                    or "octet-stream" in ct
-                                    or "force-download" in ct
-                                    or "attachment" in cd
+                            elif not looks_like_audio(
+                                href,
+                                response.headers.get("content-type"),
+                                response.headers.get("content-disposition"),
+                            ):
+                                logger.debug(
+                                    "[%s] href fetch returned %s — not a file, skipping",
+                                    self.gate_name,
+                                    response.headers.get("content-type"),
                                 )
-                                if not is_file:
-                                    logger.debug(
-                                        "[%s] href fetch returned %s — not a file, skipping",
-                                        self.gate_name,
-                                        ct,
-                                    )
-                                else:
-                                    parsed = urllib.parse.urlparse(href)
-                                    filename = Path(parsed.path).name or "download"
-                                    content = await response.body()
-                                    dest = self.download_dir / filename
-                                    dest.write_bytes(content)
-                                    if self.track_title:
-                                        ext = Path(dest).suffix
-                                        renamed = dest.parent / f"{self.track_title}{ext}"
-                                        dest.rename(renamed)
-                                        dest = renamed
-                                    logger.info(
-                                        "[%s] Saved download (href fallback) → %s",
-                                        self.gate_name,
-                                        dest,
-                                    )
-                                    downloaded = True
+                            else:
+                                parsed = urllib.parse.urlparse(href)
+                                filename = Path(parsed.path).name or "download"
+                                dest = save_bytes(
+                                    self.download_dir / filename, await response.body()
+                                )
+                                dest = rename_to_track(dest, self.track_title)
+                                logger.info(
+                                    "[%s] Saved download (href fallback) → %s",
+                                    self.gate_name,
+                                    dest,
+                                )
+                                downloaded = True
                         except Exception:  # noqa: BLE001
                             logger.debug(
                                 "[%s] href fetch failed — falling through to response intercept",
@@ -270,25 +259,18 @@ class GateHandler:
                     captured: list[tuple[str, bytes]] = []
 
                     async def _capture_audio(response: Response) -> None:
-                        ct = (await response.header_value("content-type") or "").lower()
-                        cd = (await response.header_value("content-disposition") or "").lower()
-                        url_lower = response.url.lower()
-                        is_audio = (
-                            "audio" in ct
-                            or "octet-stream" in ct
-                            or "force-download" in ct
-                            or "attachment" in cd
-                            or any(
-                                url_lower.endswith(ext)
-                                for ext in (".mp3", ".wav", ".flac", ".aiff", ".aac", ".ogg")
-                            )
-                        )
-                        if is_audio:
+                        if looks_like_audio(
+                            response.url,
+                            await response.header_value("content-type"),
+                            await response.header_value("content-disposition"),
+                        ):
                             try:
                                 body = await response.body()
                                 captured.append((response.url, body))
-                            except Exception:  # noqa: BLE001, S110
-                                pass
+                            except Exception:  # noqa: BLE001
+                                logger.debug(
+                                    "[%s] audio body read failed", self.gate_name, exc_info=True
+                                )
 
                     page.on("response", _capture_audio)
                     try:
@@ -313,13 +295,8 @@ class GateHandler:
                     filename = Path(parsed.path).name or "download.mp3"
                     if "." not in filename:
                         filename += ".mp3"
-                    dest = self.download_dir / filename
-                    dest.write_bytes(content)
-                    if self.track_title:
-                        ext = Path(dest).suffix
-                        renamed = dest.parent / f"{self.track_title}{ext}"
-                        dest.rename(renamed)
-                        dest = renamed
+                    dest = save_bytes(self.download_dir / filename, content)
+                    dest = rename_to_track(dest, self.track_title)
                     logger.info(
                         "[%s] Saved download (response intercept) → %s", self.gate_name, dest
                     )
@@ -372,14 +349,8 @@ class GateHandler:
                     raise GateStepError(msg)
                 parsed = urllib.parse.urlparse(url)
                 filename = Path(parsed.path).name or "download.mp3"
-                content = await response.body()
-                dest = self.download_dir / filename
-                dest.write_bytes(content)
-                if self.track_title:
-                    ext = Path(dest).suffix
-                    renamed = dest.parent / f"{self.track_title}{ext}"
-                    dest.rename(renamed)
-                    dest = renamed
+                dest = save_bytes(self.download_dir / filename, await response.body())
+                dest = rename_to_track(dest, self.track_title)
                 logger.info("[%s] Saved download (from %s attr) → %s", self.gate_name, attr, dest)
         elif action == "navigate":
             href = await el.get_attribute("href")

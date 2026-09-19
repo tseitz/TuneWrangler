@@ -15,13 +15,13 @@ from typing import TYPE_CHECKING, Any
 
 from typesafe_sdk import AsyncTypeSafeClient, Choice
 
+from soundcloud_dl.downloads import looks_like_audio, rename_to_track, save_bytes
 from soundcloud_dl.gate_handlers.base import GateHandler, StepResult, StuckGate
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered, detect_captcha
 from soundcloud_dl.gate_handlers.dom_snapshot import find_element_by_key, snapshot_elements
 from soundcloud_dl.gate_handlers.unlock import (
     find_download_target,
     is_download_element,
-    is_download_enabled,
     is_unlocked_href,
     unlock_reached,
 )
@@ -41,6 +41,9 @@ _ALREADY_UNLOCKED = "already_unlocked"
 # wait_for_download_ready timeout; the poll exits early on any change.
 _SETTLE_POLL_MS = 500
 _SETTLE_POLL_ATTEMPTS = 40
+
+# Only covers the client-side render of the gate widget, not a user action. 15s.
+_READY_POLL_ATTEMPTS = 30
 
 # The gate is only declared stuck after several turns that moved nothing. One unchanged
 # turn is normal — an OAuth popup can still be resolving in another window.
@@ -183,6 +186,29 @@ class JudgmentGateHandler(GateHandler):
                 raise
             await el_retry.evaluate("e => e.click()")
 
+    async def _wait_for_gate_ready(self, page: Page) -> None:
+        """Hold until the gate widget has rendered, or the DOM stops changing.
+
+        Hypeddit builds the action carousel client-side, so a snapshot taken right after
+        domcontentloaded offers the model only page furniture. It then picks the least-bad
+        of a menu that never contained the right answer.
+        """
+        previous: dict[str, dict[str, Any]] | None = None
+        for _ in range(_READY_POLL_ATTEMPTS):
+            try:
+                snapshot = await self._snapshot(page)
+            except Exception:  # noqa: BLE001
+                logger.debug("[%s] snapshot failed while waiting", self.gate_name, exc_info=True)
+                await page.wait_for_timeout(_SETTLE_POLL_MS)
+                continue
+            if any(el["step"] for el in snapshot.values()) or unlock_reached(snapshot):
+                return
+            if snapshot == previous:
+                logger.info("[%s] no gate actions found; DOM settled", self.gate_name)
+                return
+            previous = snapshot
+            await page.wait_for_timeout(_SETTLE_POLL_MS)
+
     async def _settle(
         self, page: Page, before: dict[str, dict[str, Any]]
     ) -> dict[str, dict[str, Any]]:
@@ -232,12 +258,9 @@ class JudgmentGateHandler(GateHandler):
                 await self._click_with_force_fallback(page, el, key)
             download = await download_info.value
             dest = self.download_dir / download.suggested_filename
+            dest.parent.mkdir(parents=True, exist_ok=True)
             await download.save_as(str(dest))
-            if self.track_title:
-                ext = Path(dest).suffix
-                renamed = dest.parent / f"{self.track_title}{ext}"
-                dest.rename(renamed)
-                dest = renamed
+            dest = rename_to_track(dest, self.track_title)
             logger.info("[%s] Saved download → %s", self.gate_name, dest)
             downloaded = True
         except Exception:  # noqa: BLE001
@@ -255,30 +278,19 @@ class JudgmentGateHandler(GateHandler):
                 )
                 try:
                     response = await page.request.get(href)
-                    if response.ok:
-                        ct = (response.headers.get("content-type") or "").lower()
-                        cd = (response.headers.get("content-disposition") or "").lower()
-                        is_file = (
-                            "audio" in ct
-                            or "octet-stream" in ct
-                            or "force-download" in ct
-                            or "attachment" in cd
+                    if response.ok and looks_like_audio(
+                        href,
+                        response.headers.get("content-type"),
+                        response.headers.get("content-disposition"),
+                    ):
+                        parsed = urllib.parse.urlparse(href)
+                        filename = Path(parsed.path).name or "download"
+                        dest = save_bytes(self.download_dir / filename, await response.body())
+                        dest = rename_to_track(dest, self.track_title)
+                        logger.info(
+                            "[%s] Saved download (href fallback) → %s", self.gate_name, dest
                         )
-                        if is_file:
-                            parsed = urllib.parse.urlparse(href)
-                            filename = Path(parsed.path).name or "download"
-                            content = await response.body()
-                            dest = self.download_dir / filename
-                            dest.write_bytes(content)
-                            if self.track_title:
-                                ext = Path(dest).suffix
-                                renamed = dest.parent / f"{self.track_title}{ext}"
-                                dest.rename(renamed)
-                                dest = renamed
-                            logger.info(
-                                "[%s] Saved download (href fallback) → %s", self.gate_name, dest
-                            )
-                            downloaded = True
+                        downloaded = True
                 except Exception:  # noqa: BLE001
                     logger.debug(
                         "[%s] href fetch failed — falling through to response intercept",
@@ -290,20 +302,11 @@ class JudgmentGateHandler(GateHandler):
             captured: list[tuple[str, bytes]] = []
 
             async def _capture_audio(response: Response) -> None:
-                ct = (await response.header_value("content-type") or "").lower()
-                cd = (await response.header_value("content-disposition") or "").lower()
-                url_lower = response.url.lower()
-                is_audio = (
-                    "audio" in ct
-                    or "octet-stream" in ct
-                    or "force-download" in ct
-                    or "attachment" in cd
-                    or any(
-                        url_lower.endswith(ext)
-                        for ext in (".mp3", ".wav", ".flac", ".aiff", ".aac", ".ogg")
-                    )
-                )
-                if is_audio:
+                if looks_like_audio(
+                    response.url,
+                    await response.header_value("content-type"),
+                    await response.header_value("content-disposition"),
+                ):
                     try:
                         body = await response.body()
                         captured.append((response.url, body))
@@ -328,20 +331,18 @@ class JudgmentGateHandler(GateHandler):
                 filename = Path(parsed.path).name or "download.mp3"
                 if "." not in filename:
                     filename += ".mp3"
-                dest = self.download_dir / filename
-                dest.write_bytes(content)
-                if self.track_title:
-                    ext = Path(dest).suffix
-                    renamed = dest.parent / f"{self.track_title}{ext}"
-                    dest.rename(renamed)
-                    dest = renamed
+                dest = save_bytes(self.download_dir / filename, content)
+                dest = rename_to_track(dest, self.track_title)
                 logger.info("[%s] Saved download (response intercept) → %s", self.gate_name, dest)
                 downloaded = True
 
         return downloaded
 
-    def _action_kind(self, target: dict[str, Any]) -> str:
-        if is_download_element(target) and is_download_enabled(target):
+    def _action_kind(self, target: dict[str, Any], *, unlocked: bool) -> str:
+        # Identity and an absent disable class are not enough on their own: hypeddit serves
+        # #downloadProcess with no disable class while the gate is still shut, and routing
+        # there costs a 45s expect_download plus a 20s response poll for nothing.
+        if is_download_element(target) and (unlocked or is_unlocked_href(target["href"])):
             return "download"
         if (
             target["tag"] in ("input", "textarea")
@@ -399,11 +400,23 @@ class JudgmentGateHandler(GateHandler):
         await self._click_with_force_fallback(page, el, target["key"])
         return (StepResult.EXECUTED, False)
 
-    async def _run_steps(  # noqa: C901, PLR0912
+    async def _log_turn(self, page: Page, i: int, snapshot: dict[str, dict[str, Any]]) -> None:
+        logger.info(
+            "[%s] turn %d: %d elements offered; gate actions=%s",
+            self.gate_name,
+            i,
+            len(snapshot),
+            {k: el["cls"].split()[-1] for k, el in snapshot.items() if el["step"]} or "NONE",
+        )
+        if self.recorder is not None:
+            await self.recorder.screenshot(page, f"turn-{i:02d}-before")
+
+    async def _run_steps(  # noqa: C901
         self, page: Page, results: dict[str, StepResult]
     ) -> dict[str, StepResult]:
         idle_turns = 0
         unlock_download_tried = False
+        await self._wait_for_gate_ready(page)
 
         for i in range(1, _MAX_ITERATIONS + 1):
             # A closed OAuth popup doesn't reliably return focus to this tab, and each
@@ -421,33 +434,21 @@ class JudgmentGateHandler(GateHandler):
                 raise CaptchaEncountered(captcha, self.gate_name)
 
             snapshot = await self._snapshot(page)
-            logger.info(
-                "[%s] turn %d: %d elements offered; gate actions=%s",
-                self.gate_name,
-                i,
-                len(snapshot),
-                {k: el["cls"].split()[-1] for k, el in snapshot.items() if el["step"]} or "NONE",
-            )
-            if self.recorder is not None:
-                await self.recorder.screenshot(page, f"turn-{i:02d}-before")
+            await self._log_turn(page, i, snapshot)
 
             unlocked = unlock_reached(snapshot)
-            if unlocked and not unlock_download_tried:
-                target = find_download_target(snapshot)
-                if target is not None:
-                    unlock_download_tried = True
-                    logger.info(
-                        "[%s] turn %d: gate unlocked — download on %r",
-                        self.gate_name,
-                        i,
-                        target["key"],
-                    )
-                    await self._maybe_pause("download", target)
-                    result, downloaded = await self._act(page, "download", target)
-                    results[f"el_{i}_download"] = result
-                    if downloaded:
-                        return results
-                    continue
+            target = find_download_target(snapshot) if unlocked else None
+            if target is not None and not unlock_download_tried:
+                unlock_download_tried = True
+                logger.info(
+                    "[%s] turn %d: gate unlocked — download on %r", self.gate_name, i, target["key"]
+                )
+                await self._maybe_pause("download", target)
+                result, downloaded = await self._act(page, "download", target)
+                results[f"el_{i}_download"] = result
+                if downloaded:
+                    return results
+                continue
 
             choice = await self._ask_choice(page, snapshot)
             target = self._resolve_target(choice, snapshot, results, i)
@@ -457,7 +458,7 @@ class JudgmentGateHandler(GateHandler):
                     raise StuckGate(self.gate_name, last_step_id=f"jev_iter_{i}_no_progress")
                 continue
 
-            kind = self._action_kind(target)
+            kind = self._action_kind(target, unlocked=unlocked)
             await self._maybe_pause(kind, target)
 
             try:
