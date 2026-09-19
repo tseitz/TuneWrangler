@@ -123,6 +123,14 @@ def _parse_args() -> argparse.Namespace:
         ),
     )
     p.add_argument(
+        "--sc-probe",
+        metavar="TRACK_URL",
+        help=(
+            "Dump SoundCloud's own like/repost/follow/comment controls for a track and its "
+            "artist page, so action selectors are read from the live page not guessed."
+        ),
+    )
+    p.add_argument(
         "--login",
         action="store_true",
         help=(
@@ -458,6 +466,11 @@ def main() -> None:
         return
     if args.inspect:
         asyncio.run(inspect_gate(args.inspect))
+        return
+    if args.sc_probe:
+        from soundcloud_dl.soundcloud_actions import probe_urls  # noqa: PLC0415
+
+        asyncio.run(probe_urls(args.sc_probe))
         return
     if args.jev:
         from soundcloud_dl.jev_pilot import run_jev_pilot  # noqa: PLC0415
