@@ -157,3 +157,26 @@ def test_an_enabled_download_still_counts_when_it_is_off_screen():
     snapshot = {"data-step=follow": FOLLOW_DONE, "gateDownloadButton": OFFSCREEN_READY_BUTTON}
     assert unlock_reached(snapshot) is True
     assert find_download_target(snapshot)["id"] == "gateDownloadButton"
+
+
+# #downloadProcess opens the gate; it carries no disable class even while fully locked.
+GATE_OPENER = el(
+    key="downloadProcess",
+    id="downloadProcess",
+    tag="a",
+    cls="dp hype-btn",
+    href="javascript:void(0);",
+    text="Download",
+)
+
+
+def test_the_gate_opener_is_not_mistaken_for_the_download():
+    """Judged by class alone it looked ready on a freshly loaded, fully locked gate."""
+    assert is_download_element(GATE_OPENER) is True
+    assert find_download_target({"downloadProcess": GATE_OPENER}) is None
+    assert unlock_reached({"downloadProcess": GATE_OPENER}) is False
+
+
+def test_the_gate_opener_counts_once_its_href_goes_live():
+    live = GATE_OPENER | {"href": "https://cdn.hypeddit.com/x.mp3"}
+    assert find_download_target({"downloadProcess": live})["key"] == "downloadProcess"

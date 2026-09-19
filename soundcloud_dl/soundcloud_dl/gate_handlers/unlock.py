@@ -11,6 +11,10 @@ from typing import Any
 _DOWNLOAD_IDS = frozenset({"gatedownloadbutton", "downloadprocess"})
 _DOWNLOAD_CLASSES = frozenset({"free_dwln", "dp", "download-link"})
 
+# These open the gate rather than serve the file; see _is_href_gated.
+_HREF_GATED_IDS = frozenset({"downloadprocess"})
+_HREF_GATED_CLASSES = frozenset({"dp"})
+
 # Both spellings appear on the live page at the same time.
 _DISABLED_TOKENS = frozenset({"disable", "disabled"})
 
@@ -67,13 +71,27 @@ def page_actions_complete(snapshot: dict[str, dict[str, Any]]) -> bool:
     return bool(actions) and all(is_action_done(el) for el in actions)
 
 
+def _is_href_gated(el: dict[str, Any]) -> bool:
+    """True for controls whose class never says locked, so only a real href proves readiness.
+
+    #downloadProcess is the button that OPENS the gate, and it carries no disable class at
+    any point. Judging it by class alone makes a freshly-loaded, fully-locked gate look
+    ready. hypeddit.yaml only ever matched it with a non-placeholder href, for this reason.
+    """
+    return (el.get("id") or "").lower() in _HREF_GATED_IDS or bool(
+        set(el["cls"].lower().split()) & _HREF_GATED_CLASSES
+    )
+
+
 def find_download_target(snapshot: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
     """The download element to click, preferring one with a real href."""
     candidates = [el for el in snapshot.values() if is_download_element(el)]
     live = next((el for el in candidates if is_unlocked_href(el["href"])), None)
     if live is not None:
         return live
-    return next((el for el in candidates if is_download_enabled(el)), None)
+    return next(
+        (el for el in candidates if not _is_href_gated(el) and is_download_enabled(el)), None
+    )
 
 
 def unlock_reached(snapshot: dict[str, dict[str, Any]]) -> bool:

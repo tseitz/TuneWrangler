@@ -438,7 +438,9 @@ class JudgmentGateHandler(GateHandler):
         self, page: Page, results: dict[str, StepResult]
     ) -> dict[str, StepResult]:
         idle_turns = 0
-        unlock_download_tried = False
+        # Per element, not a single global flag: a wrong guess early must not lock out the
+        # real download button when it appears later.
+        tried_downloads: set[str] = set()
         await self._wait_for_gate_ready(page)
 
         for i in range(1, _MAX_ITERATIONS + 1):
@@ -461,8 +463,8 @@ class JudgmentGateHandler(GateHandler):
 
             unlocked = unlock_reached(snapshot)
             target = find_download_target(snapshot) if unlocked else None
-            if target is not None and not unlock_download_tried:
-                unlock_download_tried = True
+            if target is not None and target["key"] not in tried_downloads:
+                tried_downloads.add(target["key"])
                 logger.info(
                     "[%s] turn %d: gate unlocked — download on %r", self.gate_name, i, target["key"]
                 )
