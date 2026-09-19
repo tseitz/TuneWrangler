@@ -41,7 +41,13 @@ async def run_jev_pilot(url: str, *, pause: bool = False) -> None:
     recorder = RunRecorder("hypeddit_jev")
 
     async with attached_browser() as context:
-        gate_url = await get_gate_url(context, url)
+        # A gate URL is accepted directly so the gate can be exercised without loading a
+        # SoundCloud page first — which matters when SoundCloud is rate-limiting this browser.
+        if "soundcloud.com" in url:
+            gate_url = await get_gate_url(context, url)
+        else:
+            logger.info("Treating URL as a gate page directly (no SoundCloud lookup)")
+            gate_url = url
         page = await context.new_page()
         await page.goto(gate_url, wait_until="domcontentloaded", timeout=30_000)
         logger.info("Gate page open: %s", page.url)
