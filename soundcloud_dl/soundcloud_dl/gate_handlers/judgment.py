@@ -82,6 +82,39 @@ _FIELD_HINTS: dict[str, tuple[str, ...]] = {
 }
 
 
+# Walks up from the element naming the first ancestor that hides it, so a run reports a
+# cause ("parent display:none") instead of the symptom ("not visible").
+_WHY_HIDDEN_JS = """
+(key) => {
+  const el = document.getElementById(key)
+    || document.querySelector('[data-step="' + key + '"]');
+  if (!el) return 'element not found';
+  const box = el.getBoundingClientRect();
+  const out = ['box=' + Math.round(box.width) + 'x' + Math.round(box.height)];
+  if (el.offsetParent === null) out.push('offsetParent=null');
+  let n = el;
+  while (n && n !== document.body) {
+    const cs = getComputedStyle(n);
+    const tag = n.tagName.toLowerCase() + ' ' + String(n.className || '').slice(0, 60);
+    if (cs.display === 'none') { out.push('display:none on ' + tag); break; }
+    if (cs.visibility === 'hidden') { out.push('visibility:hidden on ' + tag); break; }
+    if (cs.opacity === '0') { out.push('opacity:0 on ' + tag); break; }
+    if (n.offsetHeight === 0 && n !== el) { out.push('height:0 on ' + tag); break; }
+    n = n.parentElement;
+  }
+  const slide = el.closest('.fangate-slider-content');
+  if (slide) {
+    out.push('slide=' + slide.className);
+    out.push('slideStyle=' + (slide.getAttribute('style') || ''));
+    out.push('slideH=' + slide.offsetHeight);
+  }
+  const inner = document.querySelector('.carousel-inner');
+  if (inner) out.push('carouselH=' + inner.offsetHeight);
+  return out.join(' | ');
+}
+"""
+
+
 def _on_screen(snapshot: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
     return {k: el for k, el in snapshot.items() if el["visible"]}
 
@@ -364,11 +397,12 @@ class JudgmentGateHandler(GateHandler):
 
         return downloaded
 
-    def _action_kind(self, target: dict[str, Any], *, unlocked: bool) -> str:
-        # Identity and an absent disable class are not enough on their own: hypeddit serves
-        # #downloadProcess with no disable class while the gate is still shut, and routing
-        # there costs a 45s expect_download plus a 20s response poll for nothing.
-        if is_download_element(target) and (unlocked or is_unlocked_href(target["href"])):
+    def _action_kind(self, target: dict[str, Any], *, download_key: str | None) -> str:
+        # Only the one element identified as THE download takes the capture path. Any other
+        # download-ish element — #downloadProcess opens the gate — is an ordinary click, and
+        # routing it into the capture path costs a 45s wait plus a 20s poll for nothing.
+        is_live_link = is_download_element(target) and is_unlocked_href(target["href"])
+        if target["key"] == download_key or is_live_link:
             return "download"
         if (
             target["tag"] in ("input", "textarea")
@@ -464,6 +498,15 @@ class JudgmentGateHandler(GateHandler):
         )
         return None, target["key"]
 
+    async def _why_hidden(self, page: Page, key: str) -> None:
+        """Report what is hiding an element, so 'not visible' names a cause not a symptom."""
+        try:
+            info = await page.evaluate(_WHY_HIDDEN_JS, key)
+        except Exception:  # noqa: BLE001
+            logger.debug("[%s] could not inspect %r", self.gate_name, key, exc_info=True)
+            return
+        logger.info("[%s] %r hidden because: %s", self.gate_name, key, info)
+
     async def _log_turn(self, page: Page, i: int, snapshot: dict[str, dict[str, Any]]) -> None:
         logger.info(
             "[%s] turn %d: %d elements offered; gate actions=%s",
@@ -503,9 +546,11 @@ class JudgmentGateHandler(GateHandler):
             snapshot = await self._snapshot(page)
             await self._log_turn(page, i, snapshot)
 
-            unlocked = unlock_reached(snapshot)
-            target = find_download_target(snapshot) if unlocked else None
+            target = find_download_target(snapshot)
+            download_key = target["key"] if target is not None and target["visible"] else None
             target, deferred = self._defer_offscreen_download(target, i)
+            if deferred is not None and offscreen_download is None:
+                await self._why_hidden(page, deferred)
             offscreen_download = deferred or offscreen_download
             if target is not None and target["key"] not in tried_downloads:
                 tried_downloads.add(target["key"])
@@ -521,7 +566,7 @@ class JudgmentGateHandler(GateHandler):
                     raise StuckGate(self.gate_name, last_step_id=f"jev_iter_{i}_no_progress")
                 continue
 
-            kind = self._action_kind(target, unlocked=unlocked)
+            kind = self._action_kind(target, download_key=download_key)
             await self._maybe_pause(kind, target)
 
             try:
