@@ -49,6 +49,9 @@ _READY_POLL_ATTEMPTS = 30
 # turn is normal — an OAuth popup can still be resolving in another window.
 _MAX_IDLE_TURNS = 3
 
+# Long enough for a carousel slide to finish moving before the next click.
+_TRANSITION_MS = 1_500
+
 # Domain knowledge ported from hypeddit.yaml's comments (lines 200-327): the download
 # button is usually visible from the start but stays locked — class contains "disable" or
 # "disabled", href stays "javascript:void(0)" — until required actions are completed first.
@@ -423,6 +426,44 @@ class JudgmentGateHandler(GateHandler):
         await self._click_with_force_fallback(page, el, target["key"])
         return (StepResult.EXECUTED, False)
 
+    async def _try_download(
+        self, page: Page, results: dict[str, StepResult], target: dict[str, Any], i: int
+    ) -> bool:
+        logger.info(
+            "[%s] turn %d: gate unlocked — download on %r", self.gate_name, i, target["key"]
+        )
+        await self._maybe_pause("download", target)
+        result, downloaded = await self._act(page, "download", target)
+        results[f"el_{i}_download"] = result
+        return downloaded
+
+    def _terminal_reason(self, offscreen_download: str | None, fallback: str) -> str:
+        if offscreen_download is not None:
+            return (
+                f"download {offscreen_download!r} was enabled but never came on screen — "
+                "the carousel slide holding it did not render"
+            )
+        return fallback
+
+    def _defer_offscreen_download(
+        self, target: dict[str, Any] | None, i: int
+    ) -> tuple[dict[str, Any] | None, str | None]:
+        """Hold off clicking a download that is enabled but parked off-screen.
+
+        Hypeddit checks event.isTrusted (hypeddit.yaml:281), so the JS-dispatched click
+        used for an element with no box is silently ignored — it cost 65s and did not even
+        open the SoundCloud popup. Let the carousel bring it forward, then click for real.
+        """
+        if target is None or target["visible"]:
+            return target, None
+        logger.info(
+            "[%s] turn %d: download %r is enabled but off-screen; advancing first",
+            self.gate_name,
+            i,
+            target["key"],
+        )
+        return None, target["key"]
+
     async def _log_turn(self, page: Page, i: int, snapshot: dict[str, dict[str, Any]]) -> None:
         logger.info(
             "[%s] turn %d: %d elements offered; gate actions=%s",
@@ -438,6 +479,7 @@ class JudgmentGateHandler(GateHandler):
         self, page: Page, results: dict[str, StepResult]
     ) -> dict[str, StepResult]:
         idle_turns = 0
+        offscreen_download: str | None = None
         # Per element, not a single global flag: a wrong guess early must not lock out the
         # real download button when it appears later.
         tried_downloads: set[str] = set()
@@ -463,15 +505,11 @@ class JudgmentGateHandler(GateHandler):
 
             unlocked = unlock_reached(snapshot)
             target = find_download_target(snapshot) if unlocked else None
+            target, deferred = self._defer_offscreen_download(target, i)
+            offscreen_download = deferred or offscreen_download
             if target is not None and target["key"] not in tried_downloads:
                 tried_downloads.add(target["key"])
-                logger.info(
-                    "[%s] turn %d: gate unlocked — download on %r", self.gate_name, i, target["key"]
-                )
-                await self._maybe_pause("download", target)
-                result, downloaded = await self._act(page, "download", target)
-                results[f"el_{i}_download"] = result
-                if downloaded:
+                if await self._try_download(page, results, target, i):
                     return results
                 continue
 
@@ -503,6 +541,9 @@ class JudgmentGateHandler(GateHandler):
                 )
                 results[f"el_{i}_action_failed"] = StepResult.SKIPPED
 
+            # The carousel animates. Returning on the first DOM change clicked Next again
+            # mid-transition, which is what left the next slide rendering blank.
+            await page.wait_for_timeout(_TRANSITION_MS)
             settled = await self._settle(page, snapshot)
             changed = settled != snapshot
             logger.info(
@@ -519,6 +560,14 @@ class JudgmentGateHandler(GateHandler):
 
             idle_turns = 0 if changed else idle_turns + 1
             if idle_turns >= _MAX_IDLE_TURNS:
-                raise StuckGate(self.gate_name, last_step_id=f"jev_iter_{i}_no_progress")
+                raise StuckGate(
+                    self.gate_name,
+                    last_step_id=self._terminal_reason(
+                        offscreen_download, f"jev_iter_{i}_no_progress"
+                    ),
+                )
 
-        raise StuckGate(self.gate_name, last_step_id=f"jev_cap_{_MAX_ITERATIONS}")
+        raise StuckGate(
+            self.gate_name,
+            last_step_id=self._terminal_reason(offscreen_download, f"jev_cap_{_MAX_ITERATIONS}"),
+        )
