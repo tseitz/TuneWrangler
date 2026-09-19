@@ -79,6 +79,10 @@ _FIELD_HINTS: dict[str, tuple[str, ...]] = {
 }
 
 
+def _on_screen(snapshot: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {k: el for k, el in snapshot.items() if el["visible"]}
+
+
 class JudgmentGateHandler(GateHandler):
     """Replaces the "which element next" decision with a TypeSafe Choice judgment call."""
 
@@ -102,11 +106,16 @@ class JudgmentGateHandler(GateHandler):
         return self._client
 
     async def _snapshot(self, page: Page) -> dict[str, dict[str, Any]]:
+        """Every element, visible or not. Filter with _on_screen for what the model is shown.
+
+        The download button is kept off-screen behind the carousel even once it is enabled,
+        so a visible-only snapshot cannot tell an unlocked gate from a locked one.
+        """
         # First occurrence wins, matching find_element_by_key's preference, so a colliding
         # key never describes one element and click another.
         snapshot: dict[str, dict[str, Any]] = {}
         for el in await snapshot_elements(page):
-            if el["visible"] and el["key"] not in snapshot:
+            if el["key"] not in snapshot:
                 snapshot[el["key"]] = el
         return snapshot
 
@@ -124,9 +133,11 @@ class JudgmentGateHandler(GateHandler):
         return None
 
     async def _ask_choice(self, page: Page, snapshot: dict[str, dict[str, Any]]) -> str:
+        # Only what a person could actually click. Offering the off-screen carousel slides
+        # would let the model pick a button that silently does nothing.
         criteria: dict[str, str | None] = {
             key: f"<{el['tag']}> text={el['text']!r} class={el['cls']!r} href={el['href']!r}"
-            for key, el in snapshot.items()
+            for key, el in _on_screen(snapshot).items()
         }
         # Only offered when a download control is actually on screen. Left always-available,
         # the model picked it once the page's actions were done — which on a carousel gate
@@ -142,7 +153,7 @@ class JudgmentGateHandler(GateHandler):
             state={
                 "goal": self.goal,
                 "page_url": page.url,
-                "elements": list(snapshot.values()),
+                "elements": list(_on_screen(snapshot).values()),
             },
             questions={
                 "next_action": Choice(
@@ -211,7 +222,7 @@ class JudgmentGateHandler(GateHandler):
                 logger.debug("[%s] snapshot failed while waiting", self.gate_name, exc_info=True)
                 await page.wait_for_timeout(_SETTLE_POLL_MS)
                 continue
-            if any(el["step"] for el in snapshot.values()) or unlock_reached(snapshot):
+            if any(el["step"] for el in _on_screen(snapshot).values()) or unlock_reached(snapshot):
                 return
             if snapshot == previous:
                 logger.info("[%s] no gate actions found; DOM settled", self.gate_name)
@@ -254,7 +265,9 @@ class JudgmentGateHandler(GateHandler):
         el = await self._find_element_by_key(page, key)
         if el is None:
             return False
-        if self.scroll_before_click:
+        # scroll_into_view_if_needed retries for 30s on an element with no box, and the
+        # download button is deliberately parked off-screen by the carousel.
+        if self.scroll_before_click and await el.is_visible():
             await el.scroll_into_view_if_needed()
         await self._random_delay(page)
 
@@ -380,7 +393,7 @@ class JudgmentGateHandler(GateHandler):
                 results[f"el_{i}_claimed_unlocked"] = StepResult.SKIPPED
             return target
 
-        target = snapshot.get(choice)
+        target = _on_screen(snapshot).get(choice)
         if target is None:
             logger.warning(
                 "[%s] model chose unknown element key %r; continuing", self.gate_name, choice
@@ -415,7 +428,7 @@ class JudgmentGateHandler(GateHandler):
             "[%s] turn %d: %d elements offered; gate actions=%s",
             self.gate_name,
             i,
-            len(snapshot),
+            len(_on_screen(snapshot)),
             {k: el["cls"].split()[-1] for k, el in snapshot.items() if el["step"]} or "NONE",
         )
         if self.recorder is not None:

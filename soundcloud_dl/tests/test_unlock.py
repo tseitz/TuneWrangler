@@ -138,3 +138,22 @@ def test_hypeddit_site_nav_is_not_the_download_button():
     assert find_download_target({"nav": nav, "gateDownloadButton": UNLOCKED_BUTTON}) == (
         UNLOCKED_BUTTON
     )
+
+
+# Taken from a real run: once the four actions are done, hypeddit drops the disable classes
+# from #gateDownloadButton while leaving it parked on an off-screen carousel slide.
+OFFSCREEN_READY_BUTTON = el(
+    id="gateDownloadButton",
+    key="gateDownloadButton",
+    cls="hype-btn hype-btn-green hype-btn-xlarge hype-w-100 login-to-soundcloud-common free_dwln",
+    href="javascript:void(0);",
+    text="Download",
+    visible=False,
+)
+
+
+def test_an_enabled_download_still_counts_when_it_is_off_screen():
+    """Visible-only detection read this as a locked gate and the run stalled on Next."""
+    snapshot = {"data-step=follow": FOLLOW_DONE, "gateDownloadButton": OFFSCREEN_READY_BUTTON}
+    assert unlock_reached(snapshot) is True
+    assert find_download_target(snapshot)["id"] == "gateDownloadButton"
