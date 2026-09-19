@@ -106,3 +106,6 @@ __pycache__/
 
 # Generated analysis output (now lives under logs/tunewrangler/analysis/)
 output/
+
+# Claude Code planning docs (ephemeral working artifacts)
+.claude/plans/

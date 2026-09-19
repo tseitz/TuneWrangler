@@ -1,12 +1,13 @@
-// Place your settings in this file to overwrite default and user settings.
 {
   "files.exclude": {
     "node_modules": true
-  }
-,
-"python.linting.pylintEnabled": false,
-"python.linting.flake8Enabled": true,
-"python.linting.enabled": true,
-"deno.enable": true,
-"deno.unstable": true
+  },
+
+  // All Python here runs through `uv run --project soundcloud_dl`, so nothing
+  // depends on an activated venv. Left on, the Python extension re-discovers
+  // soundcloud_dl/.venv every time uv touches it and types `source .../activate`
+  // into whatever terminal is focused, mid-command.
+  "python.terminal.activateEnvironment": false,
+
+  "deno.enable": true
 }
