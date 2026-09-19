@@ -115,6 +115,27 @@ _WHY_HIDDEN_JS = """
 """
 
 
+# Hypeddit sizes .carousel-inner from the FIRST slide's height at the moment the gate is
+# opened (custom.js, 'modern' template). Automation clicks that button about a second after
+# load, before the slide has laid out, so the height is fixed at 0 and every slide renders
+# as an empty white panel — including the one holding the download button. Repairing their
+# measurement is the only way past it; waiting longer does not help once it has been set.
+_REPAIR_CAROUSEL_JS = """
+() => {
+  const inner = document.querySelector('.carousel-inner');
+  if (!inner) return 0;
+  const slides = Array.from(document.querySelectorAll('div.fangate-slider-content'));
+  if (!slides.length) return 0;
+  const tallest = Math.max(...slides.map((s) => s.scrollHeight));
+  if (tallest > 0 && inner.offsetHeight < tallest) {
+    inner.style.height = tallest + 'px';
+    return tallest;
+  }
+  return 0;
+}
+"""
+
+
 def _on_screen(snapshot: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
     return {k: el for k, el in snapshot.items() if el["visible"]}
 
@@ -498,6 +519,15 @@ class JudgmentGateHandler(GateHandler):
         )
         return None, target["key"]
 
+    async def _repair_carousel(self, page: Page) -> None:
+        try:
+            fixed = await page.evaluate(_REPAIR_CAROUSEL_JS)
+        except Exception:  # noqa: BLE001
+            logger.debug("[%s] carousel height repair failed", self.gate_name, exc_info=True)
+            return
+        if fixed:
+            logger.info("[%s] carousel had no height; set to %dpx", self.gate_name, fixed)
+
     async def _why_hidden(self, page: Page, key: str) -> None:
         """Report what is hiding an element, so 'not visible' names a cause not a symptom."""
         try:
@@ -506,6 +536,12 @@ class JudgmentGateHandler(GateHandler):
             logger.debug("[%s] could not inspect %r", self.gate_name, key, exc_info=True)
             return
         logger.info("[%s] %r hidden because: %s", self.gate_name, key, info)
+
+    async def _begin_turn(self, page: Page, i: int) -> dict[str, dict[str, Any]]:
+        await self._repair_carousel(page)
+        snapshot = await self._snapshot(page)
+        await self._log_turn(page, i, snapshot)
+        return snapshot
 
     async def _log_turn(self, page: Page, i: int, snapshot: dict[str, dict[str, Any]]) -> None:
         logger.info(
@@ -543,8 +579,7 @@ class JudgmentGateHandler(GateHandler):
             if captcha is not None:
                 raise CaptchaEncountered(captcha, self.gate_name)
 
-            snapshot = await self._snapshot(page)
-            await self._log_turn(page, i, snapshot)
+            snapshot = await self._begin_turn(page, i)
 
             target = find_download_target(snapshot)
             download_key = target["key"] if target is not None and target["visible"] else None
