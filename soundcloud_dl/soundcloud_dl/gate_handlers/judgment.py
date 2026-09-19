@@ -74,7 +74,9 @@ _DEFAULT_GOAL = (
     "and no download link is present, the next step is the continue button that advances "
     "to the following page. That is usually a 'Next' button, but some pages have no Next "
     "and can only be passed by doing the thing they ask — a Spotify or Instagram 'Connect' "
-    "button, for instance. If a Next button has already been clicked and the page did not "
+    "button, for instance. When a page has empty text fields, fill every one of them before "
+    "you press that page's continue button. If a Next button has already been clicked and "
+    "the page did not "
     "change, it belongs to a finished step: choose something else. Only pick the download "
     "button once it is actually on the page and no longer disabled."
 )
@@ -666,7 +668,10 @@ class JudgmentGateHandler(GateHandler):
 
             changed = await self._did_it_move(page, snapshot, kind, target, i)
             if changed:
-                dead_keys.discard(target["key"])
+                # Clear every dead key, not just this one. A control is dead only for the page
+                # as it was: a Next that did nothing over an empty form is the way forward once
+                # the form is filled, and banning it for the run strands the gate.
+                dead_keys.clear()
             else:
                 dead_keys.add(target["key"])
             idle_turns = 0 if changed else idle_turns + 1
