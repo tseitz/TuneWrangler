@@ -131,6 +131,16 @@ def _parse_args() -> argparse.Namespace:
         ),
     )
     p.add_argument(
+        "--sc-do",
+        metavar="TRACK_URL",
+        help="Follow, like, repost and comment on SoundCloud itself, verifying each action.",
+    )
+    p.add_argument(
+        "--sc-undo",
+        metavar="TRACK_URL",
+        help="Reverse --sc-do: unfollow, unlike, unrepost (comments are not removed).",
+    )
+    p.add_argument(
         "--login",
         action="store_true",
         help=(
@@ -466,6 +476,13 @@ def main() -> None:
         return
     if args.inspect:
         asyncio.run(inspect_gate(args.inspect))
+        return
+    if args.sc_do or args.sc_undo:
+        from soundcloud_dl.soundcloud_actions import run_actions  # noqa: PLC0415
+
+        asyncio.run(
+            run_actions(args.sc_do or args.sc_undo, DOWNLOAD_COMMENT, undo=bool(args.sc_undo))
+        )
         return
     if args.sc_probe:
         from soundcloud_dl.soundcloud_actions import probe_urls  # noqa: PLC0415

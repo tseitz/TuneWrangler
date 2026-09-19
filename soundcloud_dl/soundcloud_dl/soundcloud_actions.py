@@ -8,7 +8,8 @@ functions drive soundcloud.com directly and verify against SoundCloud's own cont
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from playwright.async_api import BrowserContext, Page
@@ -51,6 +52,34 @@ _PROBE_JS = """
 """
 
 _INTERESTING = ("like", "repost", "follow", "comment", "share", "more", "download")
+
+# Blocked for speed and quiet logs only. Blocking these does NOT fix the track page, which
+# renders its body in no profile here — "AF is not defined" turned out to be a symptom.
+_AD_HOSTS = (
+    "aditude.io",
+    "googletagservices.com",
+    "googlesyndication.com",
+    "doubleclick.net",
+    "adnxs.com",
+    "amazon-adsystem.com",
+    "criteo.com",
+    "pubmatic.com",
+    "rubiconproject.com",
+    "casalemedia.com",
+    "sharethrough.com",
+    "33across.com",
+    "alb.reddit.com",
+)
+
+
+async def block_ads(page: Page) -> None:
+    """Drop ad requests before they can load the script that breaks track pages."""
+    await page.route(
+        "**/*",
+        lambda route: (
+            route.abort() if any(h in route.request.url for h in _AD_HOSTS) else route.continue_()
+        ),
+    )
 
 
 async def _wait_for_actions(page: Page) -> None:
@@ -117,6 +146,7 @@ async def probe(context: BrowserContext, url: str) -> None:
         lambda r: problems.append(f"FAILED {r.failure} {r.url}"[:200]),
     )
     try:
+        await block_ads(page)
         logger.info("Probing: %s", url)
         await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
         await _wait_for_actions(page)
@@ -154,6 +184,146 @@ async def probe(context: BrowserContext, url: str) -> None:
         logger.info("─" * 70)
     finally:
         await page.close()
+
+
+@dataclass(frozen=True)
+class ActionResult:
+    """Outcome of one action, judged by SoundCloud's own control state afterwards."""
+
+    action: str
+    ok: bool
+    detail: str
+
+
+# Each control encodes its state in title/aria-label. "Like" means not yet liked; once it
+# lands SoundCloud rewrites it to "Unlike" and adds sc-button-selected.
+_TOGGLES = {
+    "like": ("button.sc-button-like", "Like", "Unlike"),
+    "repost": ("button.sc-button-repost", "Repost", "Unpost"),
+    "follow": ("button.sc-button-follow", "Follow", "Unfollow"),
+}
+
+
+def artist_url_for(track_url: str) -> str:
+    """The artist page owning a track. Track pages never render here, artist pages do."""
+    return "/".join(track_url.split("?", maxsplit=1)[0].split("/")[:4])
+
+
+def track_path_for(track_url: str) -> str:
+    """The site-relative path SoundCloud uses in its own links, e.g. /urboin8/mph-raw."""
+    return "/" + "/".join(track_url.split("?", maxsplit=1)[0].split("/")[3:5])
+
+
+async def _state(el: Any) -> str:  # noqa: ANN401
+    return (await el.get_attribute("title")) or (await el.get_attribute("aria-label")) or ""
+
+
+async def _toggle(page: Page, scope: Any, kind: str, *, want_on: bool) -> ActionResult:  # noqa: ANN401
+    """Click a toggle only if it is not already where we want it, then re-read its state."""
+    selector, off, on = _TOGGLES[kind]
+    target, current = (on, off) if want_on else (off, on)
+
+    el = await scope.query_selector(selector)
+    if el is None:
+        return ActionResult(kind, ok=False, detail=f"no {selector} in scope")
+
+    before = await _state(el)
+    if before == target:
+        return ActionResult(kind, ok=True, detail=f"already {target.lower()}")
+    if before != current:
+        return ActionResult(kind, ok=False, detail=f"unexpected state {before!r}")
+
+    await el.click()
+    # SoundCloud rewrites the control only once its own API call returns, so this wait IS
+    # the verification — not a cosmetic settle.
+    for _ in range(20):
+        await page.wait_for_timeout(500)
+        after = await _state(el)
+        if after == target:
+            return ActionResult(kind, ok=True, detail=f"{before!r} → {after!r}")
+    return ActionResult(kind, ok=False, detail=f"still {await _state(el)!r} after 10s")
+
+
+async def _find_track_item(page: Page, track_url: str) -> Any | None:  # noqa: ANN401
+    """The artist-page list entry for this track, found by the href SoundCloud itself uses."""
+    path = track_path_for(track_url)
+    for _ in range(10):
+        link = await page.query_selector(f'a.soundTitle__title[href="{path}"]')
+        if link is not None:
+            handle = await link.evaluate_handle("el => el.closest('.sound')")
+            return handle.as_element()
+        await page.evaluate("window.scrollBy(0, 1200)")
+        await page.wait_for_timeout(800)
+    return None
+
+
+async def _post_comment(page: Page, item: Any, text: str) -> ActionResult:  # noqa: ANN401
+    """Type a comment into this track's box and confirm it appears in the thread."""
+    box = await item.query_selector("input.commentForm__input")
+    if box is None:
+        return ActionResult("comment", ok=False, detail="no comment box on this item")
+    await box.click()
+    await box.fill(text)
+    await page.keyboard.press("Enter")
+
+    for _ in range(20):
+        await page.wait_for_timeout(500)
+        posted = await item.evaluate(
+            "(el, t) => Array.from(el.querySelectorAll('.commentItem'))"
+            ".some((c) => (c.innerText || '').includes(t))",
+            text,
+        )
+        if posted:
+            return ActionResult("comment", ok=True, detail="comment visible in thread")
+    return ActionResult("comment", ok=False, detail="comment never appeared")
+
+
+async def perform(
+    context: BrowserContext,
+    track_url: str,
+    *,
+    comment_text: str | None = None,
+    undo: bool = False,
+) -> dict[str, ActionResult]:
+    """Do follow/like/repost (and optionally comment) on SoundCloud, verifying each."""
+    page = await new_page(context)
+    results: dict[str, ActionResult] = {}
+    try:
+        await block_ads(page)
+        await page.goto(artist_url_for(track_url), wait_until="domcontentloaded", timeout=30_000)
+        await _wait_for_actions(page)
+
+        bar = await page.query_selector(".userInfoBar__buttons")
+        if bar is None:
+            results["follow"] = ActionResult("follow", ok=False, detail="artist page did not load")
+        else:
+            results["follow"] = await _toggle(page, bar, "follow", want_on=not undo)
+
+        item = await _find_track_item(page, track_url)
+        if item is None:
+            detail = f"{track_path_for(track_url)} not in the artist's listing"
+            for kind in ("like", "repost"):
+                results[kind] = ActionResult(kind, ok=False, detail=detail)
+        else:
+            for kind in ("like", "repost"):
+                results[kind] = await _toggle(page, item, kind, want_on=not undo)
+            if comment_text and not undo:
+                results["comment"] = await _post_comment(page, item, comment_text)
+
+        for r in results.values():
+            log = logger.info if r.ok else logger.warning
+            log("%s %s — %s", "OK  " if r.ok else "FAIL", r.action, r.detail)
+        return results
+    finally:
+        await page.close()
+
+
+async def run_actions(track_url: str, comment_text: str | None, *, undo: bool = False) -> None:
+    """Entry point for --sc-do / --sc-undo."""
+    from soundcloud_dl.playwright_browser import attached_browser  # noqa: PLC0415
+
+    async with attached_browser() as context:
+        await perform(context, track_url, comment_text=comment_text, undo=undo)
 
 
 async def probe_urls(track_url: str) -> None:
