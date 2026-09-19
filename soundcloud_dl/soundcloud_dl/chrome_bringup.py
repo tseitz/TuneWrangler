@@ -26,17 +26,26 @@ class ChromeBringupError(RuntimeError):
 
 
 def is_debug_port_open(port: int, *, timeout_seconds: float = 1.0) -> bool:
-    """Probe the CDP debug port. True if Chrome is listening."""
+    """Probe the CDP debug port. True if Chrome is listening and answering.
+
+    Every transport-level failure means the same thing to a probe: not usable. A Chrome
+    that has just been killed still accepts the connection and then resets it, which
+    surfaces as ReadError rather than ConnectError.
+    """
     try:
         with httpx.Client(trust_env=False) as client:
             resp = client.get(f"http://localhost:{port}/json/version", timeout=timeout_seconds)
-    except (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout):
+    except httpx.TransportError:
         return False
     return resp.status_code == HTTP_OK
 
 
-def kill_chrome_on_port(port: int) -> None:
-    """Kill any process listening on the CDP debug port (best-effort, no error if none)."""
+def kill_chrome_on_port(port: int, *, wait_seconds: float = 5.0) -> None:
+    """Kill any process listening on the CDP debug port and wait for it to stop answering.
+
+    Returning while the socket is still half-alive makes the next probe read the dying
+    Chrome as a session worth reusing.
+    """
     try:
         result = subprocess.run(  # noqa: S603
             ["lsof", "-ti", f":{port}"],  # noqa: S607
@@ -53,7 +62,14 @@ def kill_chrome_on_port(port: int) -> None:
             except ProcessLookupError:
                 pass
     except (subprocess.TimeoutExpired, OSError, ValueError):
-        pass
+        logger.debug("Could not enumerate processes on port %d", port, exc_info=True)
+
+    deadline = time.monotonic() + wait_seconds
+    while time.monotonic() < deadline:
+        if not is_debug_port_open(port):
+            return
+        time.sleep(DEFAULT_POLL_INTERVAL_SECONDS)
+    logger.warning("Port %d still answering %.0fs after kill.", port, wait_seconds)
 
 
 def ensure_chrome_running(
