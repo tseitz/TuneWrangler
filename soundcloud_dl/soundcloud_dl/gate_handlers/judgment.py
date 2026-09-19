@@ -188,14 +188,25 @@ class JudgmentGateHandler(GateHandler):
         return await find_element_by_key(page, key)
 
     def _match_template_field(self, el: dict[str, Any]) -> str | None:
-        """Return the template_vars key matching this input's name/placeholder, if any."""
-        haystack = f"{el.get('name', '')} {el.get('placeholder', '')}".lower()
+        """Return the template_vars key matching this input, if any.
+
+        Scored by where the hint sits, never by _FIELD_HINTS order. Hypeddit names its name
+        box `email_name`, so first-match-wins typed the email address into it. In a compound
+        field name the last token is the role: `email_name` is a name, `email_address` is an
+        email. Longest hint breaks a tie at the same position.
+        """
+        haystack = " ".join(
+            (el.get("name") or "", el.get("id") or "", el.get("placeholder") or "")
+        ).lower()
+        best: tuple[int, int, str] | None = None
         for var_key, hints in _FIELD_HINTS.items():
             if var_key not in self.template_vars:
                 continue
-            if any(hint in haystack for hint in hints):
-                return var_key
-        return None
+            for hint in hints:
+                at = haystack.rfind(hint)
+                if at >= 0 and (best is None or (at, len(hint)) > best[:2]):
+                    best = (at, len(hint), var_key)
+        return best[2] if best is not None else None
 
     async def _ask_choice(
         self,

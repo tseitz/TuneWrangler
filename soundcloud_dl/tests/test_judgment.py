@@ -341,3 +341,22 @@ async def test_dead_key_is_forgiven_once_it_works(monkeypatch):
         await handler._run_steps(page, {})
 
     assert all(d == frozenset() for d in seen)
+
+
+@pytest.mark.parametrize(
+    ("name", "placeholder", "expected"),
+    [
+        # The real miss: Hypeddit's name box is name="email_name", and a first-match-wins
+        # scan of _FIELD_HINTS typed the email address into it.
+        ("email_name", "", "name"),
+        ("email_address", "", "email"),
+        ("name", "", "name"),
+        ("", "Your email", "email"),
+        ("fullname", "", "name"),
+        ("subscribe", "", None),
+    ],
+)
+def test_match_template_field_picks_the_role_not_the_prefix(name, placeholder, expected):
+    handler = make_handler()
+    el = {"name": name, "id": name, "placeholder": placeholder}
+    assert handler._match_template_field(el) == expected  # noqa: SLF001
