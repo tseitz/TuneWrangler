@@ -67,10 +67,11 @@ _DEFAULT_GOAL = (
     "locked by class or href — pick an incomplete ('undone') required action instead. "
     "The gate is a multi-page carousel: when every action on the current page is 'done' "
     "and no download link is present, the next step is the continue button that advances "
-    "to the following page — often labelled 'Next', or with an id like 'skipper_sc_next' "
-    "or 'skipper_ig_next'. Pick that. A later page may ask to connect Spotify or Instagram; "
-    "skipping it with its Next button is fine. Only pick the download button once it is "
-    "actually on the page and no longer disabled."
+    "to the following page. That is usually a 'Next' button, but some pages have no Next "
+    "and can only be passed by doing the thing they ask — a Spotify or Instagram 'Connect' "
+    "button, for instance. If a Next button has already been clicked and the page did not "
+    "change, it belongs to a finished step: choose something else. Only pick the download "
+    "button once it is actually on the page and no longer disabled."
 )
 
 # Matches template_vars keys used by main.py's handler construction (email/name/comment)
@@ -189,12 +190,23 @@ class JudgmentGateHandler(GateHandler):
                 return var_key
         return None
 
-    async def _ask_choice(self, page: Page, snapshot: dict[str, dict[str, Any]]) -> str:
+    async def _ask_choice(
+        self,
+        page: Page,
+        snapshot: dict[str, dict[str, Any]],
+        dead_keys: frozenset[str] = frozenset(),
+    ) -> str:
         # Only what a person could actually click. Offering the off-screen carousel slides
         # would let the model pick a button that silently does nothing.
+        offered = _on_screen(snapshot)
+        # A control already clicked to no effect is a dead end — Hypeddit's SoundCloud Next
+        # stays on screen after its page is finished, and the model kept re-picking it at
+        # 0.94+ while the gate sat still. Withholding them is cheaper and more reliable than
+        # describing them and hoping the model discounts them.
+        live = {k: el for k, el in offered.items() if k not in dead_keys}
         criteria: dict[str, str | None] = {
             key: f"<{el['tag']}> text={el['text']!r} class={el['cls']!r} href={el['href']!r}"
-            for key, el in _on_screen(snapshot).items()
+            for key, el in (live or offered).items()
         }
         # Only offered when a download control is actually on screen. Left always-available,
         # the model picked it once the page's actions were done — which on a carousel gate
@@ -210,7 +222,7 @@ class JudgmentGateHandler(GateHandler):
             state={
                 "goal": self.goal,
                 "page_url": page.url,
-                "elements": list(_on_screen(snapshot).values()),
+                "elements": list((live or offered).values()),
             },
             questions={
                 "next_action": Choice(
@@ -297,12 +309,7 @@ class JudgmentGateHandler(GateHandler):
 
             # A Cloudflare wall appearing mid-wait replaces the page, which an
             # element-only comparison would read as change-therefore-progress.
-            try:
-                captcha = await detect_captcha(page)
-            except Exception:  # noqa: BLE001
-                captcha = None
-            if captcha is not None:
-                raise CaptchaEncountered(captcha, self.gate_name)
+            await self._raise_on_captcha(page)
 
             try:
                 snapshot = await self._snapshot(page)
@@ -311,7 +318,11 @@ class JudgmentGateHandler(GateHandler):
                 logger.debug("[%s] snapshot failed mid-settle", self.gate_name, exc_info=True)
                 continue
 
-            if snapshot != before or unlock_reached(snapshot):
+            # Only a download we could actually click ends the wait. unlock_reached is true
+            # from the moment the button is enabled, which is long before it is reachable,
+            # and short-circuiting on it turned every settle into a single 500ms poll.
+            target = find_download_target(snapshot)
+            if snapshot != before or (target is not None and target["visible"]):
                 return snapshot
         return snapshot
 
@@ -537,6 +548,40 @@ class JudgmentGateHandler(GateHandler):
             return
         logger.info("[%s] %r hidden because: %s", self.gate_name, key, info)
 
+    async def _did_it_move(
+        self,
+        page: Page,
+        before: dict[str, dict[str, Any]],
+        kind: str,
+        target: dict[str, Any],
+        i: int,
+    ) -> bool:
+        # The carousel animates. Returning on the first DOM change clicked Next again
+        # mid-transition, which is what left the next slide rendering blank.
+        await page.wait_for_timeout(_TRANSITION_MS)
+        settled = await self._settle(page, before)
+        changed = settled != before
+        logger.info(
+            "[%s] turn %d: %s on %r → changed=%s unlocked=%s",
+            self.gate_name,
+            i,
+            kind,
+            target["key"],
+            changed,
+            unlock_reached(settled),
+        )
+        if self.recorder is not None:
+            await self.recorder.screenshot(page, f"turn-{i:02d}-after")
+        return changed
+
+    async def _raise_on_captcha(self, page: Page) -> None:
+        try:
+            captcha = await detect_captcha(page)
+        except Exception:  # noqa: BLE001
+            captcha = None
+        if captcha is not None:
+            raise CaptchaEncountered(captcha, self.gate_name)
+
     async def _begin_turn(self, page: Page, i: int) -> dict[str, dict[str, Any]]:
         await self._repair_carousel(page)
         snapshot = await self._snapshot(page)
@@ -558,6 +603,7 @@ class JudgmentGateHandler(GateHandler):
         self, page: Page, results: dict[str, StepResult]
     ) -> dict[str, StepResult]:
         idle_turns = 0
+        dead_keys: set[str] = set()
         offscreen_download: str | None = None
         # Per element, not a single global flag: a wrong guess early must not lock out the
         # real download button when it appears later.
@@ -572,13 +618,7 @@ class JudgmentGateHandler(GateHandler):
             with contextlib.suppress(Exception):
                 await page.bring_to_front()
 
-            try:
-                captcha = await detect_captcha(page)
-            except Exception:  # noqa: BLE001
-                captcha = None
-            if captcha is not None:
-                raise CaptchaEncountered(captcha, self.gate_name)
-
+            await self._raise_on_captcha(page)
             snapshot = await self._begin_turn(page, i)
 
             target = find_download_target(snapshot)
@@ -593,7 +633,7 @@ class JudgmentGateHandler(GateHandler):
                     return results
                 continue
 
-            choice = await self._ask_choice(page, snapshot)
+            choice = await self._ask_choice(page, snapshot, frozenset(dead_keys))
             target = self._resolve_target(choice, snapshot, results, i)
             if target is None:
                 idle_turns += 1
@@ -621,23 +661,11 @@ class JudgmentGateHandler(GateHandler):
                 )
                 results[f"el_{i}_action_failed"] = StepResult.SKIPPED
 
-            # The carousel animates. Returning on the first DOM change clicked Next again
-            # mid-transition, which is what left the next slide rendering blank.
-            await page.wait_for_timeout(_TRANSITION_MS)
-            settled = await self._settle(page, snapshot)
-            changed = settled != snapshot
-            logger.info(
-                "[%s] turn %d: %s on %r → changed=%s unlocked=%s",
-                self.gate_name,
-                i,
-                kind,
-                target["key"],
-                changed,
-                unlock_reached(settled),
-            )
-            if self.recorder is not None:
-                await self.recorder.screenshot(page, f"turn-{i:02d}-after")
-
+            changed = await self._did_it_move(page, snapshot, kind, target, i)
+            if changed:
+                dead_keys.discard(target["key"])
+            else:
+                dead_keys.add(target["key"])
             idle_turns = 0 if changed else idle_turns + 1
             if idle_turns >= _MAX_IDLE_TURNS:
                 raise StuckGate(

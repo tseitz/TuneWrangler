@@ -87,7 +87,7 @@ def stub_choice(monkeypatch, choices: list[str]) -> None:
     """Make handler._ask_choice return each value in order, one per call."""
     choice_iter = iter(choices)
 
-    async def fake_ask_choice(self, _page, _snapshot):
+    async def fake_ask_choice(self, _page, _snapshot, _dead=frozenset()):
         return next(choice_iter)
 
     monkeypatch.setattr(JudgmentGateHandler, "_ask_choice", fake_ask_choice)
@@ -189,7 +189,7 @@ async def test_unlocked_gate_downloads_without_consulting_the_model(monkeypatch)
     page = make_page([[READY_DOWNLOAD_LINK]], found_element=el)
     asked_before_download = []
 
-    async def record_then_answer(self, _page, _snapshot):
+    async def record_then_answer(self, _page, _snapshot, _dead=frozenset()):
         asked_before_download.append("el_1_download" not in results)
         return "downloadProcess"
 
@@ -297,3 +297,47 @@ def test_key_derivation_is_not_positional():
     assert "'#' + i" not in dom_snapshot.SNAPSHOT_JS
     assert dom_snapshot.SNAPSHOT_JS.count("const elKey") == 1
     assert dom_snapshot.FIND_BY_KEY_JS.count("const elKey") == 1
+
+
+@pytest.mark.asyncio
+async def test_a_control_that_changed_nothing_is_not_offered_again(monkeypatch):
+    """Hypeddit's SoundCloud Next stays on screen after its page is done.
+
+    The model re-picked it at 0.94+ for three turns while the gate sat still, because a
+    dead end looks identical to a live one in a snapshot.
+    """
+    handler = make_handler()
+    page = make_page([[PLAIN_BUTTON, element(key="el_other", text="Connect")]], found_element=None)
+    seen: list[frozenset] = []
+
+    async def capture(self, _page, _snapshot, dead=frozenset()):
+        seen.append(dead)
+        return "el_btn"
+
+    monkeypatch.setattr(JudgmentGateHandler, "_ask_choice", capture)
+
+    with pytest.raises(StuckGate):
+        await handler._run_steps(page, {})
+
+    assert seen[0] == frozenset()
+    assert "el_btn" in seen[-1]
+
+
+@pytest.mark.asyncio
+async def test_dead_key_is_forgiven_once_it_works(monkeypatch):
+    """A control can be dead on one page and live on the next — don't ban it forever."""
+    handler = make_handler()
+    el = make_element()
+    page = make_changing_page(found_element=el)
+    seen: list[frozenset] = []
+
+    async def capture(self, _page, _snapshot, dead=frozenset()):
+        seen.append(dead)
+        return "el_btn"
+
+    monkeypatch.setattr(JudgmentGateHandler, "_ask_choice", capture)
+
+    with pytest.raises(StuckGate, match="jev_cap_15"):
+        await handler._run_steps(page, {})
+
+    assert all(d == frozenset() for d in seen)
