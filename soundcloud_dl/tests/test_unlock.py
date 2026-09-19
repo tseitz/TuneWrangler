@@ -8,6 +8,7 @@ from soundcloud_dl.gate_handlers.unlock import (
     is_download_element,
     is_download_enabled,
     is_unlocked_href,
+    page_actions_complete,
     unlock_reached,
 )
 
@@ -89,14 +90,24 @@ def test_done_is_not_matched_inside_undone():
     assert is_action_done(FOLLOW_DONE) is True
 
 
-def test_unlock_not_reached_while_an_action_is_undone():
-    snapshot = {"data-step=follow": FOLLOW_UNDONE, "gateDownloadButton": UNLOCKED_BUTTON}
+def test_actions_done_is_not_unlocked_on_a_carousel_gate():
+    """The download button is several 'Next' clicks past the last action."""
+    snapshot = {"data-step=follow": FOLLOW_DONE, "gateDownloadButton": LOCKED_BUTTON}
+    assert page_actions_complete(snapshot) is True
     assert unlock_reached(snapshot) is False
 
 
-def test_unlock_reached_when_every_action_is_done():
-    snapshot = {"data-step=follow": FOLLOW_DONE, "gateDownloadButton": LOCKED_BUTTON}
+def test_unlock_reached_once_an_enabled_download_is_on_screen():
+    snapshot = {"data-step=follow": FOLLOW_DONE, "gateDownloadButton": UNLOCKED_BUTTON}
     assert unlock_reached(snapshot) is True
+
+
+def test_page_actions_complete_is_false_while_one_is_undone():
+    assert page_actions_complete({"data-step=follow": FOLLOW_UNDONE}) is False
+
+
+def test_page_actions_complete_is_false_with_no_actions_at_all():
+    assert page_actions_complete({"gateDownloadButton": UNLOCKED_BUTTON}) is False
 
 
 def test_unlock_reached_on_a_live_download_href():

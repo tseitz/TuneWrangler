@@ -61,8 +61,13 @@ _DEFAULT_GOAL = (
     "submitting an email. On many gates these show up as elements with a data-step of "
     "'follow', 'like', 'comment', or 'repost' whose class contains 'undone' until done "
     "and 'done' once completed. Do not pick the download button while it still looks "
-    "locked by class or href — pick an incomplete ('undone') required action instead, and "
-    "only choose the download button (or already_unlocked) once none remain."
+    "locked by class or href — pick an incomplete ('undone') required action instead. "
+    "The gate is a multi-page carousel: when every action on the current page is 'done' "
+    "and no download link is present, the next step is the continue button that advances "
+    "to the following page — often labelled 'Next', or with an id like 'skipper_sc_next' "
+    "or 'skipper_ig_next'. Pick that. A later page may ask to connect Spotify or Instagram; "
+    "skipping it with its Next button is fine. Only pick the download button once it is "
+    "actually on the page and no longer disabled."
 )
 
 # Matches template_vars keys used by main.py's handler construction (email/name/comment)
@@ -123,10 +128,15 @@ class JudgmentGateHandler(GateHandler):
             key: f"<{el['tag']}> text={el['text']!r} class={el['cls']!r} href={el['href']!r}"
             for key, el in snapshot.items()
         }
-        criteria[_ALREADY_UNLOCKED] = (
-            "The real free-download link/button is already enabled and ready to click; "
-            "no further element needs interaction."
-        )
+        # Only offered when a download control is actually on screen. Left always-available,
+        # the model picked it once the page's actions were done — which on a carousel gate
+        # is several pages too early, and the loop then stalled looking for a button that
+        # had not been reached.
+        if find_download_target(snapshot) is not None:
+            criteria[_ALREADY_UNLOCKED] = (
+                "The real free-download link/button is already enabled and ready to click; "
+                "no further element needs interaction."
+            )
         client = self._get_client()
         response = await client.system_one(
             state={

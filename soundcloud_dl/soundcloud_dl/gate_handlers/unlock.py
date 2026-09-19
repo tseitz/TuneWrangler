@@ -61,12 +61,10 @@ def is_action_done(el: dict[str, Any]) -> bool:
     return "done" in tokens and "undone" not in tokens
 
 
-def unlock_reached(snapshot: dict[str, dict[str, Any]]) -> bool:
-    """True once the gate has opened: every required action done, or a live download href."""
+def page_actions_complete(snapshot: dict[str, dict[str, Any]]) -> bool:
+    """Every gate action on the CURRENT page is done. Says nothing about the gate as a whole."""
     actions = [el for el in snapshot.values() if el.get("step")]
-    if actions and all(is_action_done(el) for el in actions):
-        return True
-    return any(is_download_element(el) and is_unlocked_href(el["href"]) for el in snapshot.values())
+    return bool(actions) and all(is_action_done(el) for el in actions)
 
 
 def find_download_target(snapshot: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
@@ -76,3 +74,13 @@ def find_download_target(snapshot: dict[str, dict[str, Any]]) -> dict[str, Any] 
     if live is not None:
         return live
     return next((el for el in candidates if is_download_enabled(el)), None)
+
+
+def unlock_reached(snapshot: dict[str, dict[str, Any]]) -> bool:
+    """True only when a usable download control is on screen.
+
+    Finishing a page's actions is NOT enough: the gate is a carousel and the real download
+    button is several 'Next' clicks further on. Counting actions-done as unlocked sent the
+    loop hunting for a download it had not reached, and it stalled there.
+    """
+    return find_download_target(snapshot) is not None
