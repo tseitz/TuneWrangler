@@ -7,7 +7,6 @@ functions drive soundcloud.com directly and verify against SoundCloud's own cont
 
 from __future__ import annotations
 
-import contextlib
 import logging
 from typing import TYPE_CHECKING
 
@@ -63,17 +62,33 @@ async def _wait_for_actions(page: Page) -> None:
     # A track page's body never renders in a background tab — Chrome throttles the timers
     # its SPA renders on. Artist pages are unaffected, which is what made this look like a
     # per-track problem. Same reason judgment.py re-focuses before every snapshot.
-    with contextlib.suppress(Exception):
+    try:
         await page.bring_to_front()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("bring_to_front failed: %s", e)
 
     # Waiting on .sc-button-like alone returns in 4s because the mini player at the bottom
     # of every page has one. These two are the page's own content.
-    try:
-        await page.wait_for_selector(
-            ".soundActions, .userInfoBar", state="attached", timeout=25_000
-        )
-    except Exception:  # noqa: BLE001
-        logger.warning("Page content did not render within 25s on %s", page.url)
+    for attempt in (1, 2):
+        try:
+            await page.wait_for_selector(
+                ".soundActions, .userInfoBar", state="attached", timeout=20_000
+            )
+            break
+        except Exception:  # noqa: BLE001
+            state = await page.evaluate(
+                "() => [document.visibilityState, document.readyState,"
+                " document.querySelectorAll('.sound').length, document.body.children.length,"
+                " location.href]"
+            )
+            logger.warning(
+                "attempt %d: no content. visibility=%s ready=%s .sound=%d bodyKids=%d url=%s",
+                attempt,
+                *state,
+            )
+            if attempt == 1:
+                logger.info("reloading once")
+                await page.reload(wait_until="domcontentloaded", timeout=30_000)
     if PAGE_LOAD_WAIT_SECONDS > 0:
         await page.wait_for_timeout(PAGE_LOAD_WAIT_SECONDS * 1000)
 
@@ -94,6 +109,12 @@ async def probe(context: BrowserContext, url: str) -> None:
     page.on(
         "response",
         lambda r: problems.append(f"HTTP {r.status} {r.url}"[:200]) if r.status >= 400 else None,  # noqa: PLR2004
+    )
+    # A request killed by a proxy or blocklist never produces a response, so it is invisible
+    # to the handler above — and a missing script is exactly what "AF is not defined" means.
+    page.on(
+        "requestfailed",
+        lambda r: problems.append(f"FAILED {r.failure} {r.url}"[:200]),
     )
     try:
         logger.info("Probing: %s", url)
