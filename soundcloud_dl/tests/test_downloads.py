@@ -42,3 +42,18 @@ def test_rename_to_track_is_a_no_op_without_a_title(tmp_path):
     src = tmp_path / "suggested.mp3"
     src.write_bytes(b"x")
     assert rename_to_track(src, None) == src
+
+
+def test_save_bytes_falls_back_when_the_destination_is_unwritable(tmp_path, monkeypatch, caplog):
+    """The gate is spent by this point — a bad path must not cost us the track."""
+    log_dir = tmp_path / "logs"
+    monkeypatch.setattr("soundcloud_dl.downloads.get_log_dir", lambda: log_dir)
+
+    blocked = tmp_path / "blocked"
+    blocked.write_text("i am a file, not a directory")
+
+    saved = save_bytes(blocked / "sub" / "track.mp3", b"audio")
+
+    assert saved == log_dir / "downloads" / "track.mp3"
+    assert saved.read_bytes() == b"audio"
+    assert "saved to" in caplog.text

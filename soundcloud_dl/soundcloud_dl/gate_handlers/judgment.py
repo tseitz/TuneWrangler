@@ -15,7 +15,12 @@ from typing import TYPE_CHECKING, Any
 
 from typesafe_sdk import AsyncTypeSafeClient, Choice
 
-from soundcloud_dl.downloads import looks_like_audio, rename_to_track, save_bytes
+from soundcloud_dl.downloads import (
+    looks_like_audio,
+    rename_to_track,
+    save_bytes,
+    save_download,
+)
 from soundcloud_dl.gate_handlers.base import GateHandler, StepResult, StuckGate
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered, detect_captcha
 from soundcloud_dl.gate_handlers.dom_snapshot import find_element_by_key, snapshot_elements
@@ -348,9 +353,7 @@ class JudgmentGateHandler(GateHandler):
             async with page.expect_download(timeout=45_000) as download_info:
                 await self._click_with_force_fallback(page, el, key)
             download = await download_info.value
-            dest = self.download_dir / download.suggested_filename
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            await download.save_as(str(dest))
+            dest = await save_download(download, self.download_dir / download.suggested_filename)
             dest = rename_to_track(dest, self.track_title)
             logger.info("[%s] Saved download → %s", self.gate_name, dest)
             downloaded = True
