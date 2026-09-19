@@ -432,6 +432,10 @@ class GateHandler:
             return await self._run_steps(page, results)
         finally:
             page.context.remove_listener("page", _on_popup)
+            if _tasks:
+                # asyncio.wait, never wait_for: wait_for cancels what is still pending on
+                # timeout, which is the mid-flight OAuth approval this is protecting.
+                await asyncio.wait(_tasks, timeout=3)
 
     async def _run_steps(  # noqa: C901
         self, page: Page, results: dict[str, StepResult]

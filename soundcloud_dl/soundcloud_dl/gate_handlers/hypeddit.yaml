@@ -197,7 +197,47 @@ steps:
     depends_on: submit_comment
     force: true
 
-  # --- Carousel slide 2/3: optional SoundCloud actions ---
+  # --- "Modern" gate template: the SoundCloud support panel ---
+  # Hypeddit pages with gate_design_template="modern" put all four SoundCloud
+  # actions on ONE panel, instead of one action per carousel slide. Each action is
+  # an <a data-step="follow|like|comment|repost">, and its class carries the state:
+  # "undone" until it is completed, "done" once Hypeddit confirms it against the
+  # SoundCloud API. The download stays locked until every required action is done.
+  #
+  # Match on data-step, not on text. The visible label is artist-specific
+  # ("Repost My Track", "Follow SANJAY"), so :has-text selectors cannot match it
+  # reliably — that is exactly why the old repost step below never fired, which
+  # left the gate locked and surfaced much later as a bogus download error.
+  #
+  # The .undone qualifier means a completed action is left alone: re-clicking one
+  # just reopens an OAuth popup for no reason.
+  - id: sc_follow
+    trigger: "a[data-step='follow'].undone"
+    action: click
+    optional: true
+    force: true
+
+  - id: sc_like
+    trigger: "a[data-step='like'].undone"
+    action: click
+    optional: true
+    force: true
+
+  - id: sc_comment
+    trigger: "a[data-step='comment'].undone"
+    action: click
+    optional: true
+    force: true
+
+  - id: sc_repost
+    trigger: "a[data-step='repost'].undone"
+    action: click
+    optional: true
+    force: true
+
+  # --- Legacy carousel SoundCloud actions (older gate template) ---
+  # Kept for gates still serving the pre-"modern" design. On a modern gate these
+  # find nothing and are skipped.
   - id: repost_soundcloud
     trigger: >-
       button:has-text('Repost'), a:has-text('Repost on SoundCloud'),
@@ -251,21 +291,34 @@ steps:
   # After all gate steps, either:
   # - #downloadProcess href updates from javascript:void(0) to a real CDN URL, OR
   # - #gateDownloadButton becomes visible (sc-only gates where #downloadProcess never updates)
+  # While the gate is still locked, #gateDownloadButton is present and on screen but
+  # carries the classes "disable disabled" and an href of javascript:void(0).
+  # Excluding those classes everywhere below is what makes a locked gate fail fast
+  # and honestly: without it the handler clicks a dead button, then burns 45s waiting
+  # for a download event and 20s watching for an audio response before reporting
+  # "no audio response intercepted" — which blames the download instead of the gate.
+  # Both spellings are needed: the live page carries "disable" AND "disabled".
   - id: wait_for_download_ready
     trigger: >-
       a#downloadProcess[href]:not([href='javascript:void(0)']),
-      a#gateDownloadButton
+      a#gateDownloadButton:not(.disabled):not(.disable)
     action: wait
-    timeout_ms: 8000
+    # Raised from 8s: the button only enables after Hypeddit confirms each
+    # SoundCloud action against the API, which takes a few seconds per action.
+    timeout_ms: 20000
     optional: true
 
   - id: final_download
     trigger: >-
-      a#gateDownloadButton, a.free_dwln,
+      a#gateDownloadButton:not(.disabled):not(.disable),
+      a.free_dwln:not(.disabled):not(.disable),
       a.dp[href]:not([href='javascript:void(0)']),
       a#downloadProcess[href]:not([href='javascript:void(0)']),
-      a:has-text('Get Free Download'), a:has-text('Download Now'),
-      a:has-text('Get Download'), button:has-text('Download'), .download-link
+      a:has-text('Get Free Download'):not(.disabled):not(.disable),
+      a:has-text('Download Now'):not(.disabled):not(.disable),
+      a:has-text('Get Download'):not(.disabled):not(.disable),
+      button:has-text('Download'):not(.disabled):not(.disable),
+      .download-link:not(.disabled):not(.disable)
     action: click
     download: true
     # force bypasses "pointer intercepted" when the Instagram slide div is still

@@ -2,8 +2,14 @@
 
 import logging
 import sys
+from logging.handlers import RotatingFileHandler
 
 from soundcloud_dl.config import get_log_dir
+
+# A plain FileHandler appends forever. This log reached 84 MB, which made it
+# useless to read back after a run. Cap it and keep a few older files.
+MAX_LOG_BYTES = 10 * 1024 * 1024
+LOG_BACKUP_COUNT = 3
 
 
 def setup_logging(
@@ -26,7 +32,12 @@ def setup_logging(
         console = logging.StreamHandler(sys.stdout)
         console.setFormatter(formatter)
         root.addHandler(console)
-        file_handler = logging.FileHandler(log_path, encoding="utf-8")
+        file_handler = RotatingFileHandler(
+            log_path,
+            maxBytes=MAX_LOG_BYTES,
+            backupCount=LOG_BACKUP_COUNT,
+            encoding="utf-8",
+        )
         file_handler.setFormatter(formatter)
         root.addHandler(file_handler)
 

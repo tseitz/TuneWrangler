@@ -26,6 +26,11 @@ TUNEWRANGLER_SC_PLAYLIST_URL = os.getenv("TUNEWRANGLER_SC_PLAYLIST_URL")
 SOUNDCLOUD_CLIENT_ID = os.getenv("SOUNDCLOUD_CLIENT_ID")
 SOUNDCLOUD_CLIENT_SECRET = os.getenv("SOUNDCLOUD_CLIENT_SECRET")
 
+# ── Judgment gate pilot (--jev) ────────────────────────────────────────────────
+# Cross-cutting third-party key, not soundcloud_dl-specific — no TUNEWRANGLER_SC_ prefix,
+# matching the SOUNDCLOUD_CLIENT_ID/SECRET precedent above.
+TYPESAFE_API_KEY = os.getenv("TYPESAFE_API_KEY")
+
 # ── Phase 2: Browser / gate form values ───────────────────────────────────────
 DOWNLOAD_EMAIL = os.getenv("TUNEWRANGLER_SC_EMAIL", "tdseitz10@outlook.com")
 DOWNLOAD_NAME = os.getenv("TUNEWRANGLER_SC_NAME", "Tom")
@@ -99,6 +104,13 @@ def get_debug_dir() -> Path:
     return debug_dir
 
 
+def get_runs_dir() -> Path:
+    """Return per-run gate artifact directory (created if needed)."""
+    runs_dir = get_log_dir() / "runs"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    return runs_dir
+
+
 def get_processed_file() -> Path:
     """Path to JSON file storing processed track URLs per playlist (for resume)."""
     return get_log_dir() / "processed.json"
@@ -133,4 +145,11 @@ def validate_phase2_config() -> None:
     # No LLM required. Playwright + browser profile are enough.
     if DOWNLOAD_DIR is not None and not DOWNLOAD_DIR.parent.exists():
         msg = f"TUNEWRANGLER_SC_DOWNLOAD_DIR parent does not exist: {DOWNLOAD_DIR.parent}"
+        raise RuntimeError(msg)
+
+
+def validate_jev_config() -> None:
+    """Raise if config required for the --jev judgment pilot is missing."""
+    if not TYPESAFE_API_KEY or not TYPESAFE_API_KEY.strip():
+        msg = "TYPESAFE_API_KEY is required for --jev. Set it in .env or the environment."
         raise RuntimeError(msg)

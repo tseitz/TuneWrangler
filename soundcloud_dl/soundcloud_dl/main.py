@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import logging
 import re
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -39,6 +40,7 @@ from soundcloud_dl.gate_handlers.base import (
     StuckGate,
 )
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered
+from soundcloud_dl.inspect_gate import inspect_gate
 from soundcloud_dl.logger import setup_logging
 from soundcloud_dl.playlist import TrackItem, extract_track_urls
 from soundcloud_dl.playlist_cache import load_cached_tracks, save_cached_tracks
@@ -65,15 +67,26 @@ def _sanitize_sc_title(title: str) -> str:
     return title.strip()
 
 
-async def _save_debug_screenshot(page: "Page", label: str) -> None:
-    """Save a screenshot to logs/soundcloud_dl/debug/<label>.png for post-mortem inspection."""
+async def _save_debug_artifacts(page: "Page", label: str) -> None:
+    """Save a screenshot and the page HTML to logs/soundcloud_dl/debug/<label>.{png,html}.
+
+    The HTML matters more than the picture when a gate site redesigns: it carries the
+    selectors needed to rewrite that gate's YAML. The two saves are separate so a
+    failure to grab one still leaves the other.
+    """
+    safe = _UNSAFE_FILENAME_RE.sub("_", label)[:80]
+    base = get_debug_dir() / safe
     try:
-        safe = _UNSAFE_FILENAME_RE.sub("_", label)[:80]
-        path = get_debug_dir() / f"{safe}.png"
-        await page.screenshot(path=str(path), full_page=True)
-        logger.info("DEBUG screenshot saved → %s", path)
+        await page.screenshot(path=f"{base}.png", full_page=True)
+        logger.info("DEBUG screenshot saved → %s.png", base)
     except Exception:  # noqa: BLE001
         logger.debug("Could not save debug screenshot", exc_info=True)
+    try:
+        html = await page.content()
+        await asyncio.to_thread(Path(f"{base}.html").write_text, html, encoding="utf-8")
+        logger.info("DEBUG html saved → %s.html", base)
+    except Exception:  # noqa: BLE001
+        logger.debug("Could not save debug HTML", exc_info=True)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -89,6 +102,24 @@ def _parse_args() -> argparse.Namespace:
         metavar=("GATE_NAME", "URL"),
         help=(
             "Bootstrap a new gate config: launch playwright codegen and scaffold GATE_NAME.yaml."
+        ),
+    )
+    p.add_argument(
+        "--inspect",
+        metavar="URL",
+        help=(
+            "Open a gate URL, wait for you to complete it by hand, then report which "
+            "elements changed. Use this when a gate site redesigns and the handler's "
+            "selectors no longer unlock the download."
+        ),
+    )
+    p.add_argument(
+        "--jev",
+        metavar="URL",
+        help=(
+            "Pilot: drive a single track/gate URL with JudgmentGateHandler (a TypeSafe "
+            "Choice call decides the next element) instead of the YAML step list. "
+            "Requires TYPESAFE_API_KEY."
         ),
     )
     p.add_argument(
@@ -290,7 +321,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         return "captcha_pending"
     except StuckGate as e:
         if page:
-            await _save_debug_screenshot(page, track_label)
+            await _save_debug_artifacts(page, track_label)
         logger.warning(
             "STUCK | %s | last_step=%s — gate variant; consider --record",
             track_label,
@@ -304,17 +335,17 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         # SC page issues (no gate button found, "FREE DL" text not a real gate link,
         # no new tab opened) are human-review candidates, not automatic retries.
         if page:
-            await _save_debug_screenshot(page, track_label)
+            await _save_debug_artifacts(page, track_label)
         logger.warning("NO_GATE | %s | %s", track_label, e)
         return "manual_review"
     except GateStepError:
         if page:
-            await _save_debug_screenshot(page, track_label)
+            await _save_debug_artifacts(page, track_label)
         logger.exception("FAILED | %s", track_label)
         return "failed"
     except Exception:
         if page:
-            await _save_debug_screenshot(page, track_label)
+            await _save_debug_artifacts(page, track_label)
         logger.exception("FAILED | %s | unexpected error", track_label)
         return "failed"
     finally:
@@ -424,6 +455,14 @@ def main() -> None:
     if args.record:
         gate_name, url = args.record
         record(gate_name, url)
+        return
+    if args.inspect:
+        asyncio.run(inspect_gate(args.inspect))
+        return
+    if args.jev:
+        from soundcloud_dl.jev_pilot import run_jev_pilot  # noqa: PLC0415
+
+        asyncio.run(run_jev_pilot(args.jev, pause=args.pause))
         return
     if args.login:
         asyncio.run(_run_login_bootstrap())
