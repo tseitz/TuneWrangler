@@ -359,8 +359,11 @@ class JudgmentGateHandler(GateHandler):
         # A control already clicked to no effect is a dead end — Hypeddit's SoundCloud Next
         # stays on screen after its page is finished, and the model kept re-picking it at
         # 0.94+ while the gate sat still. Withholding them is cheaper and more reliable than
-        # describing them and hoping the model discounts them.
-        live = {k: el for k, el in offered.items() if k not in dead_keys}
+        # describing them and hoping the model discounts them. A disabled control is that
+        # same bet made in advance: droploud's "I did it" confirm stays disabled until both
+        # of the links above it have been opened, and the model pressed it at 0.50 instead
+        # of opening them.
+        live = {k: el for k, el in offered.items() if k not in dead_keys and not el.get("disabled")}
         criteria: dict[str, str | None] = {
             key: self._describe(el) for key, el in (live or offered).items()
         }

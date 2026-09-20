@@ -121,7 +121,8 @@ SNAPSHOT_JS = _js("""
       // Without this a tick is invisible to the snapshot diff, so _did_it_move reports
       // changed=False and the only control that opens the gate is banned as dead.
       checked: toggle !== null && toggle.checked === true,
-      disabled: el.disabled === true || el.hasAttribute('disabled'),
+      disabled: el.disabled === true || el.hasAttribute('disabled')
+        || el.getAttribute('aria-disabled') === 'true',
       visible: isVisible(el),
       chrome: isChrome(el),
       onscreen: onScreen(el),
