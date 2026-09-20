@@ -13,6 +13,7 @@ reads everything else off the page.
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlparse
 
 from soundcloud_dl.gate_handlers.judgment import JudgmentGateHandler
 
@@ -25,6 +26,30 @@ class JevHandler(JudgmentGateHandler):
     def __init__(self, **kwargs: Any) -> None:  # noqa: ANN401
         kwargs.setdefault("config", {"gate": self.gate_slug, "steps": []})
         super().__init__(**kwargs)
+
+
+def gate_name_for(url: str) -> str:
+    """Name a judgment run after the gate's host, so a droploud run is not filed as hypeddit."""
+    host = urlparse(url).netloc.removeprefix("www.")
+    return f"{host.split('.')[0] or 'gate'}_jev"
+
+
+def judgment_handler_for(url: str) -> type[JevHandler]:
+    """A JevHandler for a host nothing is registered for.
+
+    A step list has to be written per host before that host works at all; judgment reads
+    the page, so an unrecognised gate is worth attempting rather than retiring. Retiring
+    it is what the alternative means — `unsupported` is a resume skip state, so the track
+    is never offered again without --retry-unsupported.
+
+    Built per host rather than returning JevHandler itself so the log and the run
+    artifacts name the gate, the same as every registered judgment handler.
+    """
+    slug = gate_name_for(url)
+    # A host is allowed characters a class name is not, and type() takes the string as
+    # given — so "some-new-gate.io" would name a class nothing can be written down as.
+    name = "".join(c for c in slug.title() if c.isalnum()) + "Handler"
+    return type(name, (JevHandler,), {"gate_slug": slug})
 
 
 class HypedditJevHandler(JevHandler):

@@ -90,3 +90,42 @@ def test_every_judgment_gate_is_recognisable_as_one():
         "https://gate.influenceplanner.com/x",
     ):
         assert issubclass(get_handler_for_url(url), JevHandler), url
+
+
+@pytest.mark.parametrize(
+    ("url", "expected_slug"),
+    [
+        ("https://gaterush.me/GiMVei", "gaterush_jev"),
+        ("https://www.some-new-gate.io/abc", "some-new-gate_jev"),
+        ("https://gate.example.com/x", "gate_jev"),
+    ],
+)
+def test_an_unregistered_host_gets_a_judgment_handler_named_after_it(url, expected_slug):
+    """A step list has to be written per host before that host works at all. Judgment reads
+    the page, so an unknown gate is worth attempting rather than retiring — and retiring is
+    what the alternative means, since 'unsupported' is a resume skip state.
+    """
+    from soundcloud_dl.gate_handlers.jev import JevHandler, judgment_handler_for
+
+    handler_cls = judgment_handler_for(url)
+    assert issubclass(handler_cls, JevHandler)
+    assert handler_cls.gate_slug == expected_slug
+    # type() takes the name as given, and a host may carry characters a class name cannot.
+    assert handler_cls.__name__.isidentifier()
+
+
+def test_the_fallback_names_the_run_after_the_gate_not_a_generic_slug():
+    """Otherwise every unregistered gate's log lines and run artifacts land under one name
+    and a failure cannot be traced back to the host it came from."""
+    from soundcloud_dl.gate_handlers.jev import JevHandler, judgment_handler_for
+
+    assert judgment_handler_for("https://gaterush.me/x").gate_slug != JevHandler.gate_slug
+
+
+def test_get_handler_for_url_still_raises_for_an_unknown_host():
+    """The fallback belongs at the call site that has a live page, not in the registry:
+    main.py's meta-gate redirect asks this about whatever URL a gate ended on, and a
+    registry that always answers would start a second gate run on a CDN or success page.
+    """
+    with pytest.raises(GateNotSupportedError):
+        get_handler_for_url("https://gaterush.me/GiMVei")

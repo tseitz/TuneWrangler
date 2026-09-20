@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING
-from urllib.parse import urlparse
 
 from soundcloud_dl.config import (
     ACTION_DELAY_MAX_MS,
@@ -24,6 +23,7 @@ from soundcloud_dl.config import (
 from soundcloud_dl.gate_handlers import GateNotSupportedError, get_handler_for_url
 from soundcloud_dl.gate_handlers.base import StepResult
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered
+from soundcloud_dl.gate_handlers.jev import gate_name_for
 from soundcloud_dl.gate_handlers.judgment import JudgmentGateHandler
 from soundcloud_dl.gate_handlers.login_wall import LoginWallEncountered
 from soundcloud_dl.main import _save_debug_artifacts
@@ -40,12 +40,6 @@ if TYPE_CHECKING:
     from soundcloud_dl.soundcloud_actions import ActionResult
 
 logger = logging.getLogger("soundcloud_dl.jev_pilot")
-
-
-def _run_name(gate_url: str) -> str:
-    """Name the run folder after the gate's host, so a droploud run isn't filed as hypeddit."""
-    host = urlparse(gate_url).netloc.removeprefix("www.")
-    return f"{host.split('.')[0] or 'gate'}_jev"
 
 
 def _auto_approve_oauth_for(gate_url: str) -> bool:
@@ -205,7 +199,7 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
             logger.info("Treating URL as a gate page directly (no SoundCloud lookup)")
             gate_url = url
 
-        recorder = RunRecorder(_run_name(gate_url))
+        recorder = RunRecorder(gate_name_for(gate_url))
 
         page = await context.new_page()
         await page.goto(gate_url, wait_until="domcontentloaded", timeout=30_000)
@@ -214,7 +208,7 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
         handler = JudgmentGateHandler(
             # Otherwise every line of a droploud run is logged as [hypeddit_jev], which is
             # the default baked into the handler for the gate it was first written against.
-            config={"gate": _run_name(gate_url), "steps": []},
+            config={"gate": gate_name_for(gate_url), "steps": []},
             template_vars={
                 "email": DOWNLOAD_EMAIL,
                 "name": DOWNLOAD_NAME,
