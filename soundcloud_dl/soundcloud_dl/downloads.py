@@ -39,17 +39,64 @@ _ASSET_EXTS = (
     ".html",
 )
 
+# A gate page embeds the SoundCloud player, and that player streams while the gate is
+# being worked through. Its HLS segments are served as audio/mp4, so the content-type
+# test below says yes to them — one was saved as a 197K .m4s, reported as a success and
+# recorded done, which is worse than failing because the track is then never retried.
+# A segment is never the file a gate hands over: those arrive whole.
+#
+# Extensions alone cannot close this. The same segments also arrive as .mp4 and with no
+# extension at all, and an extensionless name is handed .mp3 downstream — so the list
+# below is the cheap first pass and is_whole_track() is what actually decides.
+_STREAM_EXTS = (".m4s", ".ts", ".m3u8", ".mpd")
 
-def looks_like_audio(url: str, content_type: str | None, content_disposition: str | None) -> bool:
+_REJECT_EXTS = _ASSET_EXTS + _STREAM_EXTS
+
+#: Smallest payload worth treating as a track. A SoundCloud HLS segment is a few hundred
+#: KB; the shortest plausible gated track is several MB. Sitting between the two costs a
+#: run nothing when it is wrong — the gate reports no download and the track is retried —
+#: whereas accepting a fragment records done and retires the track for good.
+MIN_TRACK_BYTES = 1_000_000
+
+#: Partial Content. A fragment by definition, whatever it carries.
+_HTTP_PARTIAL = 206
+
+
+def looks_like_audio(
+    url: str,
+    content_type: str | None,
+    content_disposition: str | None,
+    status: int | None = None,
+) -> bool:
     """True when a response is plausibly the downloaded track."""
+    if status == _HTTP_PARTIAL:
+        return False
     path = urllib.parse.urlparse(url).path.lower()
-    if path.endswith(_ASSET_EXTS):
+    if path.endswith(_REJECT_EXTS):
         return False
     if path.endswith(_AUDIO_EXTS):
         return True
     ct = (content_type or "").lower()
     cd = (content_disposition or "").lower()
     return "audio" in ct or "octet-stream" in ct or "force-download" in ct or "attachment" in cd
+
+
+def is_whole_track(url: str, size: int) -> bool:
+    """True when a payload is plausibly an entire track rather than one piece of one.
+
+    Everything looks_like_audio can see is chosen by the far end, and an HLS segment
+    satisfies all of it: real audio, typed audio/mp4, served from a CDN, extension
+    whatever that CDN picked this week. Length is the one signal it cannot dress up.
+    """
+    if size >= MIN_TRACK_BYTES:
+        return True
+    logger.warning(
+        "Ignoring a %d-byte response — too small to be the track, probably a stream "
+        "segment from the player embedded in the gate page: %s",
+        size,
+        url,
+    )
+    return False
 
 
 def looks_like_asset(name: str) -> bool:
@@ -59,7 +106,7 @@ def looks_like_asset(name: str) -> bool:
     content type, and its URL often has no extension at all (ToneDen serves the file from
     an extensionless /<id> path), so requiring positive proof of audio rejects real tracks.
     """
-    return urllib.parse.urlparse(name).path.lower().endswith(_ASSET_EXTS)
+    return urllib.parse.urlparse(name).path.lower().endswith(_REJECT_EXTS)
 
 
 def save_bytes(dest: Path, content: bytes) -> Path:
@@ -162,3 +209,21 @@ async def save_download(download: Any, dest: Path) -> Path:  # noqa: ANN401
         logger.warning("Could not write to %s (%s) — saved to %s instead", dest, exc, fallback)
         return fallback
     return dest
+
+
+def discard_if_fragment(dest: Path, url: str) -> Path | None:
+    """Keep a just-saved file only if it is big enough to be the track.
+
+    For the Playwright-download paths, where the size is not known until the file is on
+    disk. Returns None once the fragment has been removed, so the caller reports no
+    download and the track stays retryable.
+    """
+    try:
+        size = dest.stat().st_size
+    except OSError:
+        logger.warning("Could not size %s — keeping it", dest, exc_info=True)
+        return dest
+    if is_whole_track(url, size):
+        return dest
+    dest.unlink(missing_ok=True)
+    return None

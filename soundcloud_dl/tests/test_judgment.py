@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from soundcloud_dl.downloads import MIN_TRACK_BYTES
 from soundcloud_dl.gate_handlers import dom_snapshot
 from soundcloud_dl.gate_handlers.base import StepResult, StuckGate
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered, CaptchaKind
@@ -227,11 +228,18 @@ async def test_a_failing_callback_does_not_end_the_run(monkeypatch):
         await handler._run_steps(page, {})
 
 
-def fake_download(name: str = "track.mp3", url: str = "https://cdn.example/dl/abc") -> MagicMock:
+def fake_download(
+    name: str = "track.mp3",
+    url: str = "https://cdn.example/dl/abc",
+    size: int = MIN_TRACK_BYTES,
+) -> MagicMock:
     """A stand-in for Playwright's Download, writing real bytes so save_download works.
 
     url is set explicitly: left as a MagicMock attribute it is not a string, and the asset
     filter that reads it cannot be exercised.
+
+    size clears MIN_TRACK_BYTES by default because the handler now discards anything
+    below it as a stream fragment. Pass a smaller one to exercise that.
     """
     download = MagicMock()
     download.suggested_filename = name
@@ -239,7 +247,7 @@ def fake_download(name: str = "track.mp3", url: str = "https://cdn.example/dl/ab
 
     async def save_as(path):
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        Path(path).write_bytes(b"audio")
+        Path(path).write_bytes(b"a" * size)
 
     download.save_as = save_as
     return download
@@ -255,7 +263,19 @@ async def test_a_download_the_page_started_itself_is_saved(tmp_path):
     handler._caught.append(fake_download())
 
     assert await handler._take_caught_download() is True
-    assert (tmp_path / "track.mp3").read_bytes() == b"audio"
+    assert (tmp_path / "track.mp3").stat().st_size == MIN_TRACK_BYTES
+
+
+@pytest.mark.asyncio
+async def test_a_page_started_download_that_is_only_a_fragment_is_thrown_away(tmp_path):
+    """The gate page's embedded player streams while the gate is worked through. Keeping
+    one of its segments reports a success and records the track done, for good."""
+    handler = make_handler(download_dir=tmp_path)
+    handler._caught.append(fake_download(size=197_000))
+
+    assert await handler._take_caught_download() is False
+    assert list(tmp_path.iterdir()) == []
+    assert handler.downloaded is False
 
 
 def test_the_download_handler_can_carry_playwrights_marker_attribute():

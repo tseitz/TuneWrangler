@@ -17,6 +17,8 @@ from typing import TYPE_CHECKING, Any, Literal
 from typesafe_sdk import AsyncTypeSafeClient, Choice
 
 from soundcloud_dl.downloads import (
+    discard_if_fragment,
+    is_whole_track,
     looks_like_asset,
     looks_like_audio,
     rename_to_track,
@@ -557,10 +559,23 @@ class JudgmentGateHandler(GateHandler):
             download = await self._download_unless_a_popup_took_it(pending)
             if download is None:
                 return False
-            dest = await save_download(download, self.download_dir / download.suggested_filename)
-            dest = rename_to_track(dest, self.track_title)
-            self._note_saved(dest)
-            downloaded = True
+            if looks_like_asset(download.suggested_filename) or looks_like_asset(download.url):
+                logger.warning(
+                    "[%s] ignoring a download that looks like a page asset: %s",
+                    self.gate_name,
+                    download.suggested_filename,
+                )
+            else:
+                # Not fatal either way: the href fetch and the response intercept below
+                # are still to come, and one of them is usually what gets the real file.
+                saved = discard_if_fragment(
+                    await save_download(download, self.download_dir / download.suggested_filename),
+                    download.url,
+                )
+                if saved is not None:
+                    dest = rename_to_track(saved, self.track_title)
+                    self._note_saved(dest)
+                    downloaded = True
         except Exception:  # noqa: BLE001
             logger.debug("[%s] expect_download did not fire", self.gate_name, exc_info=True)
 
@@ -580,13 +595,16 @@ class JudgmentGateHandler(GateHandler):
                         href,
                         response.headers.get("content-type"),
                         response.headers.get("content-disposition"),
+                        response.status,
                     ):
-                        parsed = urllib.parse.urlparse(href)
-                        filename = Path(parsed.path).name or "download"
-                        dest = save_bytes(self.download_dir / filename, await response.body())
-                        dest = rename_to_track(dest, self.track_title)
-                        self._note_saved(dest, "(href fallback)")
-                        downloaded = True
+                        body = await response.body()
+                        if is_whole_track(href, len(body)):
+                            parsed = urllib.parse.urlparse(href)
+                            filename = Path(parsed.path).name or "download"
+                            dest = save_bytes(self.download_dir / filename, body)
+                            dest = rename_to_track(dest, self.track_title)
+                            self._note_saved(dest, "(href fallback)")
+                            downloaded = True
                 except Exception:  # noqa: BLE001
                     logger.debug(
                         "[%s] href fetch failed — falling through to response intercept",
@@ -602,10 +620,15 @@ class JudgmentGateHandler(GateHandler):
                     response.url,
                     await response.header_value("content-type"),
                     await response.header_value("content-disposition"),
+                    response.status,
                 ):
                     try:
                         body = await response.body()
-                        captured.append((response.url, body))
+                        # Keep polling rather than settling for this one: the player's
+                        # segments arrive throughout, so the first audio-shaped response
+                        # is routinely not the track.
+                        if is_whole_track(response.url, len(body)):
+                            captured.append((response.url, body))
                     except Exception:  # noqa: BLE001
                         logger.debug("[%s] audio body read failed", self.gate_name, exc_info=True)
 
@@ -995,7 +1018,10 @@ class JudgmentGateHandler(GateHandler):
         except Exception:
             logger.exception("[%s] a download fired but could not be saved", self.gate_name)
             return False
-        dest = rename_to_track(dest, self.track_title)
+        saved = discard_if_fragment(dest, download.url)
+        if saved is None:
+            return False
+        dest = rename_to_track(saved, self.track_title)
         self._note_saved(dest, "(started by the page)")
         return True
 

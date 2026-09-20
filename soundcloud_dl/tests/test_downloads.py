@@ -4,6 +4,9 @@ import pytest
 
 from soundcloud_dl import downloads
 from soundcloud_dl.downloads import (
+    MIN_TRACK_BYTES,
+    discard_if_fragment,
+    is_whole_track,
     looks_like_asset,
     looks_like_audio,
     rename_to_track,
@@ -26,10 +29,21 @@ from soundcloud_dl.downloads import (
         ("https://cdn.x/dl/6353", "", 'attachment; filename="t.mp3"', True),
         ("https://cdn.x/dl/6353", "text/html", "", False),
         ("https://cdn.x/dl/6353", None, None, False),
+        # The gate page's own embedded SoundCloud player, streaming while the gate is
+        # worked through. Served as audio/mp4, so only the extension rejects it.
+        ("https://cf-hls-media.sndcdn.com/media/0/60/x.m4s", "audio/mp4", "", False),
+        ("https://cf-hls-media.sndcdn.com/playlist.m3u8", "application/x-mpegURL", "", False),
+        ("https://cdn.x/seg1.ts", "video/mp2t", "", False),
     ],
 )
 def test_looks_like_audio(url, ct, cd, expected):
     assert looks_like_audio(url, ct, cd) is expected
+
+
+def test_a_stream_segment_is_not_a_finished_download():
+    """A 197K .m4s was saved as the track, reported DOWNLOAD_SUCCESS and recorded done,
+    so the track was never retried. A segment is never what a gate hands over."""
+    assert looks_like_asset("https://cf-hls-media.sndcdn.com/media/0/60/x.m4s") is True
 
 
 def test_save_bytes_creates_a_missing_download_directory(tmp_path):
@@ -139,3 +153,39 @@ def test_a_leading_dash_is_dropped():
 )
 def test_looks_like_asset(name, expected):
     assert looks_like_asset(name) is expected
+
+
+@pytest.mark.parametrize(
+    ("url", "ct", "status", "expected"),
+    [
+        # The hole the extension list could not close: SoundCloud serves the same HLS
+        # segments as .mp4 and with no extension at all, and an extensionless name is
+        # handed .mp3 downstream, so it reaches the library looking like a real track.
+        ("https://cf-hls-media.sndcdn.com/media/0/60/a.128.mp4?Policy=x", "audio/mp4", 200, True),
+        ("https://cf-hls-media.sndcdn.com/media/0/60/a?Policy=x", "audio/mp4", 200, True),
+        # 206 is a fragment whatever it carries, and the CDN cannot spoof it away.
+        ("https://cdn.x/track.mp3", "audio/mpeg", 206, False),
+        ("https://cdn.x/track.mp3", "audio/mpeg", 200, True),
+    ],
+)
+def test_looks_like_audio_rejects_partial_responses(url, ct, status, expected):
+    assert looks_like_audio(url, ct, "", status) is expected
+
+
+def test_a_short_payload_is_not_a_whole_track():
+    """The 197K .m4s that shipped. Extensions are the far end's to choose; length is not."""
+    assert is_whole_track("https://cdn.x/a.mp4", 197_000) is False
+    assert is_whole_track("https://cdn.x/a.mp4", MIN_TRACK_BYTES) is True
+
+
+def test_discard_if_fragment_removes_the_file_so_the_track_stays_retryable(tmp_path):
+    """A kept fragment means _note_saved fires and resume records done — permanently."""
+    frag = tmp_path / "seg.mp4"
+    frag.write_bytes(b"x" * 197_000)
+    assert discard_if_fragment(frag, "https://cdn.x/seg.mp4") is None
+    assert not frag.exists()
+
+    real = tmp_path / "track.wav"
+    real.write_bytes(b"x" * MIN_TRACK_BYTES)
+    assert discard_if_fragment(real, "https://cdn.x/track.wav") == real
+    assert real.exists()
