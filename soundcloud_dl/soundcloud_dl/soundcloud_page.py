@@ -26,6 +26,10 @@ _GATE_DOMAINS = frozenset(
         "fanlink.to",
         "pumpyoursound.com",
         "droploud.com",
+        # InfluencePlanner. ipln.io is the short link printed in track descriptions; it
+        # redirects to gate.influenceplanner.com, so both spellings have to be recognised.
+        "ipln.io",
+        "influenceplanner.com",
         # Blacklisted domains — still extracted so the blacklist check in main.py
         # can mark them 'unsupported' instead of falling through to 'manual_review'.
         "followeb.de",
@@ -43,6 +47,8 @@ _SELECTORS = [
     "a[href*='fanlink.tv']",
     "a[href*='fanlink.to']",
     "a[href*='droploud.com']",
+    "a[href*='ipln.io']",
+    "a[href*='influenceplanner.com']",
     "a[href*='distrokid.com']",
     "a[href*='smarturl.it']",
     # gate.sc is SoundCloud's buy-link URL proxy (wraps the real gate URL in a
