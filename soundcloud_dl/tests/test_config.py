@@ -129,3 +129,24 @@ def test_chrome_profile_dir_default():
 def test_chrome_profile_dir_from_env(tmp_path):
     cfg = _reload_config(TUNEWRANGLER_SC_CHROME_PROFILE_DIR=str(tmp_path / "custom"))
     assert (tmp_path / "custom").resolve() == cfg.CHROME_PROFILE_DIR
+
+
+def test_an_unreachable_download_dir_warns_instead_of_raising(monkeypatch, caplog, tmp_path):
+    # An unplugged drive must not abort a run: the fallback save still keeps the file.
+    import logging
+
+    cfg = _reload_config()
+    monkeypatch.setattr(cfg, "DOWNLOAD_DIR", tmp_path / "gone" / "soundcloud")
+    with caplog.at_level(logging.WARNING):
+        cfg.warn_if_download_dir_unreachable()
+    assert "unreachable" in caplog.text
+
+
+def test_a_reachable_download_dir_says_nothing(monkeypatch, caplog, tmp_path):
+    import logging
+
+    cfg = _reload_config()
+    monkeypatch.setattr(cfg, "DOWNLOAD_DIR", tmp_path / "soundcloud")
+    with caplog.at_level(logging.WARNING):
+        cfg.warn_if_download_dir_unreachable()
+    assert caplog.text == ""

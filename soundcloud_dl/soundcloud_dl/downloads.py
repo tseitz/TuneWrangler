@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import urllib.parse
 from typing import TYPE_CHECKING, Any
 
@@ -69,6 +70,65 @@ def save_bytes(dest: Path, content: bytes) -> Path:
         logger.warning("Could not write to %s (%s) — saved to %s instead", dest, exc, fallback)
         return fallback
     return dest
+
+
+_FREE_DL_RE = re.compile(r"\s*[\(\[]\s*free\s*(download|dl)?\s*[\)\]]", re.IGNORECASE)
+_UNSAFE_CHARS_RE = re.compile(r'[<>:"/\\|?*\x00-\x1f\x7f]')
+
+# macOS NAME_MAX is 255 bytes; the rest is headroom for the extension and any suffix a
+# caller adds after this.
+_MAX_NAME_BYTES = 200
+
+
+def _same_name(a: str, b: str) -> bool:
+    """Whether two names are the same once case and punctuation stop mattering.
+
+    "DEVOWR." off the API and "DEVOWR" typed into a title are one artist.
+    """
+    squashed = [re.sub(r"[^a-z0-9]", "", name.lower()) for name in (a, b)]
+    return squashed[0] == squashed[1] and squashed[0] != ""
+
+
+def track_filename(title: str | None, artist: str | None) -> str | None:
+    """ "<artist> - <title>" with download noise and path-unsafe characters removed.
+
+    One definition because both the playlist pipeline and the --jev pilot name files, and
+    a second copy would drift into two naming schemes in one download folder.
+
+    The artist is skipped only when the title already *starts with that artist*. Treating
+    any " - " as an artist separator left "Smack My B  Up - (Lowshade Flip)" with no artist
+    at all, because the dash belonged to the title.
+    """
+    if not title:
+        return None
+    clean = _UNSAFE_CHARS_RE.sub("", _FREE_DL_RE.sub("", title)).strip()
+    if not clean:
+        return None
+    safe_artist = _UNSAFE_CHARS_RE.sub("", artist or "").strip()
+    if safe_artist and not _same_name(clean.split(" - ", 1)[0], safe_artist):
+        clean = f"{safe_artist} - {clean}"
+    return _usable_filename(clean)
+
+
+def _usable_filename(name: str) -> str | None:
+    """A name the filesystem will accept, or None if nothing usable is left.
+
+    Three separate traps, all reached from an upload title we do not control:
+
+    - Over NAME_MAX the rename raises ENAMETOOLONG, and by then the gate has been spent on
+      a follow, a like, a repost and a comment that a re-run does not get back. Measured in
+      bytes, not characters, because an emoji costs four of them.
+    - "." and ".." name a directory rather than a file.
+    - A leading "-" reads as a flag to anything downstream that shells out without "--",
+      and these files are handed to ffmpeg and the Deno side afterwards.
+    """
+    name = name.lstrip("-").strip()
+    if not name.strip("."):
+        return None
+    encoded = name.encode("utf-8")
+    if len(encoded) > _MAX_NAME_BYTES:
+        name = encoded[:_MAX_NAME_BYTES].decode("utf-8", errors="ignore").strip()
+    return name or None
 
 
 def rename_to_track(dest: Path, track_title: str | None) -> Path:

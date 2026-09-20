@@ -29,6 +29,7 @@ from soundcloud_dl.main import _save_debug_artifacts
 from soundcloud_dl.playwright_browser import attached_browser
 from soundcloud_dl.run_artifacts import RunRecorder
 from soundcloud_dl.soundcloud_page import get_gate_url
+from soundcloud_dl.track_naming import judge_track_filename
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -130,15 +131,42 @@ def _requirement_follower(
     return on_requirements
 
 
+async def _resolve_track_title(url: str) -> str | None:
+    """Name the file "<artist> - <title>", the same as the playlist pipeline does.
+
+    A bare gate URL carries no track, and the resolve needs a working API token, so this
+    is allowed to come back empty — the download then keeps the name the gate suggested,
+    which is worse but is not worth failing a run over.
+    """
+    if "soundcloud.com" not in url:
+        return None
+    try:
+        from soundcloud_dl.soundcloud_api import api_client, resolve  # noqa: PLC0415
+
+        async with api_client() as client:
+            track = await resolve(client, url)
+        title = await judge_track_filename(
+            track.get("title"), (track.get("user") or {}).get("username")
+        )
+    except Exception:  # noqa: BLE001
+        # Auth, network and a resolve that answers something other than a track all end the
+        # same way here: name the file what the gate called it and get on with the run.
+        logger.warning(
+            "Could not read the track's title from SoundCloud — the download will keep "
+            "the filename the gate suggests",
+            exc_info=True,
+        )
+        return None
+    logger.info("Downloads will be named %r", title)
+    return title
+
+
 async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = False) -> None:
     """Open a gate URL and let JudgmentGateHandler drive it, reporting the outcome."""
     validate_jev_config()
 
-    # No TrackItem for a bare pilot URL — the file keeps Playwright's suggested_filename
-    # instead of the real pipeline's "artist - title" rename. Not a bug, just how --jev works.
-    logger.info("track_title=None — downloaded file will keep its suggested filename")
-
     actions: dict[str, ActionResult] = {}
+    track_title = await _resolve_track_title(url)
 
     # --pause exists so the page can be inspected between steps; that needs a window.
     # None rather than False otherwise, so a configured preference for headed still wins.
@@ -183,7 +211,7 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
             scroll_before_click=SCROLL_BEFORE_CLICK,
             pause=pause,
             download_dir=DOWNLOAD_DIR,
-            track_title=None,
+            track_title=track_title,
             recorder=recorder,
             on_requirements=_requirement_follower(actions) if sc_actions else None,
         )

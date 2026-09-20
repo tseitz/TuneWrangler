@@ -2,6 +2,7 @@
 
 import pytest
 
+from soundcloud_dl import downloads
 from soundcloud_dl.downloads import looks_like_audio, rename_to_track, save_bytes
 
 
@@ -57,3 +58,62 @@ def test_save_bytes_falls_back_when_the_destination_is_unwritable(tmp_path, monk
     assert saved == log_dir / "downloads" / "track.mp3"
     assert saved.read_bytes() == b"audio"
     assert "saved to" in caplog.text
+
+
+# ── Naming a saved file ────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("title", "artist", "expected"),
+    [
+        ("FTP", "fossils", "fossils - FTP"),
+        ("afters ahh tune", "DEVOWR.", "DEVOWR. - afters ahh tune"),
+        # Already led by this artist — a second one would read "A - A - Track".
+        ("Someone - Track", "Someone", "Someone - Track"),
+        # Punctuation and case in the API's name must not defeat that match.
+        ("DEVOWR - afters ahh tune", "DEVOWR.", "DEVOWR - afters ahh tune"),
+        # The dash belongs to the title, not to an artist — this is the case the old
+        # "any ' - ' means it has an artist" rule dropped the artist on.
+        (
+            "Smack My B  Up - (Lowshade Flip)",
+            "Lowshade",
+            "Lowshade - Smack My B  Up - (Lowshade Flip)",
+        ),
+        # A different artist leading the title is still not this uploader.
+        ("Prodigy - Smack My Up", "Lowshade", "Lowshade - Prodigy - Smack My Up"),
+        ("Track (FREE DOWNLOAD)", "Artist", "Artist - Track"),
+        ("Track [Free DL]", "Artist", "Artist - Track"),
+        # A slash in either half would otherwise open a directory that does not exist.
+        ("A/B: Track", "Some/One", "SomeOne - AB Track"),
+        ("Track", None, "Track"),
+        (None, "Artist", None),
+        ("", "Artist", None),
+    ],
+)
+def test_track_filename(title, artist, expected):
+    assert downloads.track_filename(title, artist) == expected
+
+
+def test_a_very_long_title_is_cut_to_something_the_filesystem_accepts():
+    # Over NAME_MAX the rename raises ENAMETOOLONG, and by then the gate is already spent.
+    name = downloads.track_filename("A" * 400, "B" * 100)
+    assert name is not None
+    assert len(name.encode()) <= 200
+
+
+def test_length_is_counted_in_bytes_not_characters():
+    name = downloads.track_filename("🔥" * 200, "DJ")
+    assert name is not None
+    assert len(name.encode()) <= 200
+
+
+@pytest.mark.parametrize("title", [".", "..", "...", "-", "   "])
+def test_a_title_that_names_no_file_is_refused(title):
+    assert downloads.track_filename(title, None) is None
+
+
+def test_a_leading_dash_is_dropped():
+    # These filenames are handed to ffmpeg and the Deno side later; a leading dash there
+    # reads as a flag.
+    assert downloads.track_filename("-rf", "artist") == "artist - -rf"
+    assert downloads.track_filename("-rf", None) == "rf"

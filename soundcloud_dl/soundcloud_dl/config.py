@@ -1,5 +1,6 @@
 """Load environment and constants for SoundCloud free-download automation."""
 
+import logging
 import os
 from pathlib import Path
 
@@ -187,3 +188,21 @@ def validate_jev_config() -> None:
     if not TYPESAFE_API_KEY or not TYPESAFE_API_KEY.strip():
         msg = "TYPESAFE_API_KEY is required for --jev. Set it in .env or the environment."
         raise RuntimeError(msg)
+    warn_if_download_dir_unreachable()
+
+
+def warn_if_download_dir_unreachable() -> None:
+    """Say up front that the download will land somewhere else. Never fatal.
+
+    An unplugged external drive is the usual cause, and it is only discovered at save time
+    — after a gate run has spent a real follow, like, repost and comment, and handed out an
+    OAuth grant, none of which a re-run gets back. Warning beats raising because the
+    fallback save works and losing the file to a hard error is the worse outcome.
+    """
+    if DOWNLOAD_DIR is None or DOWNLOAD_DIR.parent.exists():
+        return
+    logging.getLogger("soundcloud_dl.config").warning(
+        "TUNEWRANGLER_SC_DOWNLOAD_DIR is unreachable (%s) — downloads will fall back to the "
+        "log directory. Plug the drive in now if you want them filed properly.",
+        DOWNLOAD_DIR.parent,
+    )

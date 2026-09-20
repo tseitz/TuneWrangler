@@ -49,6 +49,7 @@ from soundcloud_dl.playwright_browser import attached_browser
 from soundcloud_dl.recorder import record
 from soundcloud_dl.resume import TrackState, load_states, record_state, should_skip
 from soundcloud_dl.soundcloud_page import SoundCloudPageError, get_gate_url, try_native_sc_download
+from soundcloud_dl.track_naming import judge_track_filename
 
 logger = logging.getLogger("soundcloud_dl.main")
 
@@ -56,16 +57,7 @@ _UNSAFE_FILENAME_RE = re.compile(r"[^\w\-]")
 
 # Strips common free-download noise tags from SC titles before using as filenames.
 # Matches e.g. "[FREE DOWNLOAD]", "(FREE DL)", "[FREE]" etc., case-insensitive.
-_FREE_DL_RE = re.compile(r"\s*[\(\[]\s*free\s*(download|dl)?\s*[\)\]]", re.IGNORECASE)
 # Characters illegal in filenames on macOS/Windows/Linux.
-_UNSAFE_CHARS_RE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
-
-
-def _sanitize_sc_title(title: str) -> str:
-    """Strip free-download noise and filesystem-unsafe chars from a SoundCloud title."""
-    title = _FREE_DL_RE.sub("", title)
-    title = _UNSAFE_CHARS_RE.sub("", title)
-    return title.strip()
 
 
 async def _save_debug_artifacts(page: "Page", label: str) -> None:
@@ -240,11 +232,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
 ) -> TrackState:
     """Attempt the gate flow for one track; return outcome string."""
     track_label = track.title or track.url
-    track_title = _sanitize_sc_title(track.title) if track.title else None
-    if track_title and track.artist and " - " not in track_title:
-        safe_artist = _UNSAFE_CHARS_RE.sub("", track.artist).strip()
-        if safe_artist:
-            track_title = f"{safe_artist} - {track_title}"
+    track_title = await judge_track_filename(track.title, track.artist)
 
     page = None
     try:
