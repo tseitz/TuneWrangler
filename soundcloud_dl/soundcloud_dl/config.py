@@ -26,6 +26,13 @@ TUNEWRANGLER_SC_PLAYLIST_URL = os.getenv("TUNEWRANGLER_SC_PLAYLIST_URL")
 SOUNDCLOUD_CLIENT_ID = os.getenv("SOUNDCLOUD_CLIENT_ID")
 SOUNDCLOUD_CLIENT_SECRET = os.getenv("SOUNDCLOUD_CLIENT_SECRET")
 
+SOUNDCLOUD_TOKEN_URL = "https://secure.soundcloud.com/oauth/token"  # noqa: S105
+SOUNDCLOUD_API_BASE = "https://api.soundcloud.com"
+
+# Must match a redirect URI registered on the SoundCloud app exactly, character for
+# character, or the authorize step rejects the request before a sign-in is even offered.
+SOUNDCLOUD_REDIRECT_URI = os.getenv("SOUNDCLOUD_REDIRECT_URI", "http://localhost:8080/callback")
+
 # ── Judgment gate pilot (--jev) ────────────────────────────────────────────────
 # Cross-cutting third-party key, not soundcloud_dl-specific — no TUNEWRANGLER_SC_ prefix,
 # matching the SOUNDCLOUD_CLIENT_ID/SECRET precedent above.
@@ -119,6 +126,11 @@ def get_processed_file() -> Path:
 def get_playlist_cache_file() -> Path:
     """Path to JSON file storing cached playlist track lists (by playlist URL)."""
     return get_log_dir() / "playlist_cache.json"
+
+
+def get_token_file() -> Path:
+    """Path to the user OAuth token store. Under logs/, which is gitignored."""
+    return get_log_dir() / "oauth_token.json"
 
 
 # ── Validation ─────────────────────────────────────────────────────────────────

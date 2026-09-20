@@ -6,12 +6,16 @@ from dataclasses import dataclass
 
 import httpx
 
-from soundcloud_dl.config import SOUNDCLOUD_CLIENT_ID, SOUNDCLOUD_CLIENT_SECRET
+from soundcloud_dl.config import (
+    SOUNDCLOUD_API_BASE,
+    SOUNDCLOUD_CLIENT_ID,
+    SOUNDCLOUD_CLIENT_SECRET,
+    SOUNDCLOUD_TOKEN_URL,
+)
 
 logger = logging.getLogger("soundcloud_dl.playlist")
 
-SOUNDCLOUD_TOKEN_URL = "https://secure.soundcloud.com/oauth/token"  # noqa: S105
-API_BASE = "https://api.soundcloud.com"
+API_BASE = SOUNDCLOUD_API_BASE
 RESOLVE_URL = f"{API_BASE}/resolve"
 
 

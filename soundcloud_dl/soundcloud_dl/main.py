@@ -159,6 +159,14 @@ def _parse_args() -> argparse.Namespace:
         ),
     )
     p.add_argument(
+        "--sc-auth",
+        action="store_true",
+        help=(
+            "Sign in to SoundCloud once in your browser and save a user token, so the API "
+            "can follow/like/repost as you instead of driving the web UI. Run this once."
+        ),
+    )
+    p.add_argument(
         "--debug",
         action="store_true",
         help="Enable DEBUG logging (shows per-selector probe results and full tracebacks).",
@@ -490,37 +498,44 @@ async def _run_login_bootstrap() -> None:
         await page.close()
 
 
-def main() -> None:
-    """Run Phase 1 then Phase 2; entrypoint for CLI."""
-    args = _parse_args()
-    log_level = logging.DEBUG if args.debug else logging.INFO
-    setup_logging(level=log_level)
+def _run_one_shot(args: argparse.Namespace) -> bool:
+    """Run whichever standalone tool the flags asked for. True if one ran."""
     if args.record:
         gate_name, url = args.record
         record(gate_name, url)
-        return
-    if args.inspect:
+    elif args.inspect:
         asyncio.run(inspect_gate(args.inspect))
-        return
-    if args.sc_do or args.sc_undo:
+    elif args.sc_auth:
+        from soundcloud_dl.soundcloud_auth import authorize  # noqa: PLC0415
+
+        authorize()
+    elif args.sc_do or args.sc_undo:
         from soundcloud_dl.soundcloud_actions import run_actions  # noqa: PLC0415
 
         asyncio.run(
             run_actions(args.sc_do or args.sc_undo, DOWNLOAD_COMMENT, undo=bool(args.sc_undo))
         )
-        return
-    if args.sc_probe:
+    elif args.sc_probe:
         from soundcloud_dl.soundcloud_actions import probe_urls  # noqa: PLC0415
 
         asyncio.run(probe_urls(args.sc_probe))
-        return
-    if args.jev:
+    elif args.jev:
         from soundcloud_dl.jev_pilot import run_jev_pilot  # noqa: PLC0415
 
         asyncio.run(run_jev_pilot(args.jev, pause=args.pause, sc_actions=args.sc_actions))
-        return
-    if args.login:
+    elif args.login:
         asyncio.run(_run_login_bootstrap())
+    else:
+        return False
+    return True
+
+
+def main() -> None:
+    """Run Phase 1 then Phase 2; entrypoint for CLI."""
+    args = _parse_args()
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    setup_logging(level=log_level)
+    if _run_one_shot(args):
         return
     asyncio.run(
         main_async(limit=args.limit, pause=args.pause, retry_unsupported=args.retry_unsupported)
