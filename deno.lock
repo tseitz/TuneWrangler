@@ -8,6 +8,8 @@
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "jsr:@std/path@1": "1.1.4",
     "jsr:@std/path@^1.1.4": "1.1.4",
+    "npm:@typesafe-ai/sdk@*": "0.6.0",
+    "npm:@typesafe-ai/sdk@0.6": "0.6.0",
     "npm:node-id3@~0.2.9": "0.2.9"
   },
   "jsr": {
@@ -45,6 +47,9 @@
     }
   },
   "npm": {
+    "@typesafe-ai/sdk@0.6.0": {
+      "integrity": "sha512-IddX+Q0XM+VagOUZFeP7wZjaO4SHMdvnh2zEBdrZZnXedWI3BNK1lKhMx3ayrkFWvVLbVcUHJy6AVZlY+e6Jaw=="
+    },
     "iconv-lite@0.6.2": {
       "integrity": "sha512-2y91h5OpQlolefMPmUlivelittSWy0rP+oYVpn6A7GwVHNE8AWzoYOBNmlwks3LobaJxgHCYZAnyNo2GgpNRNQ==",
       "dependencies": [
@@ -72,6 +77,7 @@
       "jsr:@std/cli@1",
       "jsr:@std/fs@1",
       "jsr:@std/path@1",
+      "npm:@typesafe-ai/sdk@0.6",
       "npm:node-id3@~0.2.9"
     ]
   }

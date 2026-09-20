@@ -7,4 +7,4 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Run the CLI with all arguments passed through
-deno run --allow-read --allow-write --allow-run --allow-net --allow-env --allow-sys "$SCRIPT_DIR/src/cli/main.ts" "$@"
+deno run --allow-read --allow-write --allow-run --allow-net --allow-env --allow-sys --env-file "$SCRIPT_DIR/src/cli/main.ts" "$@"

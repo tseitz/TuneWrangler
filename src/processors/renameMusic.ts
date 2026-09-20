@@ -35,6 +35,7 @@ import {
   readManifest,
   writeManifest,
 } from "../core/manifest.ts";
+import { applyJudgement, assertJudgeAvailable, getJudgeThreshold, judgeEntries } from "../core/judge.ts";
 
 const startDir = getFolder("downloaded");
 const cacheDir = getFolder("djMusic");
@@ -42,11 +43,21 @@ const moveDir = getFolder("rename");
 const backupDir = getFolder("backup");
 const MANIFEST_DIR = "./logs/tunewrangler/manifests";
 
+/** A duplicate skip always carries this reason first (see buildEntry) — distinguishes it from
+ * the .m4s hard-skip path, which is not judged. */
+const DUPLICATE_REASON = "duplicate of an existing track in the DJ collection";
+
 const args = parseArgs(Deno.args, {
   string: ["apply", "manifest"],
-  boolean: ["move", "no-clear"],
-  default: { "no-clear": false },
+  boolean: ["move", "no-clear", "judge"],
+  default: { "no-clear": false, judge: false },
 });
+
+// Fail before any IO: parsing 283 files only to discover TYPESAFE_API_KEY is missing
+// would waste the whole dry run.
+if (args.judge) {
+  await assertJudgeAvailable();
+}
 
 if (args.apply) {
   await runApply(args.apply);
@@ -56,18 +67,22 @@ if (args.apply) {
   await runDryRun(args.manifest);
 }
 
+function isJudgeCandidate(entry: ManifestEntry): boolean {
+  return entry.decision === "apply" || (entry.decision === "skip" && entry.reasons[0] === DUPLICATE_REASON);
+}
+
 /**
  * Default mode: parse + score every file, write a manifest, do not move.
  * The user reviews the manifest, edits any "review" decisions, then runs --apply.
  */
 async function runDryRun(manifestOverride?: string): Promise<void> {
   const cache = await cacheMusic(cacheDir);
-  const entries: ManifestEntry[] = [];
+  const built: BuildResult[] = [];
 
   for await (const currEntry of Deno.readDir(startDir)) {
     if (!isProcessable(currEntry)) continue;
-    const entry = buildEntry(currEntry.name, cache);
-    if (entry) entries.push(entry);
+    const result = buildEntry(currEntry.name, cache);
+    if (result) built.push(result);
   }
 
   const manifestPath = manifestOverride ?? defaultManifestPath();
@@ -77,12 +92,49 @@ async function runDryRun(manifestOverride?: string): Promise<void> {
     source_dir: startDir,
     move_dir: moveDir,
     cache_dir: cacheDir,
-    entries,
+    entries: built.map((b) => b.entry),
   };
   await fs.ensureDir(MANIFEST_DIR);
   await writeManifest(manifestPath, manifest);
 
-  printSummary(entries, manifestPath);
+  const finalEntries = args.judge ? await judgeAndRewrite(built, manifest, manifestPath) : manifest.entries;
+
+  printSummary(finalEntries, manifestPath);
+}
+
+/**
+ * Judges the apply/duplicate-skip subset with Jev, folds the verdicts onto the manifest, and
+ * rewrites it. Runs after the unjudged manifest is already on disk, so a throw here does not
+ * discard the parse.
+ */
+async function judgeAndRewrite(
+  built: BuildResult[],
+  manifest: Manifest,
+  manifestPath: string,
+): Promise<ManifestEntry[]> {
+  const candidates = built.filter((b) => isJudgeCandidate(b.entry));
+  const threshold = getJudgeThreshold();
+
+  console.log(`\nJudging ${candidates.length} entries with Jev (threshold ${threshold})...`);
+  const judgements = await judgeEntries(candidates.map(({ entry, song }) => ({ entry, song })));
+
+  const candidateSrcs = new Set(candidates.map((c) => c.entry.src));
+  const finalEntries = manifest.entries.map((entry) =>
+    candidateSrcs.has(entry.src) ? applyJudgement(entry, judgements.get(entry.src), threshold) : entry
+  );
+
+  const judged = finalEntries.filter((e) => e.judgement && !e.judgement.error).length;
+  const judgeFailed = finalEntries.filter((e) => e.judgement?.error).length;
+  console.log(`Judged: ${judged}, could not judge: ${judgeFailed} (of ${candidates.length} candidates)`);
+  if (judged + judgeFailed !== candidates.length) {
+    throw new Error(
+      `judge post-condition failed: judged(${judged}) + judgeFailed(${judgeFailed}) !== candidates(${candidates.length})`,
+    );
+  }
+
+  manifest.entries = finalEntries;
+  await writeManifest(manifestPath, manifest);
+  return finalEntries;
 }
 
 /**
@@ -108,6 +160,12 @@ async function runApply(manifestPath: string): Promise<void> {
     if (entry.decision !== "apply") {
       skipped++;
       continue;
+    }
+
+    if (entry.judgement && entry.judgement.judged_proposed !== entry.proposed) {
+      logWithBreak(
+        `***Warning: judgement for ${entry.src} graded "${entry.judgement.judged_proposed}", but proposed is now "${entry.proposed}" — its probabilities describe a different string***`,
+      );
     }
 
     const song = new DownloadedSong(entry.src, sourceDir);
@@ -157,8 +215,9 @@ async function runLegacyMove(clear: boolean): Promise<void> {
   for await (const currEntry of Deno.readDir(startDir)) {
     if (!isProcessable(currEntry)) continue;
 
-    const entry = buildEntry(currEntry.name, cache);
-    if (!entry || entry.decision === "skip") continue;
+    const result = buildEntry(currEntry.name, cache);
+    if (!result || result.entry.decision === "skip") continue;
+    const entry = result.entry;
 
     const song = new DownloadedSong(entry.src, startDir);
     if (song.dashCount > 0) parseDownloadedSong(song);
@@ -178,11 +237,17 @@ async function runLegacyMove(clear: boolean): Promise<void> {
   console.log(`\nTotal moved: ${count}`);
 }
 
+interface BuildResult {
+  entry: ManifestEntry;
+  song: DownloadedSong;
+}
+
 /**
- * Parse one file and produce a manifest entry, or null if the file should be skipped
- * (unsupported extension, parser threw, etc.).
+ * Parse one file and produce a manifest entry (plus the song it was parsed from, so a
+ * --judge pass can grade the same parse without re-deriving it), or null if the file should
+ * be skipped (unsupported extension, parser threw, etc.).
  */
-function buildEntry(filename: string, cache: MusicCache): ManifestEntry | null {
+function buildEntry(filename: string, cache: MusicCache): BuildResult | null {
   console.log("Processing: ", filename);
   try {
     const song = new DownloadedSong(filename, startDir);
@@ -200,12 +265,15 @@ function buildEntry(filename: string, cache: MusicCache): ManifestEntry | null {
 
     if (isDuplicate) {
       return {
-        src: filename,
-        proposed: song.finalFilename,
-        parser_output: song.finalFilename,
-        confidence: score.level,
-        reasons: ["duplicate of an existing track in the DJ collection", ...score.reasons],
-        decision: "skip",
+        song,
+        entry: {
+          src: filename,
+          proposed: song.finalFilename,
+          parser_output: song.finalFilename,
+          confidence: score.level,
+          reasons: [DUPLICATE_REASON, ...score.reasons],
+          decision: "skip",
+        },
       };
     }
 
@@ -213,12 +281,15 @@ function buildEntry(filename: string, cache: MusicCache): ManifestEntry | null {
     logWithBreak(`${song.finalFilename}  [${score.level}]`);
 
     return {
-      src: filename,
-      proposed: song.finalFilename,
-      parser_output: song.finalFilename,
-      confidence: score.level,
-      reasons: score.reasons,
-      decision: score.decision,
+      song,
+      entry: {
+        src: filename,
+        proposed: song.finalFilename,
+        parser_output: song.finalFilename,
+        confidence: score.level,
+        reasons: score.reasons,
+        decision: score.decision,
+      },
     };
   } catch (error) {
     logWithBreak(`Skipping (parse error): ${filename} - ${error}`);
@@ -227,27 +298,31 @@ function buildEntry(filename: string, cache: MusicCache): ManifestEntry | null {
 }
 
 function printSummary(entries: ManifestEntry[], manifestPath: string): void {
-  const counts = { high: 0, medium: 0, low: 0, skip: 0 };
+  const byDecision = { apply: 0, review: 0, skip: 0 };
+  const byConfidence = { high: 0, medium: 0, low: 0 };
+  let downgradedByJudge = 0;
   for (const e of entries) {
-    if (e.decision === "skip") counts.skip++;
-    else counts[e.confidence]++;
+    byDecision[e.decision]++;
+    byConfidence[e.confidence]++;
+    if (e.decision === "review" && e.judgement && !e.judgement.error) downgradedByJudge++;
   }
-  const willApply = counts.high + counts.medium;
-  const needsReview = counts.low;
 
   console.log("\n========================================");
   console.log(`Manifest written: ${manifestPath}`);
   console.log("");
-  console.log(`  high confidence:   ${counts.high}  (will apply)`);
-  console.log(`  medium confidence: ${counts.medium}  (will apply)`);
-  console.log(`  low confidence:    ${counts.low}  (needs review)`);
-  console.log(`  duplicates:        ${counts.skip}  (will skip)`);
+  console.log(`  will apply:   ${byDecision.apply}`);
+  console.log(
+    `  needs review: ${byDecision.review}${downgradedByJudge > 0 ? ` (${downgradedByJudge} downgraded by Jev)` : ""}`,
+  );
+  console.log(`  will skip:    ${byDecision.skip}`);
+  console.log("");
+  console.log(`  confidence — high: ${byConfidence.high}, medium: ${byConfidence.medium}, low: ${byConfidence.low}`);
   console.log("");
   console.log(`Next steps:`);
-  console.log(`  1. Open ${manifestPath} and review the ${needsReview} low-confidence entries`);
+  console.log(`  1. Open ${manifestPath} and review the ${byDecision.review} entries needing review`);
   console.log(`  2. Edit "decision" fields ("apply" to move, "skip" to leave alone)`);
   console.log(`  3. Run: deno task rM --apply ${manifestPath}`);
-  console.log(`     (will move ${willApply} files)`);
+  console.log(`     (will move ${byDecision.apply} files)`);
   console.log("========================================");
 }
 

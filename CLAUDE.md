@@ -60,6 +60,22 @@ Confidence model lives in `src/core/confidence.ts`. Low-confidence triggers: 3-p
 
 The corpus harness (`src/core/corpus_test.ts`) loads every promoted manifest and runs `parseDownloadedSong` against each entry. `proposed === parser_output` becomes a regression test; `proposed !== parser_output` (user override) is logged as a parser improvement target.
 
+### Optional: `--judge` (Jev semantic review)
+
+`deno task rM --judge` adds a second, advisory pass over the manifest: for every `apply` entry
+and every duplicate-`skip` entry, Jev (TypeSafe's System One model) grades the parse against the
+source filename and can downgrade the decision to `review` — it never upgrades one. Requires
+`TYPESAFE_API_KEY` in `.env` (checked before any file IO); tune `TUNEWRANGLER_JUDGE_THRESHOLD`
+(default `0.5`) and `TUNEWRANGLER_JUDGE_CONCURRENCY` (default `8`) there too. Judgment lives in
+`src/core/judge.ts`, entirely separate from `confidence.ts` — it never touches `confidence` or
+the parser.
+
+**Corpus interaction:** `promote` and the corpus harness both filter to `decision === "apply"`,
+so any entry Jev downgrades is excluded from the regression corpus — the feature systematically
+removes the hardest cases, which are the ones most worth pinning. If you review a Jev downgrade
+and decide it was actually fine, flip its `decision` back to `apply` before running `promote` so
+it isn't lost to the corpus.
+
 When changing `parser.ts`, run `deno task test` and inspect the corpus output for entries where `proposed !== parser_output` — those are open improvement targets. If your change closes one (parser now matches the user's override), re-promote the affected manifest so the entry converts from "improvement target" to "regression test" and stays locked in.
 
 ## Architecture
@@ -117,7 +133,7 @@ logs/
 ## Conventions
 
 - **Runtimes**: Deno 2.6.9, Python 3.12, FFmpeg 7.1.1 (managed via `.mise.toml`).
-- **Env vars**: Main tool uses `TUNEWRANGLER_*_PATH`; soundcloud_dl uses `TUNEWRANGLER_SC_*`. Both load from repo-root `.env`. Template lives at `.env.example` (root).
+- **Env vars**: Main tool uses `TUNEWRANGLER_*_PATH`; soundcloud_dl uses `TUNEWRANGLER_SC_*`. soundcloud_dl always loads repo-root `.env` via its own config loader; on the Deno side only `rM`, `cli`, and `./tunewrangler` load it (via `--env-file`, needed for `--judge`'s `TYPESAFE_API_KEY`) — the other Deno tasks read only real environment variables. Template lives at `.env.example` (root).
 - **Python tooling**: uv, ruff (line-length 100, select ALL minus D/COM812/ISC001), ty.
 - **Markdown**: markdownlint enforced (`.markdownlint.json`). Lines under 100 chars; blank lines around code blocks and headers.
 - **Commits**: Conventional (`feat:`, `fix:`, `refactor:`, etc.). **Land directly on `main`** — solo project, no feature branches unless explicitly requested.
