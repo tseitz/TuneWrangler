@@ -268,7 +268,7 @@ def _request(url: str, attempts: int = 40) -> None:
         except urllib.error.HTTPError:
             # A 404 is a real answer: the server is up and chose to ignore this request.
             return
-        except OSError as exc:  # noqa: PERF203
+        except OSError as exc:
             last = exc
             time.sleep(0.1)
     msg = f"server never came up for {url}"

@@ -7,7 +7,6 @@ import pytest
 import yaml
 
 from soundcloud_dl import gate_handlers
-
 from soundcloud_dl.gate_handlers.base import (
     GateHandler,
     GateStepError,
@@ -233,8 +232,8 @@ async def test_a_download_step_does_not_click_an_off_screen_button():
     asked: list[bool] = []
 
     async def spy(_page, _trigger, *, allow_hidden=False):
+        # Returning no element stops the step before it needs a live page.
         asked.append(allow_hidden)
-        return None  # stops the step before it needs a live page
 
     handler._find_element = spy
 

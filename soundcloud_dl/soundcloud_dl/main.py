@@ -11,6 +11,9 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from playwright.async_api import Page
 
+    from soundcloud_dl.soundcloud_actions import ActionResult
+
+from soundcloud_dl import pending_follows
 from soundcloud_dl.config import (
     ACTION_DELAY_MAX_MS,
     ACTION_DELAY_MIN_MS,
@@ -52,6 +55,11 @@ from soundcloud_dl.playwright_browser import attached_browser
 from soundcloud_dl.recorder import record
 from soundcloud_dl.resume import TrackState, load_states, record_state, should_skip
 from soundcloud_dl.run_artifacts import RunRecorder
+from soundcloud_dl.sc_actions_flow import (
+    do_soundcloud_actions,
+    release_follows_taken,
+    requirement_follower,
+)
 from soundcloud_dl.soundcloud_page import SoundCloudPageError, get_gate_url, try_native_sc_download
 from soundcloud_dl.track_naming import judge_track_filename
 
@@ -146,9 +154,11 @@ def _parse_args() -> argparse.Namespace:
         "--sc-actions",
         action="store_true",
         help=(
-            "With --jev: do the SoundCloud follow/like/repost/comment for real before "
-            "opening the gate, so a gate that verifies against SoundCloud finds them done. "
-            "Needs a SoundCloud track URL, not a bare gate URL."
+            "Do the SoundCloud follow/like/repost/comment for real before opening each "
+            "gate, so a gate that verifies against SoundCloud (rather than its own page) "
+            "finds them done. Follows this run takes are handed back when it ends. "
+            "Applies to the playlist run and to --jev; --jev also needs a track URL, not "
+            "a bare gate URL."
         ),
     )
     p.add_argument(
@@ -237,7 +247,7 @@ def _get_tracks_to_process(
 
 
 async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
-    context: object, track: TrackItem, *, pause: bool = False
+    context: object, track: TrackItem, *, pause: bool = False, sc_actions: bool = False
 ) -> TrackState:
     """Attempt the gate flow for one track; return outcome string."""
     track_label = track.title or track.url
@@ -245,6 +255,12 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
     page = None
     recorder: RunRecorder | None = None
+    actions: dict[str, ActionResult] = {}
+    # Released in the finally, so a run that ends without a file still gives back what it
+    # spent. A gate that charges follows and then never unlocks is how the account walks
+    # into SoundCloud's 2000-following cap. The two states below are the exceptions: both
+    # leave the tab open for a person to finish, and the gate is still checking.
+    keep_follows = False
     try:
         # SoundCloud tracks with a native download button (no gate) are handled here.
         # Try this before the gate flow so we don't waste time hunting for a gate link.
@@ -269,6 +285,19 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         if is_url_blacklisted(gate_url):
             logger.warning("UNSUPPORTED | %s | blacklisted gate: %s", track_label, gate_url)
             return "unsupported"
+
+        # After the blacklist check, because a gate we will not open must not cost
+        # anything: the follow is given back but the comment is permanent and only the
+        # user can delete it. Before the gate opens, though — a gate that checks
+        # SoundCloud (droploud reads the repost back) then finds the work already done
+        # and only has to verify, which keeps the gate loop a pure click-driver.
+        if sc_actions:
+            await do_soundcloud_actions(
+                context,  # type: ignore[arg-type]
+                track.url,
+                comment_text=DOWNLOAD_COMMENT,
+                into=actions,
+            )
         page = await context.new_page()  # type: ignore[union-attr]
         await page.goto(gate_url, wait_until="domcontentloaded", timeout=30_000)
         final_url = page.url
@@ -300,6 +329,10 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         if issubclass(handler_cls, JevHandler):
             recorder = RunRecorder(gate_name_for(final_url))
             extra["recorder"] = recorder
+            if sc_actions:
+                # Follows the gate names mid-run land in `actions` too, so the release
+                # below covers them and not just the four opening actions.
+                extra["on_requirements"] = requirement_follower(actions)
         handler = handler_cls(
             template_vars={
                 "email": DOWNLOAD_EMAIL,
@@ -376,6 +409,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             )
             return "manual_review"
     except CaptchaEncountered as e:
+        keep_follows = True
         logger.warning(
             "CAPTCHA | %s | %s — tab left open, manual followup needed",
             track_label,
@@ -383,6 +417,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         )
         return "captcha_pending"
     except LoginWallEncountered as e:
+        keep_follows = True
         logger.warning(
             "LOGIN_REQUIRED | %s | %s — tab left open, finish it there and re-run",
             track_label,
@@ -421,10 +456,20 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
     finally:
         if page:
             await page.close()
+        # Never before the run has ended: giving a follow back mid-run takes it away from
+        # the gate that is still checking for it.
+        if keep_follows:
+            pending_follows.hold(actions)
+        else:
+            await release_follows_taken(actions)
 
 
 async def _run_phase2(
-    playlist_url: str, to_process: list[TrackItem], *, pause: bool = False
+    playlist_url: str,
+    to_process: list[TrackItem],
+    *,
+    pause: bool = False,
+    sc_actions: bool = False,
 ) -> None:
     """Run gate handler against each track via CDP-attached Chrome; track outcomes."""
     validate_phase2_config()
@@ -442,10 +487,14 @@ async def _run_phase2(
     headed = bool(pause or HEADED)
     async with attached_browser(headed=True if pause else None) as context:
         await _ensure_logged_in(context, headed=headed)
+        # Before any track, so follows an earlier run held for a tab that has since been
+        # dealt with do not sit on the account indefinitely.
+        if sc_actions:
+            await pending_follows.sweep()
 
         for idx, track in enumerate(to_process, 1):
             logger.info("Phase 2 track %d/%d: %s", idx, len(to_process), track.url)
-            outcome = await _process_track(context, track, pause=pause)
+            outcome = await _process_track(context, track, pause=pause, sc_actions=sc_actions)
             counts[outcome] += 1
             if RESUME_ENABLED:
                 record_state(playlist_url, track.url, outcome)
@@ -496,7 +545,11 @@ async def _ensure_logged_in(context, *, headed: bool) -> None:  # noqa: ANN001
 
 
 async def main_async(
-    limit: int | None = None, *, pause: bool = False, retry_unsupported: bool = False
+    limit: int | None = None,
+    *,
+    pause: bool = False,
+    retry_unsupported: bool = False,
+    sc_actions: bool = False,
 ) -> None:
     """Load config, run Phase 1 (API track list), then Phase 2 (stealth Playwright per track)."""
     validate_phase1_config()
@@ -522,7 +575,7 @@ async def main_async(
         to_process = to_process[:limit]
         logger.info("--limit %d: processing %d track(s)", limit, len(to_process))
 
-    await _run_phase2(playlist_url, to_process, pause=pause)
+    await _run_phase2(playlist_url, to_process, pause=pause, sc_actions=sc_actions)
 
 
 async def _run_login_bootstrap() -> None:
@@ -578,7 +631,12 @@ def main() -> None:
     if _run_one_shot(args):
         return
     asyncio.run(
-        main_async(limit=args.limit, pause=args.pause, retry_unsupported=args.retry_unsupported)
+        main_async(
+            limit=args.limit,
+            pause=args.pause,
+            retry_unsupported=args.retry_unsupported,
+            sc_actions=args.sc_actions,
+        )
     )
 
 

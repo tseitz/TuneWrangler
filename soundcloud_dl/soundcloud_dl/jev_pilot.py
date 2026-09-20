@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from soundcloud_dl import pending_follows
 from soundcloud_dl.config import (
     ACTION_DELAY_MAX_MS,
     ACTION_DELAY_MIN_MS,
@@ -29,14 +30,15 @@ from soundcloud_dl.gate_handlers.login_wall import LoginWallEncountered
 from soundcloud_dl.main import _save_debug_artifacts
 from soundcloud_dl.playwright_browser import attached_browser
 from soundcloud_dl.run_artifacts import RunRecorder
+from soundcloud_dl.sc_actions_flow import (
+    do_soundcloud_actions,
+    release_follows_taken,
+    requirement_follower,
+)
 from soundcloud_dl.soundcloud_page import get_gate_url
 from soundcloud_dl.track_naming import judge_track_filename
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
-
-    from playwright.async_api import BrowserContext
-
     from soundcloud_dl.soundcloud_actions import ActionResult
 
 logger = logging.getLogger("soundcloud_dl.jev_pilot")
@@ -54,90 +56,6 @@ def _auto_approve_oauth_for(gate_url: str) -> bool:
         return get_handler_for_url(gate_url).auto_approve_oauth
     except GateNotSupportedError:
         return JudgmentGateHandler.auto_approve_oauth
-
-
-async def _do_soundcloud_actions(
-    context: BrowserContext, track_url: str
-) -> dict[str, ActionResult]:
-    """Follow/like/repost/comment for real, and say plainly which ones landed.
-
-    Never fatal. A gate can still be satisfiable when one action fails — droploud asks for
-    a repost but not a like — so a failure here is reported and the gate run continues.
-    """
-    from soundcloud_dl.soundcloud_actions import perform  # noqa: PLC0415
-
-    logger.info("SoundCloud actions first: %s", track_url)
-    try:
-        results = await perform(context, track_url, comment_text=DOWNLOAD_COMMENT)
-    except CaptchaEncountered as e:
-        logger.warning("SoundCloud actions blocked by %s — continuing to the gate", e.kind)
-        return {}
-    except Exception:
-        logger.exception("SoundCloud actions failed — continuing to the gate")
-        return {}
-    landed = [name for name, r in results.items() if r.ok]
-    missed = [f"{name} ({r.detail})" for name, r in results.items() if not r.ok]
-    logger.info("SoundCloud actions landed: %s", ", ".join(landed) or "none")
-    if missed:
-        logger.warning("SoundCloud actions missed: %s", "; ".join(missed))
-    return results
-
-
-def _follows_to_release(actions: dict[str, ActionResult]) -> list[int]:
-    """The users this run started following, so only those get handed back.
-
-    A follow the user already had is theirs, and a gate names several profiles, so the
-    subject id is the only thing that says who this run is responsible for.
-    """
-    return [
-        r.subject_id
-        for r in actions.values()
-        if r.action.startswith("follow") and r.changed and r.subject_id is not None
-    ]
-
-
-async def _release_follows_taken(actions: dict[str, ActionResult]) -> None:
-    """Hand back the follows this run took, once the file is actually in hand.
-
-    Never fatal: the download has already succeeded by this point, and failing to tidy up
-    must not undo that.
-    """
-    user_ids = _follows_to_release(actions)
-    if not user_ids:
-        return
-    from soundcloud_dl.soundcloud_actions import release_follows  # noqa: PLC0415
-
-    try:
-        results = await release_follows(user_ids)
-    except Exception:
-        logger.exception("Could not give the follows back — they stay on the account")
-        return
-    for result in results:
-        log = logger.info if result.ok else logger.warning
-        log("%s unfollow — %s", "OK  " if result.ok else "FAIL", result.detail)
-
-
-def _requirement_follower(
-    actions: dict[str, ActionResult],
-) -> Callable[[list[str]], Awaitable[None]]:
-    """Follow the profiles a gate names, the moment it names them.
-
-    Results land in `actions` so the release step afterwards covers these follows too.
-    """
-
-    async def on_requirements(blocks: list[str]) -> None:
-        from soundcloud_dl.gate_handlers.gate_requirements import (  # noqa: PLC0415
-            soundcloud_handles,
-        )
-        from soundcloud_dl.soundcloud_actions import follow_handles  # noqa: PLC0415
-
-        handles = [h for h in soundcloud_handles(blocks) if f"follow:{h}" not in actions]
-        if not handles:
-            return
-        logger.info("Gate named SoundCloud profiles: %s", ", ".join("@" + h for h in handles))
-        actions.update(await follow_handles(handles))
-
-    return on_requirements
 
 
 async def _resolve_track_title(url: str) -> str | None:
@@ -170,6 +88,19 @@ async def _resolve_track_title(url: str) -> str | None:
     return title
 
 
+async def _settle_follows(actions: dict[str, ActionResult], *, resuming: bool) -> None:
+    """Give the follows back, or write them down for a run that can.
+
+    Never before the run has ended: handing one back mid-run takes it away from the gate
+    that is still checking for it. `resuming` means a tab was left open for a person to
+    finish, so the gate still needs them and a later run releases them instead.
+    """
+    if resuming:
+        pending_follows.hold(actions)
+    else:
+        await release_follows_taken(actions)
+
+
 async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = False) -> None:
     """Open a gate URL and let JudgmentGateHandler drive it, reporting the outcome."""
     validate_jev_config()
@@ -188,7 +119,9 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
             # which keeps the gate loop a pure click-driver with no second browser context
             # to coordinate.
             if sc_actions:
-                actions = await _do_soundcloud_actions(context, url)
+                await do_soundcloud_actions(
+                    context, url, comment_text=DOWNLOAD_COMMENT, into=actions
+                )
             gate_url = await get_gate_url(context, url)
         else:
             if sc_actions:
@@ -222,7 +155,7 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
             download_dir=DOWNLOAD_DIR,
             track_title=track_title,
             recorder=recorder,
-            on_requirements=_requirement_follower(actions) if sc_actions else None,
+            on_requirements=requirement_follower(actions) if sc_actions else None,
         )
         handler.auto_approve_oauth = _auto_approve_oauth_for(gate_url)
 
@@ -278,9 +211,6 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
                 await _save_debug_artifacts(page, "jev_pilot")
                 logger.warning("GATE_INCOMPLETE | no download step reached | steps=%s", results)
         finally:
-            # Never before the run has ended: giving a follow back mid-run takes it away
-            # from the gate that is still checking for it.
-            if not resuming:
-                await _release_follows_taken(actions)
+            await _settle_follows(actions, resuming=resuming)
 
         await page.close()

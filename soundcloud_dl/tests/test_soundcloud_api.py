@@ -35,7 +35,7 @@ class FakePage:
         self.url = url
 
 
-def client_for(handler: Any) -> httpx.AsyncClient:  # noqa: ANN401
+def client_for(handler: Any) -> httpx.AsyncClient:
     """An httpx client whose requests are answered by `handler` instead of the network."""
     return httpx.AsyncClient(
         base_url="https://api.soundcloud.com", transport=httpx.MockTransport(handler)
@@ -51,7 +51,7 @@ async def test_resolve_raises_rather_than_returning_a_half_answer() -> None:
             await api.resolve(c, "https://soundcloud.com/a/b")
 
 
-def _following_handler(states: list[int]) -> Any:  # noqa: ANN401
+def _following_handler(states: list[int]) -> Any:
     """Answers GET /me/followings/{id} from `states` in order; writes always succeed."""
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -148,7 +148,7 @@ async def test_unfollow_asks_for_a_delete() -> None:
         ({"collection": []}, False),
     ],
 )
-async def test_recent_collection_reads_both_shapes(payload: Any, expected: bool) -> None:  # noqa: ANN401
+async def test_recent_collection_reads_both_shapes(payload: Any, expected: bool) -> None:
     # /me/likes/tracks answers with a bare list, /me/followings with a collection object.
     async with client_for(lambda _r: httpx.Response(200, json=payload)) as c:
         assert await api.is_liked(c, 7) is expected

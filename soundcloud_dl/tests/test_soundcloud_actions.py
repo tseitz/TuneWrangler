@@ -9,7 +9,7 @@ import httpx
 import pytest
 
 from soundcloud_dl import soundcloud_actions
-from soundcloud_dl.jev_pilot import _follows_to_release
+from soundcloud_dl.sc_actions_flow import follows_to_release
 from soundcloud_dl.soundcloud_actions import (
     ActionResult,
     artist_url_for,
@@ -51,7 +51,7 @@ def test_track_path_ignores_a_secret_share_segment():
 USERS = {"indacollective": 1430205171, "ets_wav": 165621040}
 
 
-def _fake_api(handler: Any, monkeypatch: pytest.MonkeyPatch) -> list[str]:  # noqa: ANN401
+def _fake_api(handler: Any, monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """Point api_client at a MockTransport, and return the request log it fills."""
     seen: list[str] = []
 
@@ -70,7 +70,7 @@ def _fake_api(handler: Any, monkeypatch: pytest.MonkeyPatch) -> list[str]:  # no
     return seen
 
 
-def _resolving_handler(following: set[int]) -> Any:  # noqa: ANN401
+def _resolving_handler(following: set[int]) -> Any:
     """Resolves the known handles and keeps a real following set, so reads back honestly."""
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -154,7 +154,7 @@ async def test_a_mid_loop_failure_keeps_the_record_of_what_already_landed(monkey
     def handler(request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
-        if calls > 2:  # noqa: PLR2004
+        if calls > 2:
             msg = "connection reset"
             raise httpx.ConnectError(msg)
         return _resolving_handler({USERS["indacollective"]})(request)
@@ -200,14 +200,14 @@ def test_only_follows_this_run_added_are_given_back():
         "follow:b": ActionResult("follow:b", ok=True, detail="", changed=True, subject_id=3),
         "like": ActionResult("like", ok=True, detail="", changed=True),
     }
-    assert _follows_to_release(actions) == [1, 3]
+    assert follows_to_release(actions) == [1, 3]
 
 
 def test_a_failed_follow_is_not_given_back():
     actions = {
         "follow:a": ActionResult("follow:a", ok=False, detail="422", changed=False, subject_id=2)
     }
-    assert _follows_to_release(actions) == []
+    assert follows_to_release(actions) == []
 
 
 # ── Not doing an action twice ──────────────────────────────────────────────────
@@ -226,7 +226,7 @@ async def test_a_track_already_commented_on_is_not_commented_on_again(monkeypatc
     monkeypatch.setattr(soundcloud_actions, "my_comment_on", fake_existing)
     monkeypatch.setattr(soundcloud_actions, "post_comment", fake_post)
 
-    r = await soundcloud_actions._comment_once(None, 7, 46056733, "nice one")  # noqa: SLF001
+    r = await soundcloud_actions._comment_once(None, 7, 46056733, "nice one")
     assert r.ok is True
     assert r.changed is False
     assert "already commented" in r.detail
@@ -243,7 +243,7 @@ async def test_a_track_not_yet_commented_on_gets_the_comment(monkeypatch):
     monkeypatch.setattr(soundcloud_actions, "my_comment_on", fake_existing)
     monkeypatch.setattr(soundcloud_actions, "post_comment", fake_post)
 
-    r = await soundcloud_actions._comment_once(None, 7, 46056733, "nice one")  # noqa: SLF001
+    r = await soundcloud_actions._comment_once(None, 7, 46056733, "nice one")
     assert r.ok is True
     assert r.changed is True
 
@@ -258,7 +258,7 @@ async def test_comments_that_cannot_be_read_fail_rather_than_risk_a_duplicate(mo
     monkeypatch.setattr(soundcloud_actions, "my_comment_on", fake_existing)
     monkeypatch.setattr(soundcloud_actions, "post_comment", fake_post)
 
-    r = await soundcloud_actions._comment_once(None, 7, 46056733, "nice one")  # noqa: SLF001
+    r = await soundcloud_actions._comment_once(None, 7, 46056733, "nice one")
     assert r.ok is False
     assert r.changed is False
 
@@ -273,7 +273,7 @@ async def test_a_like_already_in_place_skips_the_write():
     async def read_back() -> bool:
         return True
 
-    r = await soundcloud_actions._verified("like", write, read_back, want=True)  # noqa: SLF001
+    r = await soundcloud_actions._verified("like", write, read_back, want=True)
     assert r.ok is True
     assert r.changed is False
     assert writes == []
@@ -289,6 +289,6 @@ async def test_a_like_this_run_added_is_marked_changed():
     async def read_back() -> bool:
         return state["on"]
 
-    r = await soundcloud_actions._verified("like", write, read_back, want=True)  # noqa: SLF001
+    r = await soundcloud_actions._verified("like", write, read_back, want=True)
     assert r.ok is True
     assert r.changed is True

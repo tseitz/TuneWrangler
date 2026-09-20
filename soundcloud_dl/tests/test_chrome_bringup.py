@@ -41,7 +41,7 @@ def test_is_debug_port_open_false_on_timeout():
 def test_a_session_already_in_the_wanted_mode_is_reused(tmp_path):
     profile_dir = tmp_path / "profile"
     profile_dir.mkdir()
-    (profile_dir / chrome_bringup._MODE_MARKER).write_text("headless:4242")  # noqa: SLF001
+    (profile_dir / chrome_bringup._MODE_MARKER).write_text("headless:4242")
 
     with (
         patch.object(chrome_bringup, "is_debug_port_open", return_value=True),
@@ -60,7 +60,7 @@ def test_a_session_in_the_other_mode_is_restarted_not_reused(tmp_path):
     # --login against a reused headless Chrome shows the user nothing to sign in to.
     profile_dir = tmp_path / "profile"
     profile_dir.mkdir()
-    (profile_dir / chrome_bringup._MODE_MARKER).write_text("headless:4242")  # noqa: SLF001
+    (profile_dir / chrome_bringup._MODE_MARKER).write_text("headless:4242")
 
     with (
         patch.object(chrome_bringup, "is_debug_port_open", return_value=True),
@@ -98,7 +98,7 @@ def test_an_unmarked_session_is_restarted_rather_than_assumed(tmp_path):
 
 def test_the_mode_is_recorded_only_once_the_port_answers(tmp_path):
     profile_dir = tmp_path / "profile"
-    marker = profile_dir / chrome_bringup._MODE_MARKER  # noqa: SLF001
+    marker = profile_dir / chrome_bringup._MODE_MARKER
 
     with (
         patch.object(chrome_bringup, "is_debug_port_open", return_value=False),
@@ -191,7 +191,7 @@ def test_a_marker_left_by_a_dead_chrome_is_not_trusted(tmp_path):
     # that would be driving their real session.
     profile_dir = tmp_path / "profile"
     profile_dir.mkdir()
-    (profile_dir / chrome_bringup._MODE_MARKER).write_text("headless:4242")  # noqa: SLF001
+    (profile_dir / chrome_bringup._MODE_MARKER).write_text("headless:4242")
 
     with (
         patch.object(chrome_bringup, "is_debug_port_open", return_value=True),
@@ -226,7 +226,7 @@ def test_the_marker_records_whoever_holds_the_port(tmp_path):
                 profile_dir=profile_dir,
                 port=9222,
             )
-    marker = profile_dir / chrome_bringup._MODE_MARKER  # noqa: SLF001
+    marker = profile_dir / chrome_bringup._MODE_MARKER
     # The port owner, not the launched pid — Chrome hands the socket to another process,
     # so recording proc.pid relaunched a correct browser on every run.
     assert marker.read_text() == "headless:52538"

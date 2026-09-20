@@ -279,7 +279,10 @@ async def _toggle(page: Page, scope: Any, kind: str, *, want_on: bool) -> Action
         await page.wait_for_timeout(500)
         after = await _state(el)
         if after == target:
-            return ActionResult(kind, ok=True, detail=f"{before!r} → {after!r}")
+            # Reaching here means the "already" branch above was not taken, so this click
+            # is what moved it. Without changed=True a follow taken on this path reads as
+            # one the user already had, and is never given back.
+            return ActionResult(kind, ok=True, detail=f"{before!r} → {after!r}", changed=True)
     return ActionResult(kind, ok=False, detail=f"still {await _state(el)!r} after 10s")
 
 
@@ -383,10 +386,11 @@ async def _perform_via_api(
     *,
     comment_text: str | None,
     undo: bool,
+    into: dict[str, ActionResult] | None = None,
 ) -> dict[str, ActionResult]:
     """Act by track id, so nothing depends on finding a control on a rendered page."""
     want = not undo
-    results: dict[str, ActionResult] = {}
+    results: dict[str, ActionResult] = {} if into is None else into
     record = _recorder(results)
 
     async with api_client() as client:
@@ -438,8 +442,11 @@ async def _perform_via_api(
 
 
 # A gate page is content we do not control, and every handle read off it becomes a real
-# follow on a real stranger from the user's account. Droploud asks for two. This is the
-# ceiling on what any one page can spend, however many names it prints.
+# follow on a real stranger from the user's account. Droploud asks for two.
+#
+# This caps ONE call. A gate is asked for its requirements repeatedly, so enforcing the
+# per-run ceiling is the caller's job — see requirement_follower in sc_actions_flow.py,
+# which counts what the run has already spent before asking for more.
 MAX_GATE_FOLLOWS = 5
 
 
@@ -504,22 +511,33 @@ async def perform(
     *,
     comment_text: str | None = None,
     undo: bool = False,
+    into: dict[str, ActionResult] | None = None,
 ) -> dict[str, ActionResult]:
     """Do follow/like/repost (and optionally comment) on SoundCloud, verifying each.
 
     API first. Clicking is kept as the fallback because it is the only path that needs no
     stored token, but it is the one that failed: a half-rendered track page still offers
     the player bar's like button, which acts on whatever was played last.
+
+    `into` is the caller's own dict, and passing one is what makes a partial run
+    recoverable: the follow is taken first and like/repost/comment can each raise, so a
+    dict that only exists as a return value takes the record of that follow with it when
+    one does — leaving a real follow on the account that nothing can give back.
     """
+    results = {} if into is None else into
     try:
-        return await _perform_via_api(context, track_url, comment_text=comment_text, undo=undo)
+        return await _perform_via_api(
+            context, track_url, comment_text=comment_text, undo=undo, into=results
+        )
     except AccountMismatch:
         # Never fall back. Clicking would act as the browser's user, which is exactly the
         # mismatch that was just detected.
         raise
     except (ApiError, SoundCloudAuthError) as exc:
         logger.warning("API path unavailable (%s) — falling back to clicking", exc)
-    return await _perform_via_ui(context, track_url, comment_text=comment_text, undo=undo)
+    return await _perform_via_ui(
+        context, track_url, comment_text=comment_text, undo=undo, into=results
+    )
 
 
 async def _perform_via_ui(
@@ -528,10 +546,11 @@ async def _perform_via_ui(
     *,
     comment_text: str | None = None,
     undo: bool = False,
+    into: dict[str, ActionResult] | None = None,
 ) -> dict[str, ActionResult]:
     """Fallback: drive the buttons on the artist page."""
     page = await new_page(context)
-    results: dict[str, ActionResult] = {}
+    results: dict[str, ActionResult] = {} if into is None else into
     try:
         await block_ads(page)
         await page.goto(artist_url_for(track_url), wait_until="domcontentloaded", timeout=30_000)
@@ -543,7 +562,17 @@ async def _perform_via_ui(
         if bar is None:
             record(ActionResult("follow", ok=False, detail="artist page did not load"))
         else:
-            record(await _toggle(page, bar, "follow", want_on=not undo))
+            followed = await _toggle(page, bar, "follow", want_on=not undo)
+            record(followed)
+            if followed.changed and followed.subject_id is None:
+                # This path runs because the API was unavailable, so there is no id to
+                # resolve and release_follows has nothing to act on. Say so loudly rather
+                # than letting it read as tidied up: the account keeps this one.
+                logger.warning(
+                    "Followed %s by clicking, so there is no user id to give it back with "
+                    "— unfollow by hand if the gate does not unlock",
+                    artist_url_for(track_url),
+                )
 
         item = await _find_track_item(page, track_url)
         if item is None:

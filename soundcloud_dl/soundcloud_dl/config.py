@@ -130,6 +130,11 @@ def get_processed_file() -> Path:
     return get_log_dir() / "processed.json"
 
 
+def get_pending_follows_file() -> Path:
+    """Path to JSON file storing follows a run took but deliberately did not give back."""
+    return get_log_dir() / "pending_follows.json"
+
+
 def get_playlist_cache_file() -> Path:
     """Path to JSON file storing cached playlist track lists (by playlist URL)."""
     return get_log_dir() / "playlist_cache.json"
