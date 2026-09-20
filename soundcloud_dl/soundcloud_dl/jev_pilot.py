@@ -33,6 +33,8 @@ from soundcloud_dl.soundcloud_page import get_gate_url
 if TYPE_CHECKING:
     from playwright.async_api import BrowserContext
 
+    from soundcloud_dl.soundcloud_actions import ActionResult
+
 logger = logging.getLogger("soundcloud_dl.jev_pilot")
 
 
@@ -42,7 +44,9 @@ def _run_name(gate_url: str) -> str:
     return f"{host.split('.')[0] or 'gate'}_jev"
 
 
-async def _do_soundcloud_actions(context: BrowserContext, track_url: str) -> None:
+async def _do_soundcloud_actions(
+    context: BrowserContext, track_url: str
+) -> dict[str, ActionResult]:
     """Follow/like/repost/comment for real, and say plainly which ones landed.
 
     Never fatal. A gate can still be satisfiable when one action fails — droploud asks for
@@ -55,15 +59,36 @@ async def _do_soundcloud_actions(context: BrowserContext, track_url: str) -> Non
         results = await perform(context, track_url, comment_text=DOWNLOAD_COMMENT)
     except CaptchaEncountered as e:
         logger.warning("SoundCloud actions blocked by %s — continuing to the gate", e.kind)
-        return
+        return {}
     except Exception:
         logger.exception("SoundCloud actions failed — continuing to the gate")
-        return
+        return {}
     landed = [name for name, r in results.items() if r.ok]
     missed = [f"{name} ({r.detail})" for name, r in results.items() if not r.ok]
     logger.info("SoundCloud actions landed: %s", ", ".join(landed) or "none")
     if missed:
         logger.warning("SoundCloud actions missed: %s", "; ".join(missed))
+    return results
+
+
+async def _release_follow_if_taken(track_url: str, actions: dict[str, ActionResult]) -> None:
+    """Hand back the follow this run took, once the file is actually in hand.
+
+    Only one this run added — a follow the user already had is theirs. Never fatal: the
+    download has already succeeded by this point, and failing to tidy up must not undo that.
+    """
+    follow = actions.get("follow")
+    if follow is None or not follow.changed:
+        return
+    from soundcloud_dl.soundcloud_actions import release_follow  # noqa: PLC0415
+
+    try:
+        result = await release_follow(track_url)
+    except Exception:
+        logger.exception("Could not give the follow back — it stays on the account")
+        return
+    log = logger.info if result.ok else logger.warning
+    log("%s unfollow — %s", "OK  " if result.ok else "FAIL", result.detail)
 
 
 async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = False) -> None:
@@ -74,6 +99,8 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
     # instead of the real pipeline's "artist - title" rename. Not a bug, just how --jev works.
     logger.info("track_title=None — downloaded file will keep its suggested filename")
 
+    actions: dict[str, ActionResult] = {}
+
     async with attached_browser() as context:
         # A gate URL is accepted directly so the gate can be exercised without loading a
         # SoundCloud page first — which matters when SoundCloud is rate-limiting this browser.
@@ -83,7 +110,7 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
             # which keeps the gate loop a pure click-driver with no second browser context
             # to coordinate.
             if sc_actions:
-                await _do_soundcloud_actions(context, url)
+                actions = await _do_soundcloud_actions(context, url)
             gate_url = await get_gate_url(context, url)
         else:
             if sc_actions:
@@ -154,6 +181,9 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
         )
         if downloaded:
             logger.info("DOWNLOAD_SUCCESS | steps=%s", results)
+            # Only now. Giving the follow back before the file is in hand would take it
+            # away from the gate that is still checking for it.
+            await _release_follow_if_taken(url, actions)
         else:
             await _save_debug_artifacts(page, "jev_pilot")
             logger.warning("GATE_INCOMPLETE | no download step reached | steps=%s", results)

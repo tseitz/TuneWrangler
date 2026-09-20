@@ -223,6 +223,9 @@ class ActionResult:
     action: str
     ok: bool
     detail: str
+    # Whether this run altered the state, as opposed to finding it already right. Only a
+    # follow this run added may be given back afterwards; one the user already had is theirs.
+    changed: bool = False
 
 
 # Each control encodes its state in title/aria-label. "Like" means not yet liked; once it
@@ -374,8 +377,8 @@ async def _perform_via_api(
             user_id = await assert_same_account(page, token_user_id)
             logger.info("Acting as user %d on track %d", user_id, track_id)
 
-            ok, detail = await set_following(client, artist_id, on=want)
-            record(ActionResult("follow", ok=ok, detail=detail))
+            ok, detail, changed = await set_following(client, artist_id, on=want)
+            record(ActionResult("follow", ok=ok, detail=detail, changed=changed))
 
             record(
                 await _verified(
@@ -400,6 +403,23 @@ async def _perform_via_api(
             return results
         finally:
             await page.close()
+
+
+async def release_follow(track_url: str) -> ActionResult:
+    """Give back a follow a gate charged, now that the download is in hand.
+
+    SoundCloud caps followings at 2000 and every gate charges one, so a pipeline that keeps
+    them fills the account and then quietly cannot follow at all — which arrives as a bare
+    422 on a run that otherwise looks fine. Likes and reposts are not capped, are the point
+    of the account, and are left alone.
+
+    Needs no browser: unfollowing is one of the things api.soundcloud.com does itself.
+    """
+    async with api_client() as client:
+        track = await resolve(client, track_url)
+        artist_id = int(track["user"]["id"])
+        ok, detail, changed = await set_following(client, artist_id, on=False)
+    return ActionResult("unfollow", ok=ok, detail=detail, changed=changed)
 
 
 async def perform(

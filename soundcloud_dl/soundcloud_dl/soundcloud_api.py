@@ -116,16 +116,25 @@ async def is_following(client: httpx.AsyncClient, user_id: int) -> bool:
     return (await client.get(f"/me/followings/{user_id}")).status_code == _HTTP_OK
 
 
-async def set_following(client: httpx.AsyncClient, user_id: int, *, on: bool) -> tuple[bool, str]:
-    """Follow or unfollow, then read the state back rather than trusting the status."""
+async def set_following(
+    client: httpx.AsyncClient, user_id: int, *, on: bool
+) -> tuple[bool, str, bool]:
+    """Follow or unfollow, then read the state back rather than trusting the status.
+
+    The third value says whether this call changed anything. That is what lets a caller
+    give back a follow a gate charged without touching one the user already had.
+    """
+    before = await is_following(client, user_id)
+    if before is on:
+        return True, f"already {'following' if on else 'not following'} {user_id}", False
+
     method = "PUT" if on else "DELETE"
     resp = await client.request(method, f"/me/followings/{user_id}")
-    landed = await is_following(client, user_id)
-    if landed is on:
-        return True, f"{'following' if on else 'not following'} {user_id}"
+    if await is_following(client, user_id) is on:
+        return True, f"{'following' if on else 'not following'} {user_id}", True
     # The body carries the real reason and is often the whole answer: hitting SoundCloud's
     # 2000-following cap reads as a bare 422 without it.
-    return False, f"{method} returned {resp.status_code}: {resp.text[:160]}"
+    return False, f"{method} returned {resp.status_code}: {resp.text[:160]}", False
 
 
 async def post_comment(client: httpx.AsyncClient, track_id: int, text: str) -> tuple[bool, str]:

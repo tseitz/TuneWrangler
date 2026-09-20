@@ -51,16 +51,23 @@ async def test_resolve_raises_rather_than_returning_a_half_answer() -> None:
             await api.resolve(c, "https://soundcloud.com/a/b")
 
 
+def _following_handler(states: list[int]) -> Any:  # noqa: ANN401
+    """Answers GET /me/followings/{id} from `states` in order; writes always succeed."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET":
+            return httpx.Response(states.pop(0), json={})
+        return httpx.Response(200, json={})
+
+    return handler
+
+
 async def test_follow_reports_failure_when_the_state_does_not_change() -> None:
     # The write can answer 200 and still not stick, so the status is never the proof.
-    def handler(request: httpx.Request) -> httpx.Response:
-        if request.method == "PUT":
-            return httpx.Response(200, json={})
-        return httpx.Response(404, json={})
-
-    async with client_for(handler) as c:
-        ok, _ = await api.set_following(c, 42, on=True)
+    async with client_for(_following_handler([404, 404])) as c:
+        ok, _, changed = await api.set_following(c, 42, on=True)
     assert ok is False
+    assert changed is False
 
 
 async def test_a_failed_follow_carries_soundclouds_own_reason() -> None:
@@ -74,32 +81,62 @@ async def test_a_failed_follow_carries_soundclouds_own_reason() -> None:
         return httpx.Response(404, json={})
 
     async with client_for(handler) as c:
-        ok, detail = await api.set_following(c, 42, on=True)
+        ok, detail, _ = await api.set_following(c, 42, on=True)
     assert ok is False
     assert "maximum number of users" in detail
 
 
 async def test_follow_reports_success_only_after_reading_the_state_back() -> None:
     seen: list[str] = []
+    states = [404, 200]
 
     def handler(request: httpx.Request) -> httpx.Response:
         seen.append(f"{request.method} {request.url.path}")
+        if request.method == "GET":
+            return httpx.Response(states.pop(0), json={})
         return httpx.Response(200, json={})
 
     async with client_for(handler) as c:
-        ok, _ = await api.set_following(c, 42, on=True)
+        ok, _, changed = await api.set_following(c, 42, on=True)
     assert ok is True
-    assert seen == ["PUT /me/followings/42", "GET /me/followings/42"]
+    assert changed is True
+    assert seen == [
+        "GET /me/followings/42",
+        "PUT /me/followings/42",
+        "GET /me/followings/42",
+    ]
+
+
+async def test_a_follow_already_in_place_is_left_untouched() -> None:
+    # changed=False is what stops the run handing back a follow the user owned already.
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.method)
+        return httpx.Response(200, json={})
+
+    async with client_for(handler) as c:
+        ok, detail, changed = await api.set_following(c, 42, on=True)
+    assert (ok, changed) == (True, False)
+    assert "already following" in detail
+    assert seen == ["GET"], "an already-correct state must not be written again"
 
 
 async def test_unfollow_asks_for_a_delete() -> None:
+    seen: list[str] = []
+    states = [200, 404]
+
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(404 if request.method == "GET" else 200, json={})
+        seen.append(request.method)
+        if request.method == "GET":
+            return httpx.Response(states.pop(0), json={})
+        return httpx.Response(200, json={})
 
     async with client_for(handler) as c:
-        ok, detail = await api.set_following(c, 42, on=False)
-    assert ok is True
+        ok, detail, changed = await api.set_following(c, 42, on=False)
+    assert (ok, changed) == (True, True)
     assert "not following" in detail
+    assert "DELETE" in seen
 
 
 @pytest.mark.parametrize(
