@@ -41,9 +41,9 @@ async def detect_handler_from_page(page: Page) -> type[GateHandler] | None:
     # Hypeddit: has a#downloadProcess or the smartlink carousel structure.
     el = await page.query_selector("a#downloadProcess, a.dp, #downloadProcess")
     if el is not None:
-        from soundcloud_dl.gate_handlers.hypeddit import HypedditHandler  # noqa: PLC0415
+        from soundcloud_dl.gate_handlers.jev import HypedditJevHandler  # noqa: PLC0415
 
-        return HypedditHandler
+        return HypedditJevHandler
 
     # ToneDen: has the toneden-player or fan-gate wrapper.
     el = await page.query_selector(".toneden-player, [data-toneden], #fan-gate")
@@ -75,10 +75,14 @@ def get_handler_for_url(url: str) -> type[GateHandler]:  # noqa: PLR0911
     """
     lower = url.lower()
 
+    # hypeddit.yaml and HypedditHandler are still here and still pass their tests, but
+    # nothing routes to them any more: the flow needs the position of a control, which a
+    # step list cannot express. See HypedditJevHandler. Re-pointing this at the YAML
+    # handler brings back a gate that clicks an off-screen download and saves no file.
     if "hypeddit.com" in lower:
-        from soundcloud_dl.gate_handlers.hypeddit import HypedditHandler  # noqa: PLC0415
+        from soundcloud_dl.gate_handlers.jev import HypedditJevHandler  # noqa: PLC0415
 
-        return HypedditHandler
+        return HypedditJevHandler
 
     if "toneden.io" in lower:
         from soundcloud_dl.gate_handlers.toneden import TonedenHandler  # noqa: PLC0415

@@ -27,6 +27,19 @@ class JevHandler(JudgmentGateHandler):
         super().__init__(**kwargs)
 
 
+class HypedditJevHandler(JevHandler):
+    """Hypeddit, driven by judgment rather than by hypeddit.yaml's step list.
+
+    The step list cannot see where a control is. Hypeddit enables #gateDownloadButton by
+    class from the first turn while parking it on a carousel slide that has not arrived —
+    box 0x0, offsetParent null — and a selector that only tests classes clicks it there,
+    which does nothing and leaves the run with no file. Judgment reads the geometry, skips
+    the button until its slide arrives, and advances the carousel in between.
+    """
+
+    gate_slug = "hypeddit_jev"
+
+
 class DroploudHandler(JevHandler):
     gate_slug = "droploud_jev"
 

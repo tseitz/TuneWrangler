@@ -6,9 +6,12 @@ from soundcloud_dl.gate_handlers import GateNotSupportedError, get_handler_for_u
 
 
 def test_hypeddit_url_returns_handler():
+    """Judgment, not hypeddit.yaml. The gate enables its download button by class while
+    parking it on a carousel slide that has not arrived, so a step list clicks a control
+    that is not on screen and the run ends with no file."""
     handler_class = get_handler_for_url("https://hypeddit.com/l8nite/sometrack")
     assert handler_class is not None
-    assert handler_class.__name__ == "HypedditHandler"
+    assert handler_class.__name__ == "HypedditJevHandler"
 
 
 def test_toneden_url_returns_handler():
@@ -24,7 +27,7 @@ def test_unknown_url_raises():
 
 def test_url_matching_is_case_insensitive():
     handler_class = get_handler_for_url("https://HYPEDDIT.COM/artist/track")
-    assert handler_class.__name__ == "HypedditHandler"
+    assert handler_class.__name__ == "HypedditJevHandler"
 
 
 @pytest.mark.parametrize(
@@ -73,3 +76,17 @@ def test_the_main_pipelines_keyword_arguments_construct_one():
     )
     assert handler.gate_name == "influenceplanner_jev"
     assert handler.track_title == "Artist - Title"
+
+
+def test_every_judgment_gate_is_recognisable_as_one():
+    """main.py validates the TypeSafe key up front for any JevHandler, before the run
+    spends follows it cannot take back. A judgment gate registered as something else
+    gets that check skipped and fails partway through instead."""
+    from soundcloud_dl.gate_handlers.jev import JevHandler
+
+    for url in (
+        "https://hypeddit.com/artist/track",
+        "https://droploud.com/track/f196e1fa",
+        "https://gate.influenceplanner.com/x",
+    ):
+        assert issubclass(get_handler_for_url(url), JevHandler), url
