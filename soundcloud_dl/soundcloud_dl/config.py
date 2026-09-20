@@ -183,10 +183,18 @@ def validate_phase2_config() -> None:
 
 
 def validate_jev_config() -> None:
-    """Raise if config required for the --jev judgment pilot is missing."""
+    """Raise if config required to drive a gate by judgment is missing.
+
+    Both --jev and the main pipeline reach this: droploud and InfluencePlanner have no step
+    list to fall back on. Checked before the gate is touched, because the client is built
+    lazily and would otherwise fail partway through a run that had already spent follows.
+    """
     validate_gate_form_config()
     if not TYPESAFE_API_KEY or not TYPESAFE_API_KEY.strip():
-        msg = "TYPESAFE_API_KEY is required for --jev. Set it in .env or the environment."
+        msg = (
+            "TYPESAFE_API_KEY is required to drive a judgment-based gate. "
+            "Set it in .env or the environment."
+        )
         raise RuntimeError(msg)
     warn_if_download_dir_unreachable()
 

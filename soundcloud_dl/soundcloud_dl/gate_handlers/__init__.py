@@ -62,7 +62,7 @@ async def detect_handler_from_page(page: Page) -> type | None:
     return None
 
 
-def get_handler_for_url(url: str) -> type:
+def get_handler_for_url(url: str) -> type:  # noqa: PLR0911
     """
     Return the GateHandler subclass for the given gate URL.
 
@@ -97,6 +97,19 @@ def get_handler_for_url(url: str) -> type:
         from soundcloud_dl.gate_handlers.followeb import FollowebHandler  # noqa: PLC0415
 
         return FollowebHandler
+
+    if "droploud.com" in lower:
+        from soundcloud_dl.gate_handlers.jev import DroploudHandler  # noqa: PLC0415
+
+        return DroploudHandler
+
+    # ipln.io is the short link printed in track descriptions and redirects to
+    # gate.influenceplanner.com. soundcloud_page.py already extracts both spellings, so both
+    # arrive here — the redirect has not necessarily happened yet when this is asked.
+    if "influenceplanner.com" in lower or "ipln.io" in lower:
+        from soundcloud_dl.gate_handlers.jev import InfluencePlannerHandler  # noqa: PLC0415
+
+        return InfluencePlannerHandler
 
     domain = urlparse(url).netloc or url
     msg = f"No gate handler registered for: {domain}"

@@ -25,6 +25,7 @@ from soundcloud_dl.config import (
     TUNEWRANGLER_SC_PLAYLIST_URL,
     TYPE_DELAY_MS,
     get_debug_dir,
+    validate_jev_config,
     validate_phase1_config,
     validate_phase2_config,
 )
@@ -40,6 +41,7 @@ from soundcloud_dl.gate_handlers.base import (
     StuckGate,
 )
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered
+from soundcloud_dl.gate_handlers.jev import JevHandler
 from soundcloud_dl.gate_handlers.login_wall import LoginWallEncountered
 from soundcloud_dl.inspect_gate import inspect_gate
 from soundcloud_dl.logger import setup_logging
@@ -277,6 +279,11 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 handler_cls.__name__,
                 final_url,
             )
+        # The page is open but nothing has been clicked yet. A judgment gate builds its
+        # TypeSafe client on the first turn, so without this a missing key surfaces after
+        # the run has already handed over follows it cannot take back.
+        if issubclass(handler_cls, JevHandler):
+            validate_jev_config()
         handler = handler_cls(
             template_vars={
                 "email": DOWNLOAD_EMAIL,
