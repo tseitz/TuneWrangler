@@ -4,8 +4,9 @@ import argparse
 import asyncio
 import logging
 import re
+import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from playwright.async_api import Page
@@ -19,6 +20,7 @@ from soundcloud_dl.config import (
     DOWNLOAD_DIR,
     DOWNLOAD_EMAIL,
     DOWNLOAD_NAME,
+    HEADED,
     PLAYLIST_CACHE_ENABLED,
     RESUME_ENABLED,
     SCROLL_BEFORE_CLICK,
@@ -40,7 +42,7 @@ from soundcloud_dl.gate_handlers.base import (
     StuckGate,
 )
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered
-from soundcloud_dl.gate_handlers.jev import JevHandler, judgment_handler_for
+from soundcloud_dl.gate_handlers.jev import JevHandler, gate_name_for, judgment_handler_for
 from soundcloud_dl.gate_handlers.login_wall import LoginWallEncountered
 from soundcloud_dl.inspect_gate import inspect_gate
 from soundcloud_dl.logger import setup_logging
@@ -49,10 +51,16 @@ from soundcloud_dl.playlist_cache import load_cached_tracks, save_cached_tracks
 from soundcloud_dl.playwright_browser import attached_browser
 from soundcloud_dl.recorder import record
 from soundcloud_dl.resume import TrackState, load_states, record_state, should_skip
+from soundcloud_dl.run_artifacts import RunRecorder
 from soundcloud_dl.soundcloud_page import SoundCloudPageError, get_gate_url, try_native_sc_download
 from soundcloud_dl.track_naming import judge_track_filename
 
 logger = logging.getLogger("soundcloud_dl.main")
+
+
+class SoundCloudLoginRequiredError(RuntimeError):
+    """Raised when the profile is signed out and nothing can ask a human to fix it."""
+
 
 _UNSAFE_FILENAME_RE = re.compile(r"[^\w\-]")
 
@@ -236,6 +244,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
     track_title = await judge_track_filename(track.title, track.artist)
 
     page = None
+    recorder: RunRecorder | None = None
     try:
         # SoundCloud tracks with a native download button (no gate) are handled here.
         # Try this before the gate flow so we don't waste time hunting for a gate link.
@@ -286,6 +295,11 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         # the run has already handed over follows it cannot take back.
         if issubclass(handler_cls, JevHandler):
             validate_jev_config()
+        # Only judgment handlers take one; a YAML handler has no per-turn decision to record.
+        extra: dict[str, Any] = {}
+        if issubclass(handler_cls, JevHandler):
+            recorder = RunRecorder(gate_name_for(final_url))
+            extra["recorder"] = recorder
         handler = handler_cls(
             template_vars={
                 "email": DOWNLOAD_EMAIL,
@@ -299,6 +313,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             pause=pause,
             download_dir=DOWNLOAD_DIR,
             track_title=track_title,
+            **extra,
         )
         results = await handler.run(page)
         downloaded = handler.downloaded
@@ -326,14 +341,30 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
                     )
                     results = await real_handler.run(page)
                     downloaded = downloaded or real_handler.downloaded
+
             except GateNotSupportedError:
                 pass
-        await page.close()
-        page = None
         # The handler reports whether a file reached disk. Not the step ids: every gate
         # config has a non-terminal step named for the download it is waiting on —
         # hypeddit's wait_for_download_ready, toneden's wait_for_download_unlock — so a run
         # that only ever waited was recorded done, and done is never retried.
+        if not downloaded:
+            # Before the page closes, and here rather than only on the exception paths:
+            # a gate that runs to the end and produces nothing is the shape a new gate
+            # variant takes, and it is the one outcome that used to be recorded with
+            # nothing to look at afterwards.
+            await _save_debug_artifacts(page, track_label)
+        if recorder is not None:
+            recorder.finish(
+                url=track.url,
+                gate_url=final_url,
+                downloaded=downloaded,
+                turns=len(results),
+                terminal="downloaded" if downloaded else "incomplete",
+                steps={k: str(v) for k, v in results.items()},
+            )
+        await page.close()
+        page = None
         if downloaded:
             logger.info("DOWNLOAD_SUCCESS | %s | steps=%s", track_label, results)
             return "done"
@@ -406,8 +437,11 @@ async def _run_phase2(
         "failed": 0,
     }
 
+    # --pause forces a window regardless of config, and the login guard below has to ask
+    # about the browser it actually got, not the one the config asked for.
+    headed = bool(pause or HEADED)
     async with attached_browser(headed=True if pause else None) as context:
-        await _ensure_logged_in(context)
+        await _ensure_logged_in(context, headed=headed)
 
         for idx, track in enumerate(to_process, 1):
             logger.info("Phase 2 track %d/%d: %s", idx, len(to_process), track.url)
@@ -433,7 +467,7 @@ def _print_summary(counts: dict[str, int]) -> None:
     logger.info("─" * 50)
 
 
-async def _ensure_logged_in(context) -> None:  # noqa: ANN001
+async def _ensure_logged_in(context, *, headed: bool) -> None:  # noqa: ANN001
     """Navigate to SoundCloud and pause for manual login if signed out."""
     page = await context.new_page()
     try:
@@ -441,6 +475,15 @@ async def _ensure_logged_in(context) -> None:  # noqa: ANN001
         # The "Sign in" button is only present when logged out.
         sign_in = await page.query_selector("button:has-text('Sign in'), a:has-text('Sign in')")
         if sign_in is not None:
+            # Waiting on stdin needs someone at the terminal AND a window to log in to.
+            # An unattended headless batch has neither, and blocks here until killed —
+            # which looks exactly like a run that is working, for as long as it is left.
+            if not (sys.stdin.isatty() and headed):
+                msg = (
+                    "Not logged into SoundCloud and no way to ask: run with "
+                    "TUNEWRANGLER_SC_HEADED=1 from a terminal and sign in, then re-run."
+                )
+                raise SoundCloudLoginRequiredError(msg)
             logger.warning(
                 "Not logged into SoundCloud. Please log in in the open Chrome window, "
                 "then press Enter here to continue."
