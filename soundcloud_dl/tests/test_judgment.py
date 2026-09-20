@@ -4,6 +4,7 @@ Mocks the Choice call's return value rather than hitting the real API — only t
 browser + real paid API call stay manual-only (see the plan's Verify section).
 """
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -130,12 +131,295 @@ DISABLED_DOWNLOAD_LINK = element(
 )
 
 
+def stub_requirements(monkeypatch, blocks_per_turn: list[list[str]]) -> None:
+    """Make the per-turn requirement read yield each list in order, then repeat the last."""
+    calls = 0
+
+    async def fake_read(_page):
+        nonlocal calls
+        idx = min(calls, len(blocks_per_turn) - 1)
+        calls += 1
+        return blocks_per_turn[idx]
+
+    monkeypatch.setattr(judgment_module, "read_requirements", fake_read)
+
+
 @pytest.mark.asyncio
-async def test_fill_dispatch_matches_input_by_name(monkeypatch):
-    """Choosing an <input> whose name matches a template_vars key fills it, not clicks it."""
+async def test_terms_the_gate_states_are_shown_to_the_model(monkeypatch):
+    """The snapshot only collects interactive elements, so a stated term is invisible
+    to the model unless it is carried in separately."""
+    handler = make_handler()
+    stub_requirements(monkeypatch, [["FOLLOW @A ON SOUNDCLOUD"]])
+    page = make_page([[PLAIN_BUTTON]], found_element=make_element())
+    stub_choice(monkeypatch, ["el_btn"] * 20)
+
+    with pytest.raises(StuckGate):
+        await handler._run_steps(page, {})
+
+    assert handler._requirements == ["FOLLOW @A ON SOUNDCLOUD"]
+
+
+@pytest.mark.asyncio
+async def test_terms_restated_on_every_slide_only_fire_the_callback_once(monkeypatch):
+    """A gate re-renders its terms as it advances. Acting on them again would re-follow
+    profiles the run has already followed."""
+    seen: list[list[str]] = []
+
+    async def on_requirements(blocks):
+        seen.append(blocks)
+
+    handler = make_handler(on_requirements=on_requirements)
+    stub_requirements(monkeypatch, [["FOLLOW @A ON SOUNDCLOUD"]])
+    page = make_page([[PLAIN_BUTTON]], found_element=make_element())
+    stub_choice(monkeypatch, ["el_btn"] * 20)
+
+    with pytest.raises(StuckGate):
+        await handler._run_steps(page, {})
+
+    assert seen == [["FOLLOW @A ON SOUNDCLOUD"]]
+
+
+@pytest.mark.asyncio
+async def test_terms_that_appear_later_still_fire(monkeypatch):
+    """Droploud states nothing on the page it opens on — its terms arrive on step 2."""
+    seen: list[list[str]] = []
+
+    async def on_requirements(blocks):
+        seen.append(blocks)
+
+    handler = make_handler(on_requirements=on_requirements)
+    stub_requirements(monkeypatch, [[], [], ["FOLLOW @LATE ON SOUNDCLOUD"]])
+    page = make_changing_page(found_element=make_element())
+    stub_choice(monkeypatch, ["el_btn"] * 20)
+
+    with pytest.raises(StuckGate):
+        await handler._run_steps(page, {})
+
+    assert seen == [["FOLLOW @LATE ON SOUNDCLOUD"]]
+
+
+@pytest.mark.asyncio
+async def test_a_failing_callback_does_not_end_the_run(monkeypatch):
+    """The gate can still be driven by clicking, so failing to act on its terms
+    out-of-band must not abort a run that has not tried the page yet."""
+
+    async def on_requirements(_blocks):
+        msg = "SoundCloud said no"
+        raise RuntimeError(msg)
+
+    handler = make_handler(on_requirements=on_requirements)
+    stub_requirements(monkeypatch, [["FOLLOW @A ON SOUNDCLOUD"]])
+    page = make_page([[PLAIN_BUTTON]], found_element=make_element())
+    stub_choice(monkeypatch, ["el_btn"] * 20)
+
+    with pytest.raises(StuckGate):
+        await handler._run_steps(page, {})
+
+
+def fake_download(name: str = "track.mp3") -> MagicMock:
+    """A stand-in for Playwright's Download, writing real bytes so save_download works."""
+    download = MagicMock()
+    download.suggested_filename = name
+
+    async def save_as(path):
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        Path(path).write_bytes(b"audio")
+
+    download.save_as = save_as
+    return download
+
+
+@pytest.mark.asyncio
+async def test_a_download_the_page_started_itself_is_saved(tmp_path):
+    """Droploud starts the file on its success page with nothing clicked.
+
+    The expect_download wrapped around a click of ours can never see that one.
+    """
+    handler = make_handler(download_dir=tmp_path)
+    handler._caught.append(fake_download())
+
+    assert await handler._take_caught_download() is True
+    assert (tmp_path / "track.mp3").read_bytes() == b"audio"
+
+
+def test_the_download_handler_can_carry_playwrights_marker_attribute():
+    """Playwright tags the handler it is given with an attribute.
+
+    self._caught.append is a builtin and cannot hold one, so page.on raised AttributeError
+    at attach time — before the gate had been opened at all.
+    """
+    handler = make_handler()
+    page = MagicMock()
+
+    handler._watch_downloads(page)
+
+    event, registered = page.on.call_args.args
+    assert event == "download"
+    registered._pw_impl_instance_ = object()
+
+
+def test_the_registered_handler_actually_collects():
+    handler = make_handler()
+    page = MagicMock()
+    handler._watch_downloads(page)
+
+    page.on.call_args.args[1]("a-download")
+
+    assert handler._caught == ["a-download"]
+
+
+@pytest.mark.asyncio
+async def test_nothing_caught_is_not_reported_as_a_download(tmp_path):
+    handler = make_handler(download_dir=tmp_path)
+    assert await handler._take_caught_download() is False
+
+
+@pytest.mark.asyncio
+async def test_a_caught_download_ends_the_run_before_any_more_clicking(monkeypatch, tmp_path):
+    """Once the file is in hand the gate's state stops mattering.
+
+    Without this the success page reads as just another page to keep clicking, and the run
+    burns every remaining turn on it.
+    """
+    handler = make_handler(download_dir=tmp_path)
+    handler._caught.append(fake_download())
+    page = make_page([[PLAIN_BUTTON]], found_element=make_element())
+    stub_choice(monkeypatch, ["el_btn"] * 20)
+
+    results = await handler._run_steps(page, {})
+
+    assert results["el_1_download"] == StepResult.EXECUTED
+
+
+GATE_URL = "https://gate.example.com/track/abc-123"
+
+
+@pytest.mark.parametrize(
+    ("url", "on_gate"),
+    [
+        (GATE_URL, True),
+        # A gate that advances by putting its step in the query string is still on its own
+        # page; snapping that back would undo the step it had just taken.
+        (GATE_URL + "?step=2", True),
+        (GATE_URL + "#comments", True),
+        (GATE_URL + "/", True),
+        # Droploud's finish line. Read as leaving, this dragged the page back and re-ran a
+        # gate that had already succeeded — twice, until the run gave up.
+        (GATE_URL + "/success", True),
+        ("https://gate.example.com/artist/inda", False),
+        ("https://gate.example.com/track/other-id", False),
+        # A prefix of the gate path is not under it.
+        ("https://gate.example.com/track", False),
+        ("https://gate.example.com/", False),
+    ],
+)
+def test_the_gate_owns_its_own_subtree(url, on_gate):
+    handler = make_handler()
+    handler._gate_url = GATE_URL
+    assert handler._still_on_the_gate(url) is on_gate
+
+
+@pytest.mark.asyncio
+async def test_a_click_that_wanders_off_the_gate_is_walked_back():
+    """The host does not change, so the login-wall guard never fires.
+
+    On droploud this left the run on the artist's profile clicking "FREE DL" on other
+    people's tracks until it gave up.
+    """
+    handler = make_handler()
+    handler._gate_url = GATE_URL
+    page = make_page([[]])
+    page.url = "https://gate.example.com/artist/inda"
+    page.goto = AsyncMock()
+
+    assert await handler._reanchor_page(page) is True
+    page.goto.assert_awaited_once()
+    assert page.goto.await_args.args[0] == GATE_URL
+
+
+@pytest.mark.asyncio
+async def test_a_page_still_on_the_gate_is_not_reloaded():
+    handler = make_handler()
+    handler._gate_url = GATE_URL
+    page = make_page([[]])
+    page.url = GATE_URL
+    page.goto = AsyncMock()
+
+    assert await handler._reanchor_page(page) is False
+    page.goto.assert_not_called()
+
+
+def test_the_link_that_led_off_the_gate_is_not_offered_again():
+    handler = make_handler()
+    dead: set[str] = set()
+    handler._note_off_gate(dead, "a@theartistlink")
+    assert dead == {"a@theartistlink"}
+
+
+def test_a_gate_that_keeps_navigating_away_ends_the_run_saying_so():
+    """Better than the bare "no progress" this used to surface three turns later."""
+    handler = make_handler()
+    handler._off_gate_returns = judgment_module._MAX_OFF_GATE_RETURNS - 1
+    with pytest.raises(StuckGate, match="navigating away"):
+        handler._note_off_gate(set(), None)
+
+
+@pytest.mark.asyncio
+async def test_an_empty_field_we_have_a_value_for_is_filled_before_the_model_is_asked(monkeypatch):
+    """A gate's continue button is commonly disabled until its fields have content.
+
+    Asked to choose against an empty box the model picked the dead button at 0.51 and
+    spent the turn on a control it could not press. This is not a decision, so it is not
+    put to the model — and that also saves the API call.
+    """
+    class Asked(Exception):
+        """Raised the moment the model is consulted, to pin which turn that first happens."""
+
+    async def boom(self, _page, _snapshot, _dead=frozenset()):
+        raise Asked
+
+    monkeypatch.setattr(JudgmentGateHandler, "_ask_choice", boom)
     handler = make_handler()
     el = make_element()
     page = make_page([[EMAIL_INPUT]], found_element=el)
+
+    results = {}
+    # Turn 1 fills and restarts; the model is not reached until turn 2, once the field
+    # it would have had to reason around already has content.
+    with pytest.raises(Asked):
+        await handler._run_steps(page, results)
+
+    assert results["el_1_autofill"] == StepResult.EXECUTED
+    el.type.assert_awaited()
+    el.click.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_a_field_is_only_autofilled_once(monkeypatch):
+    """A page that blanks a field it does not like would otherwise loop for every turn."""
+    stub_choice(monkeypatch, ["el_email"] * 20)
+    handler = make_handler()
+    el = make_element()
+    # The snapshot keeps reporting it empty, as a page that clears the field would.
+    page = make_page([[EMAIL_INPUT]], found_element=el)
+
+    results = {}
+    with pytest.raises(StuckGate):
+        await handler._run_steps(page, results)
+
+    autofills = [k for k in results if k.endswith("_autofill")]
+    assert autofills == ["el_1_autofill"]
+
+
+@pytest.mark.asyncio
+async def test_a_field_that_already_has_content_is_left_to_the_model(monkeypatch):
+    """Autofill only supplies what is missing. Replacing existing text is a judgment call."""
+    handler = make_handler()
+    el = make_element()
+    prefilled = element(
+        key="el_email", tag="input", placeholder="Your email", name="email", text="a@b.com"
+    )
+    page = make_page([[prefilled]], found_element=el)
     stub_choice(monkeypatch, ["el_email"] * 20)
 
     results = {}
@@ -143,7 +427,6 @@ async def test_fill_dispatch_matches_input_by_name(monkeypatch):
         await handler._run_steps(page, results)
 
     assert results["el_1_fill"] == StepResult.EXECUTED
-    el.type.assert_awaited()
     el.click.assert_not_called()
 
 

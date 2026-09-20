@@ -31,6 +31,8 @@ from soundcloud_dl.run_artifacts import RunRecorder
 from soundcloud_dl.soundcloud_page import get_gate_url
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     from playwright.async_api import BrowserContext
 
     from soundcloud_dl.soundcloud_actions import ActionResult
@@ -71,24 +73,61 @@ async def _do_soundcloud_actions(
     return results
 
 
-async def _release_follow_if_taken(track_url: str, actions: dict[str, ActionResult]) -> None:
-    """Hand back the follow this run took, once the file is actually in hand.
+def _follows_to_release(actions: dict[str, ActionResult]) -> list[int]:
+    """The users this run started following, so only those get handed back.
 
-    Only one this run added — a follow the user already had is theirs. Never fatal: the
-    download has already succeeded by this point, and failing to tidy up must not undo that.
+    A follow the user already had is theirs, and a gate names several profiles, so the
+    subject id is the only thing that says who this run is responsible for.
     """
-    follow = actions.get("follow")
-    if follow is None or not follow.changed:
+    return [
+        r.subject_id
+        for r in actions.values()
+        if r.action.startswith("follow") and r.changed and r.subject_id is not None
+    ]
+
+
+async def _release_follows_taken(actions: dict[str, ActionResult]) -> None:
+    """Hand back the follows this run took, once the file is actually in hand.
+
+    Never fatal: the download has already succeeded by this point, and failing to tidy up
+    must not undo that.
+    """
+    user_ids = _follows_to_release(actions)
+    if not user_ids:
         return
-    from soundcloud_dl.soundcloud_actions import release_follow  # noqa: PLC0415
+    from soundcloud_dl.soundcloud_actions import release_follows  # noqa: PLC0415
 
     try:
-        result = await release_follow(track_url)
+        results = await release_follows(user_ids)
     except Exception:
-        logger.exception("Could not give the follow back — it stays on the account")
+        logger.exception("Could not give the follows back — they stay on the account")
         return
-    log = logger.info if result.ok else logger.warning
-    log("%s unfollow — %s", "OK  " if result.ok else "FAIL", result.detail)
+    for result in results:
+        log = logger.info if result.ok else logger.warning
+        log("%s unfollow — %s", "OK  " if result.ok else "FAIL", result.detail)
+
+
+def _requirement_follower(
+    actions: dict[str, ActionResult],
+) -> Callable[[list[str]], Awaitable[None]]:
+    """Follow the profiles a gate names, the moment it names them.
+
+    Results land in `actions` so the release step afterwards covers these follows too.
+    """
+
+    async def on_requirements(blocks: list[str]) -> None:
+        from soundcloud_dl.gate_handlers.gate_requirements import (  # noqa: PLC0415
+            soundcloud_handles,
+        )
+        from soundcloud_dl.soundcloud_actions import follow_handles  # noqa: PLC0415
+
+        handles = [h for h in soundcloud_handles(blocks) if f"follow:{h}" not in actions]
+        if not handles:
+            return
+        logger.info("Gate named SoundCloud profiles: %s", ", ".join("@" + h for h in handles))
+        actions.update(await follow_handles(handles))
+
+    return on_requirements
 
 
 async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = False) -> None:
@@ -128,6 +167,9 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
         logger.info("Gate page open: %s", page.url)
 
         handler = JudgmentGateHandler(
+            # Otherwise every line of a droploud run is logged as [hypeddit_jev], which is
+            # the default baked into the handler for the gate it was first written against.
+            config={"gate": _run_name(gate_url), "steps": []},
             template_vars={
                 "email": DOWNLOAD_EMAIL,
                 "name": DOWNLOAD_NAME,
@@ -141,51 +183,64 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
             download_dir=DOWNLOAD_DIR,
             track_title=None,
             recorder=recorder,
+            on_requirements=_requirement_follower(actions) if sc_actions else None,
         )
 
+        # Released in the finally, so a run that ends without a file still gives back what
+        # it spent. A gate that charges follows and then never unlocks is how the account
+        # walks into SoundCloud's 2000-following cap, and it is the gate that decides
+        # whether that happens. The two states below are the deliberate exceptions.
+        resuming = False
         try:
-            results = await handler.run(page)
-        except CaptchaEncountered as e:
-            logger.warning("CAPTCHA | %s — tab left open, manual followup needed", e.kind)
-            recorder.finish(url=url, gate_url=gate_url, downloaded=False, terminal="captcha")
-            return
-        except LoginWallEncountered as e:
-            logger.warning("LOGIN_REQUIRED | %s — sign in on that tab, then re-run", e.reason)
+            try:
+                results = await handler.run(page)
+            except CaptchaEncountered as e:
+                # Keep the follows: the tab stays open for a person to finish by hand, and
+                # the gate is still checking for them.
+                resuming = True
+                logger.warning("CAPTCHA | %s — tab left open, manual followup needed", e.kind)
+                recorder.finish(url=url, gate_url=gate_url, downloaded=False, terminal="captcha")
+                return
+            except LoginWallEncountered as e:
+                resuming = True
+                logger.warning("LOGIN_REQUIRED | %s — sign in on that tab, then re-run", e.reason)
+                recorder.finish(
+                    url=url,
+                    gate_url=gate_url,
+                    downloaded=False,
+                    terminal="login_required",
+                    stopped_at=e.url,
+                )
+                return
+            except Exception as exc:
+                await _save_debug_artifacts(page, "jev_pilot")
+                recorder.finish(
+                    url=url, gate_url=gate_url, downloaded=False, terminal=type(exc).__name__
+                )
+                logger.exception("FAILED | jev pilot run")
+                raise
+
+            downloaded = any(
+                step_id.endswith("_download") and result == StepResult.EXECUTED
+                for step_id, result in results.items()
+            )
             recorder.finish(
                 url=url,
                 gate_url=gate_url,
-                downloaded=False,
-                terminal="login_required",
-                stopped_at=e.url,
+                downloaded=downloaded,
+                turns=len(results),
+                terminal="downloaded" if downloaded else "incomplete",
+                steps={k: str(v) for k, v in results.items()},
             )
-            return
-        except Exception as exc:
-            await _save_debug_artifacts(page, "jev_pilot")
-            recorder.finish(
-                url=url, gate_url=gate_url, downloaded=False, terminal=type(exc).__name__
-            )
-            logger.exception("FAILED | jev pilot run")
-            raise
-
-        downloaded = any(
-            step_id.endswith("_download") and result == StepResult.EXECUTED
-            for step_id, result in results.items()
-        )
-        recorder.finish(
-            url=url,
-            gate_url=gate_url,
-            downloaded=downloaded,
-            turns=len(results),
-            terminal="downloaded" if downloaded else "incomplete",
-            steps={k: str(v) for k, v in results.items()},
-        )
-        if downloaded:
-            logger.info("DOWNLOAD_SUCCESS | steps=%s", results)
-            # Only now. Giving the follow back before the file is in hand would take it
-            # away from the gate that is still checking for it.
-            await _release_follow_if_taken(url, actions)
-        else:
-            await _save_debug_artifacts(page, "jev_pilot")
-            logger.warning("GATE_INCOMPLETE | no download step reached | steps=%s", results)
+            if downloaded:
+                logger.info("DOWNLOAD_SUCCESS | steps=%s", results)
+            else:
+                await _save_debug_artifacts(page, "jev_pilot")
+                logger.warning("GATE_INCOMPLETE | no download step reached | steps=%s", results)
+        finally:
+            # Never before the run has ended: giving a follow back mid-run takes it away
+            # from the gate that is still checking for it.
+            if not resuming:
+                await _release_follows_taken(actions)
 
         await page.close()

@@ -102,6 +102,26 @@ async def resolve(client: httpx.AsyncClient, url: str) -> dict[str, Any]:
     return resp.json()
 
 
+async def resolve_user(client: httpx.AsyncClient, handle: str) -> dict[str, Any]:
+    """Turn a @handle a gate named into that user, refusing anything that is not one.
+
+    A permalink is not reserved to profiles — soundcloud.com/<handle> can be a playlist or
+    a track. The kind check is what stops a mistyped handle being followed as if it were a
+    person, which is a real action on a real account and cannot be taken back quietly.
+    """
+    resource = await resolve(client, f"https://soundcloud.com/{handle}")
+    if resource.get("kind") != "user":
+        msg = f"@{handle} resolved to {resource.get('kind')!r}, not a user"
+        raise ApiError(msg)
+    # /resolve follows redirects, so a permalink that has been renamed or reassigned
+    # answers as whoever holds it now — a different person than the gate asked for.
+    got = str(resource.get("permalink", "")).lower()
+    if got != handle.lower():
+        msg = f"@{handle} resolved to a different profile, @{got}"
+        raise ApiError(msg)
+    return resource
+
+
 async def me(client: httpx.AsyncClient) -> dict[str, Any]:
     """The account the stored token belongs to."""
     resp = await client.get("/me")

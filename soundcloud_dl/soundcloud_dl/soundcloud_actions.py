@@ -30,6 +30,7 @@ from soundcloud_dl.soundcloud_api import (
     me,
     post_comment,
     resolve,
+    resolve_user,
     set_following,
     set_like,
     set_repost,
@@ -226,6 +227,9 @@ class ActionResult:
     # Whether this run altered the state, as opposed to finding it already right. Only a
     # follow this run added may be given back afterwards; one the user already had is theirs.
     changed: bool = False
+    # The SoundCloud user a follow landed on. A gate names several profiles, so the action
+    # name alone no longer says who to give back.
+    subject_id: int | None = None
 
 
 # Each control encodes its state in title/aria-label. "Like" means not yet liked; once it
@@ -378,7 +382,9 @@ async def _perform_via_api(
             logger.info("Acting as user %d on track %d", user_id, track_id)
 
             ok, detail, changed = await set_following(client, artist_id, on=want)
-            record(ActionResult("follow", ok=ok, detail=detail, changed=changed))
+            record(
+                ActionResult("follow", ok=ok, detail=detail, changed=changed, subject_id=artist_id)
+            )
 
             record(
                 await _verified(
@@ -405,21 +411,65 @@ async def _perform_via_api(
             await page.close()
 
 
-async def release_follow(track_url: str) -> ActionResult:
-    """Give back a follow a gate charged, now that the download is in hand.
+# A gate page is content we do not control, and every handle read off it becomes a real
+# follow on a real stranger from the user's account. Droploud asks for two. This is the
+# ceiling on what any one page can spend, however many names it prints.
+MAX_GATE_FOLLOWS = 5
 
-    SoundCloud caps followings at 2000 and every gate charges one, so a pipeline that keeps
-    them fills the account and then quietly cannot follow at all — which arrives as a bare
-    422 on a run that otherwise looks fine. Likes and reposts are not capped, are the point
-    of the account, and are left alone.
 
-    Needs no browser: unfollowing is one of the things api.soundcloud.com does itself.
+async def follow_handles(handles: list[str]) -> dict[str, ActionResult]:
+    """Follow the profiles a gate named by @handle, up to MAX_GATE_FOLLOWS.
+
+    Separate from perform() because a gate does not say who it wants until partway through
+    its own flow — droploud prints its terms on step 2 — so this runs mid-run, after the
+    track's own artist has already been followed.
+
+    Needs no browser: following is one of the things api.soundcloud.com does itself.
     """
+    if len(handles) > MAX_GATE_FOLLOWS:
+        logger.warning(
+            "gate named %d profiles; following only the first %d: %s",
+            len(handles),
+            MAX_GATE_FOLLOWS,
+            ", ".join(handles[:MAX_GATE_FOLLOWS]),
+        )
+        handles = handles[:MAX_GATE_FOLLOWS]
+
+    results: dict[str, ActionResult] = {}
+    record = _recorder(results)
     async with api_client() as client:
-        track = await resolve(client, track_url)
-        artist_id = int(track["user"]["id"])
-        ok, detail, changed = await set_following(client, artist_id, on=False)
-    return ActionResult("unfollow", ok=ok, detail=detail, changed=changed)
+        for handle in handles:
+            name = f"follow:{handle}"
+            try:
+                user = await resolve_user(client, handle)
+                user_id = int(user["id"])
+                ok, detail, changed = await set_following(client, user_id, on=True)
+            except Exception as exc:  # noqa: BLE001
+                # Caught per handle, never around the loop. A timeout on the third of five
+                # must not discard the record of the first two — without their subject_id
+                # nothing can give those follows back, and they leak silently.
+                record(ActionResult(name, ok=False, detail=f"{type(exc).__name__}: {exc}"))
+                continue
+            record(ActionResult(name, ok=ok, detail=detail, changed=changed, subject_id=user_id))
+    return results
+
+
+async def release_follows(user_ids: list[int]) -> list[ActionResult]:
+    """Give back follows this run added, by id.
+
+    SoundCloud caps followings at 2000 and every gate charges one or more, so a pipeline
+    that keeps them fills the account and then quietly cannot follow at all — which arrives
+    as a bare 422 on a run that otherwise looks fine. Likes and reposts are not capped, are
+    the point of the account, and are left alone.
+    """
+    out: list[ActionResult] = []
+    async with api_client() as client:
+        for user_id in user_ids:
+            ok, detail, changed = await set_following(client, user_id, on=False)
+            out.append(
+                ActionResult("unfollow", ok=ok, detail=detail, changed=changed, subject_id=user_id)
+            )
+    return out
 
 
 async def perform(
