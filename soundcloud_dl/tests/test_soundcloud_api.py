@@ -191,6 +191,92 @@ async def test_comment_without_an_id_is_not_treated_as_posted() -> None:
     assert "no id" in detail
 
 
+async def test_my_own_comment_is_found_among_other_peoples() -> None:
+    body = {
+        "collection": [
+            {"id": 1, "user": {"id": 999}},
+            {"id": 2, "user": {"id": 46056733}},
+        ],
+        "next_href": None,
+    }
+    async with client_for(lambda _r: httpx.Response(200, json=body)) as c:
+        assert await api.my_comment_on(c, 7, 46056733) == 2
+
+
+async def test_a_track_nobody_commented_on_reads_as_none() -> None:
+    body = {"collection": [{"id": 1, "user": {"id": 999}}], "next_href": None}
+    async with client_for(lambda _r: httpx.Response(200, json=body)) as c:
+        assert await api.my_comment_on(c, 7, 46056733) is None
+
+
+async def test_a_comment_past_the_first_page_is_still_found() -> None:
+    # The duplicate this guard exists to stop is exactly the one that falls off page one.
+    pages = [
+        httpx.Response(
+            200,
+            json={
+                "collection": [{"id": 1, "user": {"id": 999}}],
+                "next_href": "https://api.soundcloud.com/tracks/7/comments?offset=200",
+            },
+        ),
+        httpx.Response(
+            200,
+            json={"collection": [{"id": 2, "user": {"id": 46056733}}], "next_href": None},
+        ),
+    ]
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        return pages.pop(0)
+
+    async with client_for(handler) as c:
+        assert await api.my_comment_on(c, 7, 46056733) == 2
+    # The second hop must not re-send limit/linked_partitioning on top of next_href's own.
+    assert seen[1] == "https://api.soundcloud.com/tracks/7/comments?offset=200"
+
+
+async def test_an_unreadable_comment_list_raises_instead_of_reading_as_empty() -> None:
+    # Returning None here would post the duplicate this whole function exists to prevent.
+    async with client_for(lambda _r: httpx.Response(500, text="boom")) as c:
+        with pytest.raises(ApiError):
+            await api.my_comment_on(c, 7, 46056733)
+
+
+async def test_a_cursor_pointing_off_host_is_refused() -> None:
+    # api_client carries the OAuth token as a default header, so httpx would hand it to
+    # whatever host a response body names — it only strips credentials across a redirect.
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        return httpx.Response(
+            200,
+            json={"collection": [], "next_href": "https://evil.example.com/steal"},
+        )
+
+    async with client_for(handler) as c:
+        with pytest.raises(ApiError, match="off-host"):
+            await api.my_comment_on(c, 7, 46056733)
+    assert not any("evil.example.com" in url for url in seen)
+
+
+async def test_a_cursor_that_never_ends_stops_rather_than_hanging() -> None:
+    # Exhaustion must not read as "no comment found" — that is what posts the duplicate.
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "collection": [],
+                "next_href": "https://api.soundcloud.com/tracks/7/comments?offset=0",
+            },
+        )
+
+    async with client_for(handler) as c:
+        with pytest.raises(ApiError, match="did not end"):
+            await api.my_comment_on(c, 7, 46056733)
+
+
 # ── api-v2 through the page ────────────────────────────────────────────────────
 
 

@@ -21,6 +21,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import urllib.parse
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -46,6 +47,14 @@ _HTTP_NOT_FOUND = 404
 # collection to answer "is this old track liked" would cost many requests to learn nothing
 # the write itself did not already report.
 _VERIFY_PAGE_SIZE = 200
+
+# Comments are read to the end instead, so this only sets how many hops that takes. 200 is
+# the most the route will return for one.
+_COMMENT_PAGE_SIZE = 200
+
+# A cursor loop driven by the server needs its own end. Without one a next_href pointing
+# at itself never returns, and the per-request timeout does not bound the loop.
+_MAX_COMMENT_PAGES = 25
 
 # Runs inside the page so the request carries its session. The web app sends the token as a
 # header, not as a cookie, even though that is where it keeps it.
@@ -166,6 +175,59 @@ async def post_comment(client: httpx.AsyncClient, track_id: int, text: str) -> t
     if not comment_id:
         return False, "comment accepted but no id came back"
     return True, f"comment {comment_id} posted"
+
+
+def _same_host_path(next_href: str) -> str:
+    """Reduce a pagination cursor to a path on our own API host.
+
+    next_href is an absolute URL taken from a response body, and api_client() carries the
+    user's OAuth token as a default header — which httpx attaches to whatever host it is
+    handed. It strips credentials across a cross-origin *redirect*, but a URL passed
+    straight to .get() is not a redirect, so nothing would strip it there. A body naming
+    another host would hand that host the token.
+    """
+    parsed = urllib.parse.urlparse(next_href)
+    if parsed.netloc and parsed.netloc != urllib.parse.urlparse(SOUNDCLOUD_API_BASE).netloc:
+        msg = f"pagination cursor pointed off-host: {parsed.netloc}"
+        raise ApiError(msg)
+    return parsed.path + (f"?{parsed.query}" if parsed.query else "")
+
+
+async def my_comment_on(client: httpx.AsyncClient, track_id: int, user_id: int) -> int | None:
+    """The id of a comment this user has already left on the track, or None.
+
+    Read to the end of the collection, unlike the like/repost checks: a like the newest
+    page missed is re-sent harmlessly because the write is a set, while a comment the
+    newest page missed is posted a second time and only the user can delete it.
+
+    /me/comments does not exist (405 'unknown route'), so the track's own collection is
+    the only way to ask.
+    """
+    path = f"/tracks/{track_id}/comments"
+    params: dict[str, Any] | None = {
+        "limit": _COMMENT_PAGE_SIZE,
+        "linked_partitioning": 1,
+    }
+    for _ in range(_MAX_COMMENT_PAGES):
+        resp = await client.get(path, params=params)
+        if resp.status_code != _HTTP_OK:
+            msg = f"GET {path} returned {resp.status_code}: {resp.text[:120]}"
+            raise ApiError(msg)
+        body = resp.json()
+        items = body if isinstance(body, list) else body.get("collection", [])
+        for item in items:
+            if (item.get("user") or {}).get("id") == user_id:
+                return int(item["id"])
+        next_href = body.get("next_href") if isinstance(body, dict) else None
+        if not next_href:
+            return None
+        # next_href carries its own query string; re-sending params would duplicate it.
+        path, params = _same_host_path(next_href), None
+
+    # Running out of pages is not "no comment found": that reading is what posts a second
+    # one. The caller treats an ApiError as a reason to leave the track alone.
+    msg = f"comments on track {track_id} did not end within {_MAX_COMMENT_PAGES} pages"
+    raise ApiError(msg)
 
 
 async def _in_recent(client: httpx.AsyncClient, path: str, track_id: int) -> bool:

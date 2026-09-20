@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
+    import httpx
     from playwright.async_api import BrowserContext, Page
 
 from soundcloud_dl.config import PAGE_LOAD_WAIT_SECONDS
@@ -28,6 +29,7 @@ from soundcloud_dl.soundcloud_api import (
     is_liked,
     is_reposted,
     me,
+    my_comment_on,
     post_comment,
     resolve,
     resolve_user,
@@ -336,18 +338,43 @@ async def _verified(
     *,
     want: bool,
 ) -> ActionResult:
-    """Run a write, then ask SoundCloud what it thinks the state is.
+    """Ask SoundCloud the state, write only if it is wrong, then ask again.
 
     The write's own status is not the verification. api-v2 answers 204 for a repost while
     telling us nothing about whether it stuck.
+
+    Reading first is what makes `changed` mean something here, the same way it does for a
+    follow: a like this run added may be given back, one the user already had is theirs.
     """
+    if await read_back() is want:
+        return ActionResult(name, ok=True, detail=f"already {'on' if want else 'off'}")
     ok, detail = await write()
     if not ok:
         return ActionResult(name, ok=False, detail=detail)
     landed = await read_back()
     if landed is want:
-        return ActionResult(name, ok=True, detail=f"{detail}, confirmed")
+        return ActionResult(name, ok=True, detail=f"{detail}, confirmed", changed=True)
     return ActionResult(name, ok=False, detail=f"{detail} but SoundCloud still says {landed}")
+
+
+async def _comment_once(
+    client: httpx.AsyncClient, track_id: int, user_id: int, text: str
+) -> ActionResult:
+    """Post the comment unless this account already left one on the track.
+
+    A like and a repost are sets, so re-running one costs a wasted write and nothing else.
+    A comment is a list: every re-run leaves another copy on the artist's track, and only
+    the user can delete them.
+    """
+    try:
+        existing = await my_comment_on(client, track_id, user_id)
+    except ApiError as e:
+        # Not treated as "no comment found": that reading is what posts the duplicate.
+        return ActionResult("comment", ok=False, detail=f"could not read comments: {e}")
+    if existing is not None:
+        return ActionResult("comment", ok=True, detail=f"already commented ({existing})")
+    ok, detail = await post_comment(client, track_id, text)
+    return ActionResult("comment", ok=ok, detail=detail, changed=ok)
 
 
 async def _perform_via_api(
@@ -404,8 +431,7 @@ async def _perform_via_api(
             )
 
             if comment_text and not undo:
-                ok, detail = await post_comment(client, track_id, comment_text)
-                record(ActionResult("comment", ok=ok, detail=detail))
+                record(await _comment_once(client, track_id, token_user_id, comment_text))
             return results
         finally:
             await page.close()

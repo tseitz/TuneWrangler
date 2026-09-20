@@ -208,3 +208,87 @@ def test_a_failed_follow_is_not_given_back():
         "follow:a": ActionResult("follow:a", ok=False, detail="422", changed=False, subject_id=2)
     }
     assert _follows_to_release(actions) == []
+
+
+# ── Not doing an action twice ──────────────────────────────────────────────────
+
+
+async def test_a_track_already_commented_on_is_not_commented_on_again(monkeypatch):
+    posted: list[str] = []
+
+    async def fake_existing(*_a: object, **_k: object) -> int | None:
+        return 2594494206
+
+    async def fake_post(*_a: object, **_k: object) -> tuple[bool, str]:
+        posted.append("posted")
+        raise AssertionError("post_comment must not be reached")
+
+    monkeypatch.setattr(soundcloud_actions, "my_comment_on", fake_existing)
+    monkeypatch.setattr(soundcloud_actions, "post_comment", fake_post)
+
+    r = await soundcloud_actions._comment_once(None, 7, 46056733, "nice one")  # noqa: SLF001
+    assert r.ok is True
+    assert r.changed is False
+    assert "already commented" in r.detail
+    assert posted == []
+
+
+async def test_a_track_not_yet_commented_on_gets_the_comment(monkeypatch):
+    async def fake_existing(*_a: object, **_k: object) -> int | None:
+        return None
+
+    async def fake_post(*_a: object, **_k: object) -> tuple[bool, str]:
+        return True, "comment 1 posted"
+
+    monkeypatch.setattr(soundcloud_actions, "my_comment_on", fake_existing)
+    monkeypatch.setattr(soundcloud_actions, "post_comment", fake_post)
+
+    r = await soundcloud_actions._comment_once(None, 7, 46056733, "nice one")  # noqa: SLF001
+    assert r.ok is True
+    assert r.changed is True
+
+
+async def test_comments_that_cannot_be_read_fail_rather_than_risk_a_duplicate(monkeypatch):
+    async def fake_existing(*_a: object, **_k: object) -> int | None:
+        raise soundcloud_actions.ApiError("500")
+
+    async def fake_post(*_a: object, **_k: object) -> tuple[bool, str]:
+        raise AssertionError("post_comment must not be reached")
+
+    monkeypatch.setattr(soundcloud_actions, "my_comment_on", fake_existing)
+    monkeypatch.setattr(soundcloud_actions, "post_comment", fake_post)
+
+    r = await soundcloud_actions._comment_once(None, 7, 46056733, "nice one")  # noqa: SLF001
+    assert r.ok is False
+    assert r.changed is False
+
+
+async def test_a_like_already_in_place_skips_the_write():
+    writes: list[str] = []
+
+    async def write() -> tuple[bool, str]:
+        writes.append("w")
+        return True, "wrote"
+
+    async def read_back() -> bool:
+        return True
+
+    r = await soundcloud_actions._verified("like", write, read_back, want=True)  # noqa: SLF001
+    assert r.ok is True
+    assert r.changed is False
+    assert writes == []
+
+
+async def test_a_like_this_run_added_is_marked_changed():
+    state = {"on": False}
+
+    async def write() -> tuple[bool, str]:
+        state["on"] = True
+        return True, "wrote"
+
+    async def read_back() -> bool:
+        return state["on"]
+
+    r = await soundcloud_actions._verified("like", write, read_back, want=True)  # noqa: SLF001
+    assert r.ok is True
+    assert r.changed is True
