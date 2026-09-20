@@ -508,7 +508,7 @@ def _run_one_shot(args: argparse.Namespace) -> bool:
     elif args.sc_auth:
         from soundcloud_dl.soundcloud_auth import authorize  # noqa: PLC0415
 
-        authorize()
+        asyncio.run(authorize())
     elif args.sc_do or args.sc_undo:
         from soundcloud_dl.soundcloud_actions import run_actions  # noqa: PLC0415
 

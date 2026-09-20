@@ -183,15 +183,15 @@ def test_callback_logging_never_carries_the_authorization_code(
 # ── authorize() ────────────────────────────────────────────────────────────────
 
 
-def test_authorize_rejects_a_redirect_uri_it_cannot_listen_on(
+async def test_authorize_rejects_a_redirect_uri_it_cannot_listen_on(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(auth, "SOUNDCLOUD_REDIRECT_URI", "https://example.com/callback")
     with pytest.raises(SoundCloudAuthError, match="localhost"):
-        auth.authorize()
+        await auth.authorize()
 
 
-def test_authorize_fails_fast_when_credentials_are_missing(
+async def test_authorize_fails_fast_when_credentials_are_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Must raise before the browser opens, not after a five-minute wait that blames the
@@ -200,28 +200,28 @@ def test_authorize_fails_fast_when_credentials_are_missing(
     monkeypatch.setattr(auth, "SOUNDCLOUD_CLIENT_ID", None)
     monkeypatch.setattr(auth, "_await_callback", _never_called)
     with pytest.raises(SoundCloudAuthError, match="SOUNDCLOUD_CLIENT_ID"):
-        auth.authorize()
+        await auth.authorize()
 
 
-def test_authorize_rejects_a_mismatched_state(
+async def test_authorize_rejects_a_mismatched_state(
     monkeypatch: pytest.MonkeyPatch, token_file: Path
 ) -> None:
     _stub_authorize(monkeypatch, {"code": "abc", "state": "not-the-one-we-sent"})
     with pytest.raises(SoundCloudAuthError, match="wrong state"):
-        auth.authorize()
+        await auth.authorize()
     assert not token_file.exists(), "a rejected sign-in must not write a token"
 
 
-def test_authorize_reports_a_refusal_from_soundcloud(
+async def test_authorize_reports_a_refusal_from_soundcloud(
     monkeypatch: pytest.MonkeyPatch, token_file: Path
 ) -> None:
     _stub_authorize(monkeypatch, {"error": "access_denied", "error_description": "user said no"})
     with pytest.raises(SoundCloudAuthError, match="access_denied"):
-        auth.authorize()
+        await auth.authorize()
     assert not token_file.exists()
 
 
-def test_authorize_saves_tokens_on_the_happy_path(
+async def test_authorize_saves_tokens_on_the_happy_path(
     monkeypatch: pytest.MonkeyPatch, token_file: Path
 ) -> None:
     sent: dict[str, Any] = {}
@@ -232,7 +232,7 @@ def test_authorize_saves_tokens_on_the_happy_path(
         lambda d: sent.update(d)
         or {"access_token": "at", "refresh_token": "rt", "expires_in": 3600, "scope": "*"},
     )
-    auth.authorize()
+    await auth.authorize()
     stored = json.loads(token_file.read_text())
     assert stored["access_token"] == "at"
     assert stored["refresh_token"] == "rt"
@@ -304,7 +304,13 @@ def _stub_authorize(
     monkeypatch.setattr(auth, "SOUNDCLOUD_CLIENT_ID", "cid")
     monkeypatch.setattr(auth, "SOUNDCLOUD_CLIENT_SECRET", "secret")
     opened: dict[str, str] = {}
-    monkeypatch.setattr(auth.webbrowser, "open", lambda url: opened.update(url=url))
+
+    async def fake_open(_stack: object, url: str) -> str:
+        opened["url"] = url
+        return "a fake browser"
+
+    monkeypatch.setattr(auth, "_open_sign_in", fake_open)
+    monkeypatch.setattr(auth, "_whoami", lambda _t: "tester")
 
     bound: dict[str, str] = {}
 

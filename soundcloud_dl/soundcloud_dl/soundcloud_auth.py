@@ -13,7 +13,9 @@ challenged.
 
 from __future__ import annotations
 
+import asyncio
 import base64
+import contextlib
 import hashlib
 import json
 import logging
@@ -27,6 +29,7 @@ from urllib.parse import parse_qs, urlencode, urlparse
 import httpx
 
 from soundcloud_dl.config import (
+    SOUNDCLOUD_API_BASE,
     SOUNDCLOUD_CLIENT_ID,
     SOUNDCLOUD_CLIENT_SECRET,
     SOUNDCLOUD_REDIRECT_URI,
@@ -258,7 +261,50 @@ def load_access_token() -> str:
     return str(_refresh(refresh_token)["access_token"])
 
 
-def authorize() -> None:
+def _whoami(access_token: str) -> str:
+    """The account a token belongs to, so a run can say who it is about to act as."""
+    with httpx.Client(follow_redirects=True) as client:
+        resp = client.get(
+            f"{SOUNDCLOUD_API_BASE}/me",
+            headers={
+                "Authorization": f"OAuth {access_token}",
+                "Accept": "application/json; charset=utf-8",
+            },
+            timeout=30.0,
+        )
+    if resp.status_code != _HTTP_OK:
+        return "unknown"
+    return str(resp.json().get("permalink") or "unknown")
+
+
+async def _open_sign_in(stack: contextlib.AsyncExitStack, url: str) -> str:
+    """Show the sign-in page, preferring the browser the gates are driven in.
+
+    The token has to belong to the same account as that browser. Using the default browser
+    signed us in as one account while the gate ran as another, and the two halves of a run
+    then acted as different people — follows on one, likes and reposts on the other.
+
+    The attach is held open by the caller's stack, because dropping it closes the tab the
+    sign-in is happening in.
+    """
+    try:
+        from soundcloud_dl.playwright_browser import attached_browser, new_page  # noqa: PLC0415
+
+        context = await stack.enter_async_context(attached_browser())
+        page = await new_page(context)
+        await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "Could not open the automation Chrome (%s). Falling back to your default "
+            "browser — it must be signed in as the account the gates run as.",
+            exc,
+        )
+        webbrowser.open(url)
+        return "your default browser"
+    return "the automation Chrome"
+
+
+async def authorize() -> None:
     """Run the interactive sign-in once and save the resulting tokens."""
     parsed = urlparse(SOUNDCLOUD_REDIRECT_URI)
     if parsed.hostname not in ("localhost", "127.0.0.1") or not parsed.port:
@@ -286,10 +332,17 @@ def authorize() -> None:
     url = f"{AUTHORIZE_URL}?{query}"
 
     server = _bind_callback_server("127.0.0.1", parsed.port, parsed.path or "/", state)
-    logger.info("Opening SoundCloud sign-in in your browser")
-    logger.info("If nothing opens, paste this into a browser:\n%s", url)
-    webbrowser.open(url)
-    returned = _await_callback(server)
+    try:
+        async with contextlib.AsyncExitStack() as stack:
+            where = await _open_sign_in(stack, url)
+            logger.info("SoundCloud sign-in opened in %s", where)
+            logger.info("If nothing opens, paste this into a browser:\n%s", url)
+            # The blocking wait runs off the event loop so the browser attach above stays
+            # serviceable for the whole sign-in.
+            returned = await asyncio.to_thread(_await_callback, server)
+    except BaseException:
+        server.server_close()
+        raise
 
     if returned.get("error"):
         detail = returned.get("error_description", "")
@@ -316,9 +369,11 @@ def authorize() -> None:
             }
         )
     )
+    # Named out loud because the account is the one thing a sign-in can get silently wrong,
+    # and a token for the wrong account fails much later as a gate that never unlocks.
     logger.info(
-        "Signed in. Token saved to %s (scope=%r, refresh token %s)",
+        "Signed in as %r. Token saved to %s (refresh token %s)",
+        _whoami(stored["access_token"]),
         get_token_file(),
-        stored["scope"],
         "stored" if stored["refresh_token"] else "MISSING — you will have to sign in again",
     )
