@@ -23,21 +23,44 @@ if TYPE_CHECKING:
 # passes offsetParent and display checks. Without excluding it, elements on a not-yet-active
 # slide look clickable but silently do nothing.
 _HELPERS_JS = """
+// A gate repeats a data-step: hypeddit prints one "follow" button per artist, the track's
+// and the remixer's. Keyed on the step alone the two collide, the snapshot offers only the
+// first, and the second can never be chosen or clicked — so the gate refuses to unlock and
+// the run reports whatever it was stuck on instead. data-url is what actually differs
+// (the profile or track being acted on) and, unlike the label, does not change when the
+// button flips to done.
+const hash = (s) => {
+  let h = 5381;
+  for (let i = 0; i < s.length; i += 1) {
+    h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  }
+  return h.toString(36);
+};
+// The hash is what makes the key unique — it covers the whole attribute, so two buttons
+// whose URLs end the same way (/users/1/follow and /users/2/follow) still differ. The
+// readable half is for the log only, so it is truncated and stripped: a key is page-supplied
+// text that ends up in a log line, a CSS selector and a prompt.
+const stepSuffix = (el) => {
+  const sub = el.getAttribute('data-url') || el.getAttribute('data-title') || '';
+  if (!sub) return '';
+  const clean = sub.split('?')[0].split('#')[0].replace(/\\/+$/, '');
+  const tail = clean
+    .slice(clean.lastIndexOf('/') + 1)
+    .replace(/[^A-Za-z0-9._-]/g, '')
+    .slice(0, 24);
+  return ':' + tail + '@' + hash(sub);
+};
 const elKey = (el) => {
   if (el.id) return el.id;
   const step = el.getAttribute('data-step');
-  if (step) return 'data-step=' + step;
+  if (step) return 'data-step=' + step + stepSuffix(el);
   const parts = [
     el.tagName.toLowerCase(),
     el.getAttribute('href') || '',
     el.getAttribute('name') || '',
     (el.innerText || el.value || '').trim().slice(0, 40),
   ].join('|');
-  let h = 5381;
-  for (let i = 0; i < parts.length; i += 1) {
-    h = ((h * 33) ^ parts.charCodeAt(i)) >>> 0;
-  }
-  return el.tagName.toLowerCase() + '@' + h.toString(36);
+  return el.tagName.toLowerCase() + '@' + hash(parts);
 };
 const isVisible = (el) => (
   el.offsetParent !== null
@@ -90,7 +113,9 @@ SNAPSHOT_JS = _js("""
       id: el.id || '',
       step: el.getAttribute('data-step') || '',
       tag: el.tagName.toLowerCase(),
-      cls: el.className || '',
+      // An SVG <a> matches the 'a' selector but its className is an SVGAnimatedString, not
+      // a string. Every reader here calls .lower().split() on it.
+      cls: typeof el.className === 'string' ? el.className : (el.getAttribute('class') || ''),
       href: el.getAttribute('href') || '',
       type: ((toggle || el).getAttribute('type') || '').toLowerCase(),
       // Without this a tick is invisible to the snapshot diff, so _did_it_move reports

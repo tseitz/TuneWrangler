@@ -46,7 +46,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("soundcloud_dl.gate_handlers.judgment")
 
-_MAX_ITERATIONS = 15
+# A backstop, not the stop condition — _MAX_IDLE_TURNS is what ends a gate that has stopped
+# moving. Sized for the longest gate seen: hypeddit spends a turn per slide (email, then one
+# per SoundCloud action, then a skipper slide per platform) and reached its download button on
+# turn 16, one past the old ceiling of 15.
+_MAX_ITERATIONS = 25
 _ALREADY_UNLOCKED = "already_unlocked"
 
 # Hypeddit only flips an action's class once it has confirmed that action against the
@@ -54,6 +58,12 @@ _ALREADY_UNLOCKED = "already_unlocked"
 # wait_for_download_ready timeout; the poll exits early on any change.
 _SETTLE_POLL_MS = 500
 _SETTLE_POLL_ATTEMPTS = 40
+
+# Everything else either reacts to the click or was the wrong button. A carousel Next is the
+# common case, and Instagram is the clear one — hypeddit has no callback for it and marks the
+# button done inside the onclick. Waiting the full budget on each of those spent a minute of
+# a two-minute run proving three buttons had done nothing.
+_FAST_SETTLE_ATTEMPTS = 6
 
 # Only covers the client-side render of the gate widget, not a user action. 15s.
 _READY_POLL_ATTEMPTS = 30
@@ -190,6 +200,18 @@ def _on_screen(snapshot: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]
 _DownloadOutcome = Literal["got_it", "missed", "not_ready"]
 
 
+def _settle_attempts(target: dict[str, Any]) -> int:
+    """How long to give the page to react to a click on this control.
+
+    Only a control the gate has still to verify is slow: hypeddit clears 'undone' once it has
+    confirmed that action against the SoundCloud API, several seconds later. A Next button
+    never carries the class, so it either advances the carousel at once or was the wrong
+    button — and the full budget only bought a 20s wait to be told so.
+    """
+    pending = "undone" in target["cls"].lower().split()
+    return _SETTLE_POLL_ATTEMPTS if pending else _FAST_SETTLE_ATTEMPTS
+
+
 def _visible_download_key(snapshot: dict[str, dict[str, Any]]) -> str | None:
     """The download element's key, only once it is on screen.
 
@@ -234,6 +256,7 @@ class JudgmentGateHandler(GateHandler):
         # Per element, not a single global flag: a wrong guess early must not lock out the
         # real download button when it appears later.
         self._tried_downloads: set[str] = set()
+        self._warned_collisions: set[str] = set()
         # Constructed lazily so importing this module never requires TYPESAFE_API_KEY.
         self._client: AsyncTypeSafeClient | None = None
 
@@ -248,13 +271,46 @@ class JudgmentGateHandler(GateHandler):
         The download button is kept off-screen behind the carousel even once it is enabled,
         so a visible-only snapshot cannot tell an unlocked gate from a locked one.
         """
-        # First occurrence wins, matching find_element_by_key's preference, so a colliding
-        # key never describes one element and click another.
+        # The first VISIBLE occurrence wins, because that is what find_element_by_key returns.
+        # Keeping the first in document order instead let a hidden element be described here
+        # and a different, visible one be clicked.
         snapshot: dict[str, dict[str, Any]] = {}
+        dropped: list[dict[str, Any]] = []
         for el in await snapshot_elements(page):
-            if el["key"] not in snapshot:
+            held = snapshot.get(el["key"])
+            if held is None:
                 snapshot[el["key"]] = el
+            elif el["visible"] and not held["visible"]:
+                snapshot[el["key"]] = el
+                dropped.append(held)
+            else:
+                dropped.append(el)
+        self._log_dropped(dropped)
         return snapshot
+
+    def _log_dropped(self, dropped: list[dict[str, Any]]) -> None:
+        """A dropped element is one the model is never offered and can never click.
+
+        Loud only for a gate action, because that is the case that makes a gate unwinnable
+        while every symptom points elsewhere — hypeddit's two data-step="follow" buttons
+        collided on one key and the run reported the download it could not reach. A page
+        repeating its own furniture (a genre list in two menus) is normal and would
+        otherwise bury it forty lines deep.
+        """
+        for el in dropped:
+            # Once per key per run. _snapshot runs on every settle poll, so a per-call warning
+            # re-emitted the same line a thousand times over a run and pushed the evidence it
+            # exists to preserve out of the rotating log.
+            if el["key"] in self._warned_collisions:
+                continue
+            self._warned_collisions.add(el["key"])
+            log = logger.warning if el["step"] else logger.debug
+            log(
+                "[%s] two elements share the key %r; only the first is offered (%r)",
+                self.gate_name,
+                el["key"],
+                el["text"][:40],
+            )
 
     async def _find_element_by_key(self, page: Page, key: str) -> Any | None:  # noqa: ANN401
         return await find_element_by_key(page, key)
@@ -408,11 +464,11 @@ class JudgmentGateHandler(GateHandler):
             await page.wait_for_timeout(_SETTLE_POLL_MS)
 
     async def _settle(
-        self, page: Page, before: dict[str, dict[str, Any]]
+        self, page: Page, before: dict[str, dict[str, Any]], attempts: int
     ) -> dict[str, dict[str, Any]]:
         """Poll until the page reacts to the last action, the gate unlocks, or time runs out."""
         snapshot = before
-        for _ in range(_SETTLE_POLL_ATTEMPTS):
+        for _ in range(attempts):
             await page.wait_for_timeout(_SETTLE_POLL_MS)
 
             # A Cloudflare wall appearing mid-wait replaces the page, which an
@@ -665,7 +721,7 @@ class JudgmentGateHandler(GateHandler):
         # The carousel animates. Returning on the first DOM change clicked Next again
         # mid-transition, which is what left the next slide rendering blank.
         await page.wait_for_timeout(_TRANSITION_MS)
-        settled = await self._settle(page, before)
+        settled = await self._settle(page, before, _settle_attempts(target))
         changed = settled != before
         logger.info(
             "[%s] turn %d: %s on %r → changed=%s unlocked=%s",

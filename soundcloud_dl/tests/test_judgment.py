@@ -4,6 +4,7 @@ Mocks the Choice call's return value rather than hitting the real API — only t
 browser + real paid API call stay manual-only (see the plan's Verify section).
 """
 
+import logging
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -86,11 +87,19 @@ def make_changing_page(*, found_element=None) -> MagicMock:
 
 
 def stub_choice(monkeypatch, choices: list[str]) -> None:
-    """Make handler._ask_choice return each value in order, one per call."""
-    choice_iter = iter(choices)
+    """Make handler._ask_choice return each value in order, one per call.
+
+    Calls past the end repeat the last, matching make_page. Raising StopIteration instead
+    tied every caller's list length to _MAX_ITERATIONS, so raising the cap failed tests
+    that had nothing to do with it.
+    """
+    calls = 0
 
     async def fake_ask_choice(self, _page, _snapshot, _dead=frozenset()):
-        return next(choice_iter)
+        nonlocal calls
+        idx = min(calls, len(choices) - 1)
+        calls += 1
+        return choices[idx]
 
     monkeypatch.setattr(JudgmentGateHandler, "_ask_choice", fake_ask_choice)
 
@@ -540,7 +549,7 @@ async def test_iteration_cap_raises_stuck_gate(monkeypatch):
     page = make_changing_page(found_element=make_element())
     stub_choice(monkeypatch, ["el_btn"] * 40)
 
-    with pytest.raises(StuckGate, match="jev_cap_15"):
+    with pytest.raises(StuckGate, match=f"jev_cap_{judgment_module._MAX_ITERATIONS}"):
         await handler._run_steps(page, {})
 
 
@@ -568,6 +577,49 @@ async def test_snapshot_keeps_the_first_of_two_colliding_keys():
 
     snapshot = await handler._snapshot(page)
     assert snapshot["dupe"]["text"] == "first"
+
+
+@pytest.mark.asyncio
+async def test_a_dropped_gate_action_says_so(caplog):
+    """Hypeddit's two data-step="follow" buttons collided into a single key.
+
+    The second was never offered, so the gate could not be finished, and the run reported
+    the download it could not reach rather than the button it was never shown.
+    """
+    handler = make_handler()
+    first = element(key="dupe", step="follow", text="Follow Buntai")
+    second = element(key="dupe", step="follow", text="Follow Saint Jabir")
+    page = make_page([[first, second]])
+
+    with caplog.at_level(logging.WARNING):
+        await handler._snapshot(page)
+
+    assert "share the key" in caplog.text
+    assert "Follow Saint Jabir" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_repeated_page_furniture_is_not_warned_about(caplog):
+    """A genre list rendered into two menus dropped 40 keys and would bury the one above."""
+    handler = make_handler()
+    page = make_page([[element(key="dupe", text="Techno"), element(key="dupe", text="Techno")]])
+
+    with caplog.at_level(logging.WARNING):
+        await handler._snapshot(page)
+
+    assert caplog.text == ""
+
+
+def test_a_repeated_data_step_gets_its_own_key():
+    """One follow button per artist, both data-step="follow", is normal on hypeddit.
+
+    Source-level for the same reason as the test below: the derivation is JavaScript.
+    """
+    assert "'data-step=' + step + stepSuffix(el)" in dom_snapshot.SNAPSHOT_JS
+    assert "'data-step=' + step;" not in dom_snapshot.SNAPSHOT_JS
+    assert "data-url" in dom_snapshot.SNAPSHOT_JS
+    assert dom_snapshot.SNAPSHOT_JS.count("const stepSuffix") == 1
+    assert dom_snapshot.FIND_BY_KEY_JS.count("const stepSuffix") == 1
 
 
 def test_key_derivation_is_not_positional():
@@ -621,7 +673,7 @@ async def test_dead_key_is_forgiven_once_it_works(monkeypatch):
 
     monkeypatch.setattr(JudgmentGateHandler, "_ask_choice", capture)
 
-    with pytest.raises(StuckGate, match="jev_cap_15"):
+    with pytest.raises(StuckGate, match=f"jev_cap_{judgment_module._MAX_ITERATIONS}"):
         await handler._run_steps(page, {})
 
     assert all(d == frozenset() for d in seen)
@@ -739,3 +791,75 @@ def test_on_screen_tolerates_elements_without_the_new_fields():
     """Hand-built elements elsewhere in these tests carry neither field."""
     bare = {"key": "b", "visible": True}
     assert set(judgment_module._on_screen({"b": bare})) == {"b"}  # noqa: SLF001
+
+
+def test_a_pending_gate_action_gets_the_long_settle():
+    """Hypeddit clears 'undone' only after confirming the action against the SoundCloud API."""
+    pending = element(key="k", step="follow", cls="hype-btn undone")
+    assert judgment_module._settle_attempts(pending) == judgment_module._SETTLE_POLL_ATTEMPTS
+
+
+@pytest.mark.parametrize(
+    "cls",
+    [
+        "hype-btn button-next",  # a carousel Next
+        "hype-btn button-instagram-1 done",  # Instagram: no callback, done in the onclick
+        "",
+    ],
+)
+def test_everything_else_gets_the_short_settle(cls):
+    """Three no-op Next clicks at 20s each spent a minute of a two-minute run."""
+    assert judgment_module._settle_attempts(element(key="k", cls=cls)) == (
+        judgment_module._FAST_SETTLE_ATTEMPTS
+    )
+
+
+def test_undone_is_matched_as_a_token_not_a_substring():
+    """'done' is inside 'undone'; a naive check reads a finished action as still pending."""
+    assert judgment_module._settle_attempts(element(key="k", cls="btn done")) == (
+        judgment_module._FAST_SETTLE_ATTEMPTS
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_visible_element_wins_over_a_hidden_one_with_the_same_key():
+    """find_element_by_key returns the first VISIBLE match, so the snapshot must describe it.
+
+    Keeping the first in document order let a hidden element be described here and a
+    different, visible one be clicked.
+    """
+    handler = make_handler()
+    hidden = element(key="dupe", text="hidden", visible=False)
+    shown = element(key="dupe", text="shown", visible=True)
+    page = make_page([[hidden, shown]])
+
+    snapshot = await handler._snapshot(page)
+    assert snapshot["dupe"]["text"] == "shown"
+
+
+@pytest.mark.asyncio
+async def test_a_collision_is_warned_about_once_per_run(caplog):
+    """_snapshot runs on every settle poll; a per-call warning buried the run in repeats."""
+    handler = make_handler()
+    pair = [element(key="dupe", step="follow", text="a"), element(key="dupe", step="follow")]
+    page = make_page([pair])
+
+    with caplog.at_level(logging.WARNING):
+        for _ in range(5):
+            await handler._snapshot(page)
+
+    assert caplog.text.count("share the key") == 1
+
+
+def test_the_step_suffix_is_unique_bounded_and_selector_safe():
+    """Two data-urls ending '/follow' must not collide, and a key reaches a CSS selector."""
+    assert "const hash" in dom_snapshot.SNAPSHOT_JS
+    assert "hash(sub)" in dom_snapshot.SNAPSHOT_JS
+    assert "[^A-Za-z0-9._-]" in dom_snapshot.SNAPSHOT_JS
+    assert ".slice(0, 24)" in dom_snapshot.SNAPSHOT_JS
+
+
+def test_class_is_read_as_a_string_for_svg_anchors():
+    """An SVG <a> matches 'a' but its className is an SVGAnimatedString, and every reader
+    calls .lower().split() on it."""
+    assert "typeof el.className === 'string'" in dom_snapshot.SNAPSHOT_JS
