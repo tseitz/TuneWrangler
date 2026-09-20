@@ -300,7 +300,7 @@ steps:
   # Both spellings are needed: the live page carries "disable" AND "disabled".
   - id: wait_for_download_ready
     trigger: >-
-      a#downloadProcess[href]:not([href='javascript:void(0)']),
+      a#downloadProcess[href]:not([href^='javascript:']),
       a#gateDownloadButton:not(.disabled):not(.disable)
     action: wait
     # Raised from 8s: the button only enables after Hypeddit confirms each
@@ -312,8 +312,8 @@ steps:
     trigger: >-
       a#gateDownloadButton:not(.disabled):not(.disable),
       a.free_dwln:not(.disabled):not(.disable),
-      a.dp[href]:not([href='javascript:void(0)']),
-      a#downloadProcess[href]:not([href='javascript:void(0)']),
+      a.dp[href]:not([href^='javascript:']),
+      a#downloadProcess[href]:not([href^='javascript:']),
       a:has-text('Get Free Download'):not(.disabled):not(.disable),
       a:has-text('Download Now'):not(.disabled):not(.disable),
       a:has-text('Get Download'):not(.disabled):not(.disable),

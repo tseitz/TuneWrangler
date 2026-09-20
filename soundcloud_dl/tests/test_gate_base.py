@@ -1,9 +1,12 @@
 """Unit tests for GateHandler YAML step interpreter (base.py)."""
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import yaml
+
+from soundcloud_dl import gate_handlers
 
 from soundcloud_dl.gate_handlers.base import (
     GateHandler,
@@ -207,3 +210,14 @@ def test_waiting_on_a_step_named_download_is_not_downloading():
     }
     assert any("download" in step_id for step_id in results)
     assert h.downloaded is False
+
+
+def test_no_gate_guards_a_javascript_href_by_exact_match():
+    """hypeddit's markup says href="javascript:void(0);" — with the semicolon — so a
+    :not([href='javascript:void(0)']) guard did not match it and the still-locked
+    Download anchor was clicked anyway. Two of three tracks in a batch then fell through
+    to the href fallback and one of them saved a stream segment as the track.
+    """
+    configs = Path(gate_handlers.__file__).parent.glob("*.yaml")
+    offenders = [p.name for p in configs if "[href='javascript:" in p.read_text()]
+    assert offenders == [], f"use [href^='javascript:'] instead: {offenders}"
