@@ -69,6 +69,21 @@ class DroploudHandler(JevHandler):
     gate_slug = "droploud_jev"
 
 
+class GaterushHandler(JevHandler):
+    """Gaterush, whose Connect SoundCloud is not satisfied by approving the popup.
+
+    Its gate is one card: a comment box, a Connect SoundCloud button, and a padlocked
+    Download. Clicking Connect opens the SoundCloud consent popup and approving it changes
+    nothing on the gate — a run approved it on seven consecutive turns and the download
+    stayed LOCKED, the same shape InfluencePlanner showed on thirteen. Re-granting an
+    account-wide authorization once per turn is worth stopping whether or not the grant is
+    the reason the gate will not open.
+    """
+
+    gate_slug = "gaterush_jev"
+    auto_approve_oauth = False
+
+
 class InfluencePlannerHandler(JevHandler):
     gate_slug = "influenceplanner_jev"
 

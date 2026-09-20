@@ -986,3 +986,42 @@ async def test_the_click_is_made_before_the_wait_is_raced():
     assert await handler._download_unless_a_popup_took_it(pending) is None
     assert clicked.is_set()
     await task
+
+
+def _ctl(tag, *, onscreen=True, step="", visible=True, chrome=False):
+    return {
+        "tag": tag, "step": step, "cls": "", "visible": visible,
+        "chrome": chrome, "onscreen": onscreen,
+    }
+
+
+def test_two_social_icons_on_the_sleeve_are_not_a_gate():
+    """gaterush opens on the artwork, so the only things inside the viewport were the
+    SoundCloud and Instagram links on the sleeve. _on_screen returned them because the set
+    was non-empty, the fallback to the whole body never fired, and the gate below the fold
+    was never offered — three turns of picking between two dead links, then StuckGate.
+    """
+    from soundcloud_dl.gate_handlers.judgment import _is_control, _on_screen
+
+    snapshot = {
+        "a@1": _ctl("a"),
+        "a@2": _ctl("a"),
+        "button@3": _ctl("button", onscreen=False),
+    }
+    assert not any(_is_control(el) for el in _on_screen(snapshot).values())
+    assert _is_control(snapshot["button@3"])
+
+
+def test_a_control_on_screen_needs_no_scrolling():
+    from soundcloud_dl.gate_handlers.judgment import _is_control, _on_screen
+
+    snapshot = {"a@1": _ctl("a"), "button@2": _ctl("button")}
+    assert any(_is_control(el) for el in _on_screen(snapshot).values())
+
+
+def test_a_data_step_element_counts_as_a_control_whatever_its_tag():
+    """Gate actions are the thing we most need to see, and hypeddit spells them on <a>."""
+    from soundcloud_dl.gate_handlers.judgment import _is_control
+
+    assert _is_control(_ctl("a", step="follow"))
+    assert not _is_control(_ctl("a"))

@@ -109,6 +109,11 @@ def get_handler_for_url(url: str) -> type[GateHandler]:  # noqa: PLR0911
 
         return DroploudHandler
 
+    if "gaterush" in lower:
+        from soundcloud_dl.gate_handlers.jev import GaterushHandler  # noqa: PLC0415
+
+        return GaterushHandler
+
     # ipln.io is the short link printed in track descriptions and redirects to
     # gate.influenceplanner.com. soundcloud_page.py already extracts both spellings, so both
     # arrive here — the redirect has not necessarily happened yet when this is asked.

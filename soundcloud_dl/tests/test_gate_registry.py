@@ -128,4 +128,16 @@ def test_get_handler_for_url_still_raises_for_an_unknown_host():
     registry that always answers would start a second gate run on a CDN or success page.
     """
     with pytest.raises(GateNotSupportedError):
-        get_handler_for_url("https://gaterush.me/GiMVei")
+        get_handler_for_url("https://some-gate-nobody-has-written-yet.example/abc")
+
+
+def test_gaterush_routes_to_a_handler_that_does_not_reapprove_oauth():
+    """Approving gaterush's SoundCloud popup does not unlock its gate — a run approved it
+    on seven consecutive turns and the download stayed locked. Without this, every turn
+    re-grants an account-wide authorization for nothing.
+    """
+    from soundcloud_dl.gate_handlers import get_handler_for_url
+
+    handler = get_handler_for_url("https://gaterush.me/GiMVei")
+    assert handler.gate_slug == "gaterush_jev"
+    assert handler.auto_approve_oauth is False

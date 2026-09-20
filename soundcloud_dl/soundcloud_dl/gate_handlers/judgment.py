@@ -204,6 +204,15 @@ def _on_screen(snapshot: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]
     return near or body or visible
 
 
+#: Tags that make an element something a gate asks you to operate. A gate always offers at
+#: least one; a bare <a> to another site is part of the artwork, not the gate.
+_CONTROL_TAGS = frozenset({"button", "input", "textarea", "form", "label"})
+
+
+def _is_control(el: dict[str, Any]) -> bool:
+    return bool(el["step"]) or el.get("tag", "") in _CONTROL_TAGS
+
+
 # got_it = the file is in hand · missed = a download was tried and did not land, so the turn
 # is spent · not_ready = no download to take yet, carry on deciding.
 _DownloadOutcome = Literal["got_it", "missed", "not_ready"]
@@ -1104,8 +1113,44 @@ class JudgmentGateHandler(GateHandler):
         await self._repair_carousel(page)
         await self._note_requirements(page, i)
         snapshot = await self._snapshot(page)
+        snapshot = await self._bring_gate_into_view(page, snapshot)
         await self._log_turn(page, i, snapshot)
         return snapshot
+
+    async def _bring_gate_into_view(
+        self, page: Page, snapshot: dict[str, dict[str, Any]]
+    ) -> dict[str, dict[str, Any]]:
+        """Scroll the gate's own controls into the viewport when none are on screen.
+
+        _on_screen keeps what the viewport covers, which is what stops a run spending its
+        turns on the FAQ accordions in a footer. It assumes the gate is where the page
+        opens. Gaterush opens on the artwork instead, so the only things on screen were the
+        two social icons on the sleeve — and because that set was not empty, the fallback
+        to the whole body never fired and the gate below the fold was never offered at all.
+        """
+        if any(_is_control(el) for el in _on_screen(snapshot).values()):
+            return snapshot
+        below = [
+            k
+            for k, el in snapshot.items()
+            if el["visible"]
+            and not el.get("chrome", False)
+            and not el.get("onscreen", True)
+            and _is_control(el)
+        ]
+        if not below:
+            return snapshot
+        el = await self._find_element_by_key(page, below[0])
+        if el is None:
+            return snapshot
+        logger.info("[%s] no gate control on screen; scrolling to %s", self.gate_name, below[0])
+        try:
+            await el.scroll_into_view_if_needed()
+        except Exception:  # noqa: BLE001
+            logger.debug("[%s] could not scroll %s into view", self.gate_name, below[0])
+            return snapshot
+        await page.wait_for_timeout(_SETTLE_POLL_MS)
+        return await self._snapshot(page)
 
     async def _log_turn(self, page: Page, i: int, snapshot: dict[str, dict[str, Any]]) -> None:
         logger.info(
