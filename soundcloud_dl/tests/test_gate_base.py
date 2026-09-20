@@ -221,3 +221,27 @@ def test_no_gate_guards_a_javascript_href_by_exact_match():
     configs = Path(gate_handlers.__file__).parent.glob("*.yaml")
     offenders = [p.name for p in configs if "[href='javascript:" in p.read_text()]
     assert offenders == [], f"use [href^='javascript:'] instead: {offenders}"
+
+
+@pytest.mark.asyncio
+async def test_a_download_step_does_not_click_an_off_screen_button():
+    """Hypeddit enables #gateDownloadButton by class from the first turn while parking it
+    on a carousel slide that has not arrived. Clicking it there does nothing: the run
+    reports no file and the track is recorded failed with the gate half spent.
+    """
+    handler = GateHandler(config={"gate": "g", "steps": []})
+    asked: list[bool] = []
+
+    async def spy(_page, _trigger, *, allow_hidden=False):
+        asked.append(allow_hidden)
+        return None  # stops the step before it needs a live page
+
+    handler._find_element = spy
+
+    base = {"trigger": "a#gateDownloadButton", "action": "click", "force": True}
+    await handler._execute_step(MagicMock(), base)
+    await handler._execute_step(MagicMock(), {**base, "download": True})
+
+    # A force step may still take a hidden match — overlaid or mid-transition is fine.
+    # The download must not, which is the whole of the fix.
+    assert asked == [True, False]

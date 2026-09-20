@@ -194,7 +194,15 @@ class GateHandler:
     async def _execute_step(self, page: Page, step: dict) -> None:  # noqa: C901, PLR0912, PLR0915
         """Execute a single step action against the found element."""
         force = step.get("force", False)
-        el = await self._find_element(page, step["trigger"], allow_hidden=force)
+        # A hidden match is right for a force step whose element is merely overlaid or
+        # mid-transition, and never right for the download itself. Hypeddit enables its
+        # download button by class from the first turn while parking it on a carousel
+        # slide that has not arrived — box 0x0, offsetParent null — and clicking it there
+        # does nothing, so the run ends with no file and the track is recorded failed.
+        # force still governs the click, so an overlaid download anchor is unaffected.
+        el = await self._find_element(
+            page, step["trigger"], allow_hidden=force and not step.get("download")
+        )
         if el is None:
             return  # caller handles required/optional logic
 
