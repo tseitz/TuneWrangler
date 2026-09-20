@@ -129,6 +129,18 @@ SNAPSHOT_JS = _js("""
       text: (el.innerText || el.value || '').trim().slice(0, 60),
       placeholder: el.getAttribute('placeholder') || '',
       name: el.getAttribute('name') || '',
+      // ToneDen's download button says "FREE DOWNLOAD" and carries the same classes whether
+      // the gate is locked or open — only the icon changes, padlock to arrow. Without this
+      // the two states are indistinguishable to every reader here and to the model.
+      //
+      // Capped both ways, like text and stepSuffix above: this is page-supplied and every
+      // record is sent verbatim to the model on all 25 turns, so an element wrapping a few
+      // thousand long data-icon values would cost real tokens on each one.
+      icons: Array.from(new Set(
+        Array.from(el.querySelectorAll('[data-icon]'))
+          .map((i) => (i.getAttribute('data-icon') || '').toLowerCase().slice(0, 32))
+          .filter(Boolean),
+      )).slice(0, 8),
     };
   }).filter((rec) => rec !== null);
 }

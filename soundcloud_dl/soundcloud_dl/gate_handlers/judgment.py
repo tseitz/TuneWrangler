@@ -7,6 +7,7 @@ CaptchaEncountered/StuckGate/GateStepError exceptions main.py already dispatches
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import logging
 import urllib.parse
@@ -16,6 +17,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from typesafe_sdk import AsyncTypeSafeClient, Choice
 
 from soundcloud_dl.downloads import (
+    looks_like_asset,
     looks_like_audio,
     rename_to_track,
     save_bytes,
@@ -74,6 +76,10 @@ _MAX_IDLE_TURNS = 3
 
 # Long enough for a carousel slide to finish moving before the next click.
 _TRANSITION_MS = 1_500
+
+# How often to check whether a popup beat the gate page to the download. Only ever shortens
+# the wait, so it costs nothing on a gate that serves the file itself.
+_POPUP_DOWNLOAD_POLL_SECONDS = 0.25
 
 # Viewport heights of drift before the page is judged to have left the gate behind.
 _SCROLL_DRIFT_FACTOR = 1.5
@@ -493,6 +499,37 @@ class JudgmentGateHandler(GateHandler):
                 return snapshot
         return snapshot
 
+    async def _click_then_wait_for_download(self, page: Page, el: Any, key: str) -> Any:  # noqa: ANN401
+        """Click, and wait for a download to start on this page.
+
+        The click belongs inside expect_download's block: registering the listener after it
+        would race a gate that serves the file immediately.
+        """
+        async with page.expect_download(timeout=45_000) as download_info:
+            await self._click_with_force_fallback(page, el, key)
+        return await download_info.value
+
+    async def _download_unless_a_popup_took_it(self, pending: asyncio.Future) -> Any | None:  # noqa: ANN401
+        """The gate page's own download, or None once a popup has caught one instead.
+
+        ToneDen serves the file from window.open(), so waiting on the gate page burns the
+        full 45s for an event that lands elsewhere — and the href and intercept fallbacks
+        then spend another 20s on a button with no href. Measured against the live gate, the
+        popup's download event arrives 0.13s after the click; the turn loop saves it on the
+        next pass.
+
+        The whole expect_download block is what gets raced, not its .value: Playwright waits
+        for the event when the context manager exits, so a race against .value alone never
+        runs until the 45s is already gone.
+        """
+        while not pending.done():
+            if self._caught:
+                pending.cancel()
+                logger.info("[%s] a popup took the download; letting it land", self.gate_name)
+                return None
+            await asyncio.sleep(_POPUP_DOWNLOAD_POLL_SECONDS)
+        return pending.result()
+
     async def _click_and_capture_download(  # noqa: C901, PLR0912, PLR0915
         self, page: Page, key: str
     ) -> bool:
@@ -512,9 +549,13 @@ class JudgmentGateHandler(GateHandler):
 
         downloaded = False
         try:
-            async with page.expect_download(timeout=45_000) as download_info:
-                await self._click_with_force_fallback(page, el, key)
-            download = await download_info.value
+            # Safe to cancel on the popup's behalf: _collect_download drained _caught at the
+            # top of this turn, so anything landing in it is a consequence of the click this
+            # task has already made.
+            pending = asyncio.ensure_future(self._click_then_wait_for_download(page, el, key))
+            download = await self._download_unless_a_popup_took_it(pending)
+            if download is None:
+                return False
             dest = await save_download(download, self.download_dir / download.suggested_filename)
             dest = rename_to_track(dest, self.track_title)
             logger.info("[%s] Saved download → %s", self.gate_name, dest)
@@ -901,6 +942,10 @@ class JudgmentGateHandler(GateHandler):
             return download_key, "got_it"
         return download_key, "missed"
 
+    def on_new_page(self, page: Page) -> None:
+        """Watch a popup too: ToneDen serves the file from one, not from the gate page."""
+        self._watch_downloads(page)
+
     def _watch_downloads(self, page: Page) -> None:
         """Catch a download whenever it fires, not only inside expect_download around a click.
 
@@ -921,10 +966,27 @@ class JudgmentGateHandler(GateHandler):
         page.on("download", collect)
 
     async def _take_caught_download(self) -> bool:
-        """Save a download the page started on its own. True if one landed."""
+        """Save a download the page started on its own. True if one landed.
+
+        Taking anything at all ends the run as DOWNLOAD_SUCCESS and marks the track done
+        forever in resume.py, so a popup serving a stylesheet spends the gate's follow and
+        repost and leaves nothing to re-run. Now that every popup is listened to, that is no
+        longer only the gate operator.
+
+        Rejects known assets rather than requiring known audio: a Download carries no
+        content type and ToneDen's URL has no extension, so positive proof is not available
+        here the way it is on the href and intercept paths.
+        """
         if not self._caught or self.download_dir is None:
             return False
         download = self._caught.pop(0)
+        if looks_like_asset(download.suggested_filename) or looks_like_asset(download.url):
+            logger.warning(
+                "[%s] ignoring a download that looks like a page asset: %s",
+                self.gate_name,
+                download.suggested_filename,
+            )
+            return False
         try:
             dest = await save_download(download, self.download_dir / download.suggested_filename)
         except Exception:

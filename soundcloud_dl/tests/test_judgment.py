@@ -4,6 +4,8 @@ Mocks the Choice call's return value rather than hitting the real API — only t
 browser + real paid API call stay manual-only (see the plan's Verify section).
 """
 
+import asyncio
+import contextlib
 import logging
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
@@ -225,10 +227,15 @@ async def test_a_failing_callback_does_not_end_the_run(monkeypatch):
         await handler._run_steps(page, {})
 
 
-def fake_download(name: str = "track.mp3") -> MagicMock:
-    """A stand-in for Playwright's Download, writing real bytes so save_download works."""
+def fake_download(name: str = "track.mp3", url: str = "https://cdn.example/dl/abc") -> MagicMock:
+    """A stand-in for Playwright's Download, writing real bytes so save_download works.
+
+    url is set explicitly: left as a MagicMock attribute it is not a string, and the asset
+    filter that reads it cannot be exercised.
+    """
     download = MagicMock()
     download.suggested_filename = name
+    download.url = url
 
     async def save_as(path):
         Path(path).parent.mkdir(parents=True, exist_ok=True)
@@ -863,3 +870,99 @@ def test_class_is_read_as_a_string_for_svg_anchors():
     """An SVG <a> matches 'a' but its className is an SVGAnimatedString, and every reader
     calls .lower().split() on it."""
     assert "typeof el.className === 'string'" in dom_snapshot.SNAPSHOT_JS
+
+
+@pytest.mark.asyncio
+async def test_a_caught_page_asset_is_not_taken_as_the_track(tmp_path):
+    """Any popup can fire a download now, and taking one ends the run as DOWNLOAD_SUCCESS.
+
+    resume.py then marks the track done forever, with the gate's follow and repost already
+    spent — so a stylesheet must not count.
+    """
+    handler = make_handler(download_dir=tmp_path)
+    handler._caught.append(fake_download(name="fontawesome-webfont.woff2"))
+
+    assert await handler._take_caught_download() is False
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.asyncio
+async def test_an_extensionless_download_url_is_still_taken(tmp_path):
+    """ToneDen serves the real file from /<uuid> with no extension and no content type."""
+    handler = make_handler(download_dir=tmp_path)
+    handler._caught.append(
+        fake_download(
+            name="LYES & IZZY VADIM - PRESSURE (STONED LEVEL EDIT).wav",
+            url="https://io.toneden.io/523319/c971d7da-9975-4414-9a19-389a583c80ec",
+        )
+    )
+
+    assert await handler._take_caught_download() is True
+
+
+@pytest.mark.asyncio
+async def test_a_popup_download_short_circuits_the_gate_page_wait():
+    """The gate page's wait would otherwise run its full 45s for an event on another page."""
+    handler = make_handler()
+    handler._caught.append(fake_download())
+    pending = asyncio.ensure_future(asyncio.sleep(3600))
+
+    assert await handler._download_unless_a_popup_took_it(pending) is None
+    with contextlib.suppress(asyncio.CancelledError):
+        await pending
+    assert pending.cancelled()
+
+
+@pytest.mark.asyncio
+async def test_the_gate_pages_own_download_is_still_returned():
+    """Hypeddit serves the file from the gate page itself; that path must not change."""
+    handler = make_handler()
+    download = fake_download()
+
+    async def arrives():
+        return download
+
+    assert await handler._download_unless_a_popup_took_it(
+        asyncio.ensure_future(arrives())
+    ) is download
+
+
+@pytest.mark.asyncio
+async def test_waiting_ends_when_a_popup_download_arrives_late():
+    """The popup fires after the click, not before it, so _caught starts empty."""
+    handler = make_handler()
+
+    async def land_later():
+        await asyncio.sleep(0.05)
+        handler._caught.append(fake_download())
+
+    task = asyncio.ensure_future(land_later())
+    pending = asyncio.ensure_future(asyncio.sleep(3600))
+    assert await handler._download_unless_a_popup_took_it(pending) is None
+    await task
+
+
+@pytest.mark.asyncio
+async def test_the_click_is_made_before_the_wait_is_raced():
+    """Playwright waits for the event when expect_download's block EXITS, not at .value.
+
+    Racing .value alone never got a turn until the full 45s had already been spent, so the
+    click and the wait have to be raced together as one task.
+    """
+    handler = make_handler()
+    clicked = asyncio.Event()
+
+    async def click_then_hang():
+        clicked.set()
+        await asyncio.sleep(3600)
+
+    pending = asyncio.ensure_future(click_then_hang())
+
+    async def land_after_click():
+        await clicked.wait()
+        handler._caught.append(fake_download())
+
+    task = asyncio.ensure_future(land_after_click())
+    assert await handler._download_unless_a_popup_took_it(pending) is None
+    assert clicked.is_set()
+    await task

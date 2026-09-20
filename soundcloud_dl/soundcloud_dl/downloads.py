@@ -52,6 +52,16 @@ def looks_like_audio(url: str, content_type: str | None, content_disposition: st
     return "audio" in ct or "octet-stream" in ct or "force-download" in ct or "attachment" in cd
 
 
+def looks_like_asset(name: str) -> bool:
+    """True for a filename or URL that is site furniture rather than the track.
+
+    The negative half of looks_like_audio, for a Playwright Download: that carries no
+    content type, and its URL often has no extension at all (ToneDen serves the file from
+    an extensionless /<id> path), so requiring positive proof of audio rejects real tracks.
+    """
+    return urllib.parse.urlparse(name).path.lower().endswith(_ASSET_EXTS)
+
+
 def save_bytes(dest: Path, content: bytes) -> Path:
     """Write content to dest, falling back to the log directory if that path is unusable.
 

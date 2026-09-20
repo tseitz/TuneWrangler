@@ -9,11 +9,15 @@ from typing import Any
 
 # hypeddit.yaml's final_download selector list, as data.
 _DOWNLOAD_IDS = frozenset({"gatedownloadbutton", "downloadprocess"})
-_DOWNLOAD_CLASSES = frozenset({"free_dwln", "dp", "download-link"})
+_DOWNLOAD_CLASSES = frozenset({"free_dwln", "dp", "download-link", "post-gate-btn"})
 
 # These open the gate rather than serve the file; see _is_href_gated.
 _HREF_GATED_IDS = frozenset({"downloadprocess"})
 _HREF_GATED_CLASSES = frozenset({"dp"})
+
+# Controls whose only readiness signal is the icon they show; see _is_icon_gated.
+_ICON_GATED_CLASSES = frozenset({"post-gate-btn"})
+_READY_ICON = "download"
 
 # Both spellings appear on the live page at the same time.
 _DISABLED_TOKENS = frozenset({"disable", "disabled"})
@@ -41,7 +45,27 @@ def is_download_enabled(el: dict[str, Any]) -> bool:
     Deliberately not an href check: on SoundCloud-only gates #gateDownloadButton keeps
     href="javascript:void(0);" even once it works, and clicking it is what serves the file.
     """
-    return not (set(el["cls"].lower().split()) & _DISABLED_TOKENS) and not el["disabled"]
+    if set(el["cls"].lower().split()) & _DISABLED_TOKENS or el["disabled"]:
+        return False
+    if _is_icon_gated(el):
+        return _READY_ICON in el.get("icons", ())
+    return True
+
+
+def _is_icon_gated(el: dict[str, Any]) -> bool:
+    """True for controls that look identical locked and open apart from the icon they show.
+
+    ToneDen renders one <a class="post-gate-btn">FREE DOWNLOAD</a> in both states: no href,
+    no disable class, and the same text. Everything else here would call the locked one
+    ready. That matters more than a wasted click, because judgment.py banks a download key
+    before trying it and keys are derived from text — so clicking the locked button burns
+    the real one for the rest of the run.
+
+    Stated as "must show the download icon" rather than "must not show a padlock": the open
+    state is the one that was observed, and a gate is free to invent a third icon for
+    locked. Controls with no icons at all are unaffected, which is every hypeddit button.
+    """
+    return bool(set(el["cls"].lower().split()) & _ICON_GATED_CLASSES)
 
 
 def is_unlocked_href(href: str) -> bool:
@@ -84,14 +108,18 @@ def _is_href_gated(el: dict[str, Any]) -> bool:
 
 
 def find_download_target(snapshot: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
-    """The download element to click, preferring one with a real href."""
-    candidates = [el for el in snapshot.values() if is_download_element(el)]
+    """The download element to click, preferring one with a real href.
+
+    Readiness is checked before the href is, not after: a live href used to be taken as
+    proof on its own, which let a locked control through as long as it was linked at all.
+    """
+    candidates = [
+        el for el in snapshot.values() if is_download_element(el) and is_download_enabled(el)
+    ]
     live = next((el for el in candidates if is_unlocked_href(el["href"])), None)
     if live is not None:
         return live
-    return next(
-        (el for el in candidates if not _is_href_gated(el) and is_download_enabled(el)), None
-    )
+    return next((el for el in candidates if not _is_href_gated(el)), None)
 
 
 def unlock_reached(snapshot: dict[str, dict[str, Any]]) -> bool:

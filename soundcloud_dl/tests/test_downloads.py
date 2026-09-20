@@ -3,7 +3,12 @@
 import pytest
 
 from soundcloud_dl import downloads
-from soundcloud_dl.downloads import looks_like_audio, rename_to_track, save_bytes
+from soundcloud_dl.downloads import (
+    looks_like_asset,
+    looks_like_audio,
+    rename_to_track,
+    save_bytes,
+)
 
 
 @pytest.mark.parametrize(
@@ -117,3 +122,20 @@ def test_a_leading_dash_is_dropped():
     # reads as a flag.
     assert downloads.track_filename("-rf", "artist") == "artist - -rf"
     assert downloads.track_filename("-rf", None) == "rf"
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        # The real ToneDen download: extensionless URL, and no content type on a Download.
+        ("https://io.toneden.io/523319/c971d7da-9975-4414-9a19-389a583c80ec", False),
+        ("LYES & IZZY VADIM - PRESSURE (STONED LEVEL EDIT).wav", False),
+        ("track.mp3", False),
+        ("fontawesome-webfont.woff2", True),
+        ("https://gate.example/assets/app.js", True),
+        ("style.CSS", True),
+        ("", False),
+    ],
+)
+def test_looks_like_asset(name, expected):
+    assert looks_like_asset(name) is expected

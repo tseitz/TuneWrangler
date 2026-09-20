@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import random
 import re
@@ -405,6 +406,24 @@ class GateHandler:
         except Exception:  # noqa: BLE001
             logger.debug("[%s] could not dump page elements", self.gate_name, exc_info=True)
 
+    def on_new_page(self, page: Page) -> None:
+        """A page or popup appeared in the context. Subclasses attach listeners here."""
+
+    async def _close_popups(self, popups: list[Page]) -> None:
+        """Shut every popup this run opened, once the run is over.
+
+        handle_oauth_popup deliberately leaves a popup open while it is serving the file,
+        and nothing else ever closed one. The context is the default context of a persistent
+        real Chrome, so a popup left behind keeps running script against the user's live
+        SoundCloud session for the rest of the playlist, and is picked up again by the next
+        track's popup handler. By here the download has already been saved.
+        """
+        for popup in popups:
+            if popup.is_closed():
+                continue
+            with contextlib.suppress(Exception):
+                await popup.close()
+
     async def run(self, page: Page) -> dict[str, StepResult]:
         """
         Walk all steps. Return a dict of step_id → StepResult.
@@ -417,7 +436,17 @@ class GateHandler:
         # Register popup handler so SoundCloud OAuth dialogs are auto-approved.
         _tasks: list[asyncio.Task] = []
 
+        _popups: list[Page] = []
+
         def _on_popup(popup: Page) -> None:
+            _popups.append(popup)
+            # Ahead of the OAuth handler, and synchronously: that handler closes every popup
+            # it does not recognise, and a gate serving its file from window.open() emits the
+            # download on this page rather than on the gate's. Suppressed because this runs
+            # inside Playwright's event emitter, where a raise would also drop the OAuth
+            # approval and the close that follow it.
+            with contextlib.suppress(Exception):
+                self.on_new_page(popup)
             _tasks.append(asyncio.ensure_future(handle_oauth_popup(popup, self.gate_name)))
 
         page.context.on("page", _on_popup)
@@ -425,6 +454,7 @@ class GateHandler:
             return await self._run_steps(page, results)
         finally:
             page.context.remove_listener("page", _on_popup)
+            await self._close_popups(_popups)
             if _tasks:
                 # asyncio.wait, never wait_for: wait_for cancels what is still pending on
                 # timeout, which is the mid-flight OAuth approval this is protecting.

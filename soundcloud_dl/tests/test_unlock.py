@@ -26,6 +26,7 @@ def el(**overrides):
         "text": "",
         "placeholder": "",
         "name": "",
+        "icons": [],
     }
     return base | overrides
 
@@ -180,3 +181,59 @@ def test_the_gate_opener_is_not_mistaken_for_the_download():
 def test_the_gate_opener_counts_once_its_href_goes_live():
     live = GATE_OPENER | {"href": "https://cdn.hypeddit.com/x.mp3"}
     assert find_download_target({"downloadProcess": live})["key"] == "downloadProcess"
+
+
+# ToneDen, both states off the live page. Identical but for the icon: no href either way,
+# no disable class either way, and the same text — so the snapshot key is the same too.
+TONEDEN_LOCKED = el(
+    key="a@locked",
+    tag="a",
+    cls="btn primary large expand expand post-gate-btn",
+    text="FREE DOWNLOAD",
+    icons=["lock"],
+)
+TONEDEN_OPEN = el(
+    key="a@locked",
+    tag="a",
+    cls="btn success large expand expand post-gate-btn",
+    text="FREE DOWNLOAD",
+    icons=["download"],
+)
+
+
+def test_toneden_button_is_recognised_as_the_download():
+    assert is_download_element(TONEDEN_OPEN) is True
+    assert find_download_target({"a@locked": TONEDEN_OPEN})["key"] == "a@locked"
+    assert unlock_reached({"a@locked": TONEDEN_OPEN}) is True
+
+
+def test_a_padlocked_toneden_button_is_not_a_download_yet():
+    """The stall this closes: judged ready while locked, clicked once, then banned by key.
+
+    judgment.py banks the key before attempting, and the key is the same in both states, so
+    one premature click made the real button unreachable for the whole run.
+    """
+    assert is_download_enabled(TONEDEN_LOCKED) is False
+    assert find_download_target({"a@locked": TONEDEN_LOCKED}) is None
+    assert unlock_reached({"a@locked": TONEDEN_LOCKED}) is False
+
+
+def test_a_padlocked_button_stays_locked_even_when_it_carries_an_href():
+    """A live href was once proof on its own, which skipped the readiness check entirely."""
+    linked = TONEDEN_LOCKED | {"href": "/gate/locked"}
+    assert find_download_target({"a@locked": linked}) is None
+    assert unlock_reached({"a@locked": linked}) is False
+
+
+def test_an_unfamiliar_locked_icon_still_reads_as_locked():
+    """Only the open state was observed, so readiness is a positive check on 'download'."""
+    assert is_download_enabled(TONEDEN_LOCKED | {"icons": ["lock-alt"]}) is False
+    assert is_download_enabled(TONEDEN_LOCKED | {"icons": []}) is False
+
+
+def test_icon_gating_does_not_reach_buttons_that_carry_no_icons():
+    """Every hypeddit download button reports icons=[]; none may start depending on one."""
+    assert is_download_enabled(UNLOCKED_BUTTON) is True
+    assert find_download_target({"gateDownloadButton": UNLOCKED_BUTTON})["id"] == (
+        "gateDownloadButton"
+    )
