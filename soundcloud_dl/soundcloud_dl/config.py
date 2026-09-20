@@ -39,7 +39,10 @@ SOUNDCLOUD_REDIRECT_URI = os.getenv("SOUNDCLOUD_REDIRECT_URI", "http://localhost
 TYPESAFE_API_KEY = os.getenv("TYPESAFE_API_KEY")
 
 # ── Phase 2: Browser / gate form values ───────────────────────────────────────
-DOWNLOAD_EMAIL = os.getenv("TUNEWRANGLER_SC_EMAIL", "tdseitz10@outlook.com")
+# No default, and validated before any gate runs. A gate form belongs to a third party and
+# the address typed into it is a real person's; a fallback here put one in the repo and sent
+# it to every gate this was ever pointed at.
+DOWNLOAD_EMAIL = os.getenv("TUNEWRANGLER_SC_EMAIL", "")
 DOWNLOAD_NAME = os.getenv("TUNEWRANGLER_SC_NAME", "Tom")
 DOWNLOAD_COMMENT = os.getenv("TUNEWRANGLER_SC_COMMENT", "🔥🔥🔥")
 
@@ -152,9 +155,24 @@ def validate_phase1_config() -> None:
         raise RuntimeError(msg)
 
 
+def validate_gate_form_config() -> None:
+    """Raise unless the values a gate form gets filled with are configured.
+
+    Called by every path that drives a gate, because a missing address is only discovered
+    when a form is already half-filled on someone else's site.
+    """
+    if not DOWNLOAD_EMAIL.strip():
+        msg = (
+            "TUNEWRANGLER_SC_EMAIL is required — gates ask for an email address, and there "
+            "is deliberately no default. Set it in .env or the environment."
+        )
+        raise RuntimeError(msg)
+
+
 def validate_phase2_config() -> None:
     """Raise if config required for Phase 2 (stealth Playwright) is invalid."""
     # No LLM required. Playwright + browser profile are enough.
+    validate_gate_form_config()
     if DOWNLOAD_DIR is not None and not DOWNLOAD_DIR.parent.exists():
         msg = f"TUNEWRANGLER_SC_DOWNLOAD_DIR parent does not exist: {DOWNLOAD_DIR.parent}"
         raise RuntimeError(msg)
@@ -162,6 +180,7 @@ def validate_phase2_config() -> None:
 
 def validate_jev_config() -> None:
     """Raise if config required for the --jev judgment pilot is missing."""
+    validate_gate_form_config()
     if not TYPESAFE_API_KEY or not TYPESAFE_API_KEY.strip():
         msg = "TYPESAFE_API_KEY is required for --jev. Set it in .env or the environment."
         raise RuntimeError(msg)

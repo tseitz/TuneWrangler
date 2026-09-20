@@ -80,11 +80,25 @@ def test_download_name_default():
     assert cfg.DOWNLOAD_NAME == "Tom"
 
 
-def test_validate_phase2_passes_with_no_extra_config():
-    """validate_phase2_config should pass with no special config (no LLM required)."""
-    import soundcloud_dl.config as cfg
+def test_validate_phase2_passes_without_an_llm():
+    """No LLM dependency in phase 2 — the browser and profile are enough."""
+    cfg = _reload_config(TUNEWRANGLER_SC_EMAIL="you@example.com")
+    cfg.validate_phase2_config()
 
-    cfg.validate_phase2_config()  # should not raise — no LLM dependency
+
+def test_the_email_has_no_default():
+    """A hardcoded address put a real person's email in the repo, and into every gate."""
+    assert _reload_config().DOWNLOAD_EMAIL == ""
+
+
+@pytest.mark.parametrize("missing", ["", "   "])
+@pytest.mark.parametrize("validate", ["validate_phase2_config", "validate_jev_config"])
+def test_every_gate_path_refuses_to_start_without_an_email(validate, missing):
+    """Checked up front. A missing address is otherwise found with a third party's form
+    already half-filled."""
+    cfg = _reload_config(TUNEWRANGLER_SC_EMAIL=missing, TYPESAFE_API_KEY="k")
+    with pytest.raises(RuntimeError, match="TUNEWRANGLER_SC_EMAIL"):
+        getattr(cfg, validate)()
 
 
 def test_chrome_path_default_macos():

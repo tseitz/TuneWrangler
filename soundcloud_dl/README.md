@@ -113,7 +113,7 @@ scaffolds a starter YAML at `soundcloud_dl/gate_handlers/<gate-name>.yaml`.
 | `TUNEWRANGLER_SC_PLAYLIST_URL` | — | SoundCloud playlist URL (required) |
 | `SOUNDCLOUD_CLIENT_ID` | — | SoundCloud API client ID (required) |
 | `SOUNDCLOUD_CLIENT_SECRET` | — | SoundCloud API client secret (required) |
-| `TUNEWRANGLER_SC_EMAIL` | `tdseitz10@outlook.com` | Email for gate forms |
+| `TUNEWRANGLER_SC_EMAIL` | — | Email for gate forms (required). No default — gate runs refuse to start without it. |
 | `TUNEWRANGLER_SC_NAME` | `Tom` | Name for gate forms |
 | `TUNEWRANGLER_SC_COMMENT` | `🔥🔥🔥` | Comment for gate forms |
 | `TUNEWRANGLER_SC_CHROME_PATH` | macOS Chrome path | Path to real Chrome binary. Required to be set on Linux/Windows. |

@@ -227,7 +227,7 @@ SOUNDCLOUD_CLIENT_ID = os.getenv("SOUNDCLOUD_CLIENT_ID")
 SOUNDCLOUD_CLIENT_SECRET = os.getenv("SOUNDCLOUD_CLIENT_SECRET")
 
 # ── Phase 2: Browser / gate form values ───────────────────────────────────────
-DOWNLOAD_EMAIL = os.getenv("TUNEWRANGLER_SC_EMAIL", "tdseitz10@outlook.com")
+DOWNLOAD_EMAIL = os.getenv("TUNEWRANGLER_SC_EMAIL", "")
 DOWNLOAD_NAME = os.getenv("TUNEWRANGLER_SC_NAME", "Tom")
 DOWNLOAD_COMMENT = os.getenv("TUNEWRANGLER_SC_COMMENT", "🔥🔥🔥")
 
