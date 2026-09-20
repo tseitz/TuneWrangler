@@ -55,3 +55,17 @@ def pytest_collection_modifyitems(
     for item in items:
         if "requires_browser" in item.keywords:
             item.add_marker(skip_marker)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_pending_follows(tmp_path, monkeypatch):
+    """Keep the follow ledger out of logs/ during tests.
+
+    A test that reaches pending_follows.hold() for real writes ids into the file the next
+    live run sweeps, and that run then tries to unfollow them on the actual account.
+    """
+    from soundcloud_dl import pending_follows
+
+    monkeypatch.setattr(
+        pending_follows, "get_pending_follows_file", lambda: tmp_path / "pending_follows.json"
+    )
