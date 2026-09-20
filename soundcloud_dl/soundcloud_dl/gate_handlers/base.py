@@ -62,6 +62,12 @@ class GateHandler:
     #: Subclasses set this to the path of their YAML config file.
     config_path: Path | None = None
 
+    #: Auto-approving a consent screen is right for a gate asking for the throwaway
+    #: per-download connect most of them use, and wrong for one asking for a broad,
+    #: non-expiring grant on the account. A handler for the latter sets this False, and the
+    #: run stops with the tab open so a person decides. See InfluencePlannerHandler.
+    auto_approve_oauth: bool = True
+
     def __init__(  # noqa: PLR0913
         self,
         *,
@@ -415,17 +421,21 @@ class GateHandler:
     def on_new_page(self, page: Page) -> None:
         """A page or popup appeared in the context. Subclasses attach listeners here."""
 
-    async def _close_popups(self, popups: list[Page]) -> None:
-        """Shut every popup this run opened, once the run is over.
+    async def _close_popups(self, popups: list[Page], keep: set[Page]) -> None:
+        """Shut every popup this run opened, once the run is over, except those in `keep`.
 
-        handle_oauth_popup deliberately leaves a popup open while it is serving the file,
-        and nothing else ever closed one. The context is the default context of a persistent
+        Nothing else ever closed one. The context is the default context of a persistent
         real Chrome, so a popup left behind keeps running script against the user's live
         SoundCloud session for the rest of the playlist, and is picked up again by the next
-        track's popup handler. By here the download has already been saved.
+        track's popup handler.
+
+        `keep` holds consent popups we declined to approve. Those are the operator's to act
+        on, and closing one makes the message telling them to press Allow a lie. A popup
+        serving the file needs no entry here — the tasks are awaited before this runs, so
+        its transfer has finished by now.
         """
         for popup in popups:
-            if popup.is_closed():
+            if popup in keep or popup.is_closed():
                 continue
             with contextlib.suppress(Exception):
                 await popup.close()
@@ -443,6 +453,7 @@ class GateHandler:
         _tasks: list[asyncio.Task] = []
 
         _popups: list[Page] = []
+        _keep_open: set[Page] = set()
 
         def _on_popup(popup: Page) -> None:
             _popups.append(popup)
@@ -453,18 +464,30 @@ class GateHandler:
             # approval and the close that follow it.
             with contextlib.suppress(Exception):
                 self.on_new_page(popup)
-            _tasks.append(asyncio.ensure_future(handle_oauth_popup(popup, self.gate_name)))
+            _tasks.append(
+                asyncio.ensure_future(
+                    handle_oauth_popup(
+                        popup,
+                        self.gate_name,
+                        approve=self.auto_approve_oauth,
+                        on_keep_open=_keep_open.add,
+                    )
+                )
+            )
 
         page.context.on("page", _on_popup)
         try:
             return await self._run_steps(page, results)
         finally:
             page.context.remove_listener("page", _on_popup)
-            await self._close_popups(_popups)
+            # Drained before anything is closed, both because closing a popup out from
+            # under an in-flight Allow click cancels it, and because a handler that has
+            # not run yet has not had the chance to say "keep this one open".
             if _tasks:
                 # asyncio.wait, never wait_for: wait_for cancels what is still pending on
                 # timeout, which is the mid-flight OAuth approval this is protecting.
                 await asyncio.wait(_tasks, timeout=3)
+            await self._close_popups(_popups, _keep_open)
 
     async def _run_steps(  # noqa: C901
         self, page: Page, results: dict[str, StepResult]

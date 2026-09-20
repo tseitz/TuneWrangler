@@ -32,6 +32,7 @@ from soundcloud_dl.gate_handlers.login_wall import (
     detect_login_wall,
     normalize_host,
 )
+from soundcloud_dl.gate_handlers.oauth_consent import stop_reason
 from soundcloud_dl.gate_handlers.unlock import (
     find_download_target,
     is_download_element,
@@ -876,8 +877,12 @@ class JudgmentGateHandler(GateHandler):
         if self._gate_host is None:
             return
         reason = detect_login_wall(page.url, self._gate_host)
-        if reason is not None:
-            raise LoginWallEncountered(page.url, reason, self.gate_name)
+        if reason is None:
+            return
+        # A consent screen reads as "left the gate" because the provider is on its own
+        # host. Still a stop — nothing here approves it — but reported as the one-button
+        # decision it is rather than as a sign-in the operator has already done.
+        raise LoginWallEncountered(page.url, await stop_reason(page, reason), self.gate_name)
 
     async def _raise_on_captcha(self, page: Page) -> None:
         try:

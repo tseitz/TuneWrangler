@@ -33,3 +33,9 @@ class DroploudHandler(JevHandler):
 
 class InfluencePlannerHandler(JevHandler):
     gate_slug = "influenceplanner_jev"
+
+    # This gate opens by asking SoundCloud for authType SUPERFAN_CONNECT: a broad,
+    # non-expiring grant on the account, not the per-download connect the other gates use.
+    # That is the operator's to give, once, by hand. Clicking it automatically re-granted
+    # it on thirteen consecutive turns and never unlocked the gate.
+    auto_approve_oauth = False

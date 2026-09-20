@@ -8,19 +8,21 @@ import urllib.parse
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from playwright.async_api import Page
 
 logger = logging.getLogger("soundcloud_dl.gate_handlers.oauth_popup")
 
 
-def _host_of(url: str) -> str:
+def host_of(url: str) -> str:
     try:
         return (urllib.parse.urlparse(url).hostname or "").lower()
     except ValueError:
         return ""
 
 
-def _host_is(host: str, domain: str) -> bool:
+def host_is(host: str, domain: str) -> bool:
     """Host equality or a subdomain of it.
 
     Never a substring test on the URL: "soundcloud.com" appears in
@@ -90,30 +92,64 @@ async def _dump_buttons(popup: Page, gate_name: str, vendor: str) -> None:
     )
 
 
-async def handle_oauth_popup(popup: Page, gate_name: str) -> None:
+def _decline(
+    popup: Page,
+    gate_name: str,
+    vendor: str,
+    on_keep_open: Callable[[Page], None] | None,
+) -> None:
+    """Leave a consent popup for a person, and make sure run() leaves it alone too."""
+    logger.warning(
+        "[%s] %s is asking for a grant on your account. Not clicking Allow — decide on "
+        "the open tab yourself, then re-run.",
+        gate_name,
+        vendor,
+    )
+    if on_keep_open is not None:
+        on_keep_open(popup)
+
+
+async def handle_oauth_popup(
+    popup: Page,
+    gate_name: str,
+    *,
+    approve: bool = True,
+    on_keep_open: Callable[[Page], None] | None = None,
+) -> None:
     """Auto-approve SoundCloud/Spotify OAuth popups; close ToneDen URL-visit popups.
 
-    `gate_name` is only used for log message prefixes.
+    `gate_name` is only used for log message prefixes. `approve=False` leaves a consent
+    popup open and untouched for a person to decide on — see GateHandler.auto_approve_oauth.
+
+    `on_keep_open` is how that decision reaches the caller. Suppressing this function's own
+    close is not enough on its own: run() closes every popup it saw when the run ends, so
+    without telling it, the tab the operator was just sent to press Allow on is shut behind
+    them and the next run repeats the whole cycle.
     """
-    # A popup serving the file must outlive this handler. ToneDen's download window never
-    # reaches a "load" state and has no URL to recognise, so it falls through to the close
-    # below — and closing it mid-transfer cancels a download that is still being written.
-    serving_download = False
+    # Two unrelated reasons a popup must outlive this handler, tracked as one flag because
+    # the finally below asks the same question either way: is this window still wanted.
+    #
+    # A popup serving the file — ToneDen's download window never reaches a "load" state and
+    # has no URL to recognise, so it falls through to the close below, and closing it
+    # mid-transfer cancels a download that is still being written.
+    #
+    # A consent popup we deliberately did not approve, which is left for a person.
+    keep_open = False
 
     def note_download(_download: object) -> None:
-        nonlocal serving_download
-        serving_download = True
+        nonlocal keep_open
+        keep_open = True
 
     popup.on("download", note_download)
     try:
         # Use "load" — SoundCloud's auth page is a React SPA; Spotify's is similar.
         await popup.wait_for_load_state("load", timeout=15_000)
         url = popup.url
-        host = _host_of(url)
-        is_sc = _host_is(host, "soundcloud.com")
-        is_sp = _host_is(host, "accounts.spotify.com")
-        is_toneden_visit = _host_is(host, "toneden.io") and "/auth/custom-url-visit" in url
-        is_instagram = _host_is(host, "instagram.com")
+        host = host_of(url)
+        is_sc = host_is(host, "soundcloud.com")
+        is_sp = host_is(host, "accounts.spotify.com")
+        is_toneden_visit = host_is(host, "toneden.io") and "/auth/custom-url-visit" in url
+        is_instagram = host_is(host, "instagram.com")
         if not is_sc and not is_sp and not is_toneden_visit and not is_instagram:
             return
 
@@ -139,9 +175,13 @@ async def handle_oauth_popup(popup: Page, gate_name: str) -> None:
 
         vendor = "SoundCloud" if is_sc else "Spotify"
         logger.debug("[%s] %s OAuth popup: %s", gate_name, vendor, url)
+        if not approve:
+            keep_open = True
+            _decline(popup, gate_name, vendor, on_keep_open)
+            return
         await _approve(popup, gate_name, vendor=vendor)
     except Exception:  # noqa: BLE001
         logger.debug("[%s] OAuth popup handler error", gate_name, exc_info=True)
     finally:
-        if not serving_download and not popup.is_closed():
+        if not keep_open and not popup.is_closed():
             await popup.close()

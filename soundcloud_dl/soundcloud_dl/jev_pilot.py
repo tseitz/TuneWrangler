@@ -21,6 +21,7 @@ from soundcloud_dl.config import (
     TYPE_DELAY_MS,
     validate_jev_config,
 )
+from soundcloud_dl.gate_handlers import GateNotSupportedError, get_handler_for_url
 from soundcloud_dl.gate_handlers.base import StepResult
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered
 from soundcloud_dl.gate_handlers.judgment import JudgmentGateHandler
@@ -45,6 +46,20 @@ def _run_name(gate_url: str) -> str:
     """Name the run folder after the gate's host, so a droploud run isn't filed as hypeddit."""
     host = urlparse(gate_url).netloc.removeprefix("www.")
     return f"{host.split('.')[0] or 'gate'}_jev"
+
+
+def _auto_approve_oauth_for(gate_url: str) -> bool:
+    """The OAuth policy registered for this host, read off a class we deliberately do not use.
+
+    --jev means "drive this with JudgmentGateHandler whatever the host", so this path builds
+    that class directly instead of the registered one. The policy is not part of what --jev
+    is overriding, though: without this the one gate that must never have its account grant
+    auto-approved gets it auto-approved here and nowhere else.
+    """
+    try:
+        return get_handler_for_url(gate_url).auto_approve_oauth
+    except GateNotSupportedError:
+        return JudgmentGateHandler.auto_approve_oauth
 
 
 async def _do_soundcloud_actions(
@@ -215,6 +230,7 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
             recorder=recorder,
             on_requirements=_requirement_follower(actions) if sc_actions else None,
         )
+        handler.auto_approve_oauth = _auto_approve_oauth_for(gate_url)
 
         # Released in the finally, so a run that ends without a file still gives back what
         # it spent. A gate that charges follows and then never unlocks is how the account
@@ -233,7 +249,7 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
                 return
             except LoginWallEncountered as e:
                 resuming = True
-                logger.warning("LOGIN_REQUIRED | %s — sign in on that tab, then re-run", e.reason)
+                logger.warning("LOGIN_REQUIRED | %s — tab left open, then re-run", e.reason)
                 recorder.finish(
                     url=url,
                     gate_url=gate_url,

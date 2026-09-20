@@ -8,6 +8,8 @@ from urllib.parse import urlparse
 if TYPE_CHECKING:
     from playwright.async_api import Page
 
+    from soundcloud_dl.gate_handlers.base import GateHandler
+
 
 class GateNotSupportedError(ValueError):
     """Raised when no handler is registered for a given URL."""
@@ -28,7 +30,7 @@ def is_url_blacklisted(url: str) -> bool:
     return any(domain in lower for domain in _BLACKLISTED_DOMAINS)
 
 
-async def detect_handler_from_page(page: Page) -> type | None:
+async def detect_handler_from_page(page: Page) -> type[GateHandler] | None:
     """
     Inspect page content to identify the gate type when URL matching fails.
 
@@ -62,7 +64,7 @@ async def detect_handler_from_page(page: Page) -> type | None:
     return None
 
 
-def get_handler_for_url(url: str) -> type:  # noqa: PLR0911
+def get_handler_for_url(url: str) -> type[GateHandler]:  # noqa: PLR0911
     """
     Return the GateHandler subclass for the given gate URL.
 

@@ -350,7 +350,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         return "captcha_pending"
     except LoginWallEncountered as e:
         logger.warning(
-            "LOGIN_REQUIRED | %s | %s — tab left open, sign in there and re-run",
+            "LOGIN_REQUIRED | %s | %s — tab left open, finish it there and re-run",
             track_label,
             e.reason,
         )
