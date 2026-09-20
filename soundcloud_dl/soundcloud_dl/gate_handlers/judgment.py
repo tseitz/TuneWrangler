@@ -558,7 +558,7 @@ class JudgmentGateHandler(GateHandler):
                 return False
             dest = await save_download(download, self.download_dir / download.suggested_filename)
             dest = rename_to_track(dest, self.track_title)
-            logger.info("[%s] Saved download → %s", self.gate_name, dest)
+            self._note_saved(dest)
             downloaded = True
         except Exception:  # noqa: BLE001
             logger.debug("[%s] expect_download did not fire", self.gate_name, exc_info=True)
@@ -584,9 +584,7 @@ class JudgmentGateHandler(GateHandler):
                         filename = Path(parsed.path).name or "download"
                         dest = save_bytes(self.download_dir / filename, await response.body())
                         dest = rename_to_track(dest, self.track_title)
-                        logger.info(
-                            "[%s] Saved download (href fallback) → %s", self.gate_name, dest
-                        )
+                        self._note_saved(dest, "(href fallback)")
                         downloaded = True
                 except Exception:  # noqa: BLE001
                     logger.debug(
@@ -630,7 +628,7 @@ class JudgmentGateHandler(GateHandler):
                     filename += ".mp3"
                 dest = save_bytes(self.download_dir / filename, content)
                 dest = rename_to_track(dest, self.track_title)
-                logger.info("[%s] Saved download (response intercept) → %s", self.gate_name, dest)
+                self._note_saved(dest, "(response intercept)")
                 downloaded = True
 
         return downloaded
@@ -993,7 +991,7 @@ class JudgmentGateHandler(GateHandler):
             logger.exception("[%s] a download fired but could not be saved", self.gate_name)
             return False
         dest = rename_to_track(dest, self.track_title)
-        logger.info("[%s] Saved download (started by the page) → %s", self.gate_name, dest)
+        self._note_saved(dest, "(started by the page)")
         return True
 
     async def _anchor_run(self, page: Page) -> None:

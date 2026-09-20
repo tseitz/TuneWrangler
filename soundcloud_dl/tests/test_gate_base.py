@@ -181,3 +181,29 @@ async def test_run_continues_when_no_captcha(monkeypatch):
     monkeypatch.setattr("soundcloud_dl.gate_handlers.base.detect_captcha", fake_detect)
     results = await handler.run(page)
     assert "required_click" in results
+
+
+def test_a_fresh_handler_has_not_downloaded_anything():
+    h = GateHandler(config={"gate": "g", "steps": []})
+    assert h.downloaded is False
+
+
+def test_note_saved_is_what_marks_a_download_real(tmp_path):
+    h = GateHandler(config={"gate": "g", "steps": []})
+    h._note_saved(tmp_path / "t.wav")
+    assert h.downloaded is True
+
+
+def test_waiting_on_a_step_named_download_is_not_downloading():
+    """The bug this replaces: main.py inferred success from step ids containing
+    "download", and every gate config has a non-terminal step named for the thing it is
+    waiting on — hypeddit's wait_for_download_ready, toneden's wait_for_download_unlock.
+    A run that only ever waited was recorded done, and done is never retried.
+    """
+    h = GateHandler(config={"gate": "g", "steps": []})
+    results = {
+        "wait_for_download_ready": StepResult.EXECUTED,
+        "wait_for_download_unlock": StepResult.EXECUTED,
+    }
+    assert any("download" in step_id for step_id in results)
+    assert h.downloaded is False

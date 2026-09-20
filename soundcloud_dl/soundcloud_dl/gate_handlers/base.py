@@ -95,7 +95,19 @@ class GateHandler:
         self.pause = pause
         self.download_dir = download_dir
         self.track_title = track_title
+        self.downloaded = False
         self._pause_warned = False
+
+    def _note_saved(self, dest: Path, via: str = "") -> None:
+        """Record that a file actually landed on disk.
+
+        Callers ask this, never the step ids in the results dict. A step id is a name, and
+        every gate config here has a non-terminal step called something like
+        `wait_for_download_ready` — so matching on the name marked tracks done that had no
+        file, and a track recorded done is never retried.
+        """
+        self.downloaded = True
+        logger.info("[%s] Saved download%s → %s", self.gate_name, f" {via}" if via else "", dest)
 
     def resolve_value(self, value: str) -> str:
         """Substitute {{var}} placeholders from template_vars. Raises KeyError if missing."""
@@ -206,7 +218,7 @@ class GateHandler:
                         download, self.download_dir / download.suggested_filename
                     )
                     dest = rename_to_track(dest, self.track_title)
-                    logger.info("[%s] Saved download → %s", self.gate_name, dest)
+                    self._note_saved(dest)
                     downloaded = True
                 except Exception:  # noqa: BLE001, S110
                     pass
@@ -247,11 +259,7 @@ class GateHandler:
                                     self.download_dir / filename, await response.body()
                                 )
                                 dest = rename_to_track(dest, self.track_title)
-                                logger.info(
-                                    "[%s] Saved download (href fallback) → %s",
-                                    self.gate_name,
-                                    dest,
-                                )
+                                self._note_saved(dest, "(href fallback)")
                                 downloaded = True
                         except Exception:  # noqa: BLE001
                             logger.debug(
@@ -303,9 +311,7 @@ class GateHandler:
                         filename += ".mp3"
                     dest = save_bytes(self.download_dir / filename, content)
                     dest = rename_to_track(dest, self.track_title)
-                    logger.info(
-                        "[%s] Saved download (response intercept) → %s", self.gate_name, dest
-                    )
+                    self._note_saved(dest, "(response intercept)")
             elif force:
                 # For visible elements, use a trusted Playwright click with force=True
                 # to bypass z-order pointer-intercept (carousel overlap).
@@ -357,7 +363,7 @@ class GateHandler:
                 filename = Path(parsed.path).name or "download.mp3"
                 dest = save_bytes(self.download_dir / filename, await response.body())
                 dest = rename_to_track(dest, self.track_title)
-                logger.info("[%s] Saved download (from %s attr) → %s", self.gate_name, attr, dest)
+                self._note_saved(dest, f"(from {attr} attr)")
         elif action == "navigate":
             href = await el.get_attribute("href")
             if href:

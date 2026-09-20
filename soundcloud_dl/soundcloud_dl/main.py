@@ -37,7 +37,6 @@ from soundcloud_dl.gate_handlers import (
 )
 from soundcloud_dl.gate_handlers.base import (
     GateStepError,
-    StepResult,
     StuckGate,
 )
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered
@@ -299,6 +298,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             track_title=track_title,
         )
         results = await handler.run(page)
+        downloaded = handler.downloaded
         # Meta-gate redirect: if the handler navigated us to a different gate
         # (e.g. fanlink.tv → toneden.io), run the real gate handler on the same page.
         post_url = page.url
@@ -322,18 +322,16 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
                         track_title=track_title,
                     )
                     results = await real_handler.run(page)
+                    downloaded = downloaded or real_handler.downloaded
             except GateNotSupportedError:
                 pass
         await page.close()
         page = None
-        # Any step with "download" in its ID that executed counts as success —
-        # handles both the standard final_download step and alternate paths like
-        # toneden's click_direct_download variant.
-        download_executed = any(
-            "download" in step_id and result == StepResult.EXECUTED
-            for step_id, result in results.items()
-        )
-        if download_executed:
+        # The handler reports whether a file reached disk. Not the step ids: every gate
+        # config has a non-terminal step named for the download it is waiting on —
+        # hypeddit's wait_for_download_ready, toneden's wait_for_download_unlock — so a run
+        # that only ever waited was recorded done, and done is never retried.
+        if downloaded:
             logger.info("DOWNLOAD_SUCCESS | %s | steps=%s", track_label, results)
             return "done"
         else:  # noqa: RET505
