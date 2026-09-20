@@ -12,11 +12,29 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     from playwright.async_api import BrowserContext, Page
 
 from soundcloud_dl.config import PAGE_LOAD_WAIT_SECONDS
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered, detect_captcha
 from soundcloud_dl.playwright_browser import new_page
+from soundcloud_dl.soundcloud_api import (
+    AccountMismatch,
+    ApiError,
+    api_client,
+    assert_same_account,
+    ensure_on_soundcloud,
+    is_liked,
+    is_reposted,
+    me,
+    post_comment,
+    resolve,
+    set_following,
+    set_like,
+    set_repost,
+)
+from soundcloud_dl.soundcloud_auth import SoundCloudAuthError
 
 logger = logging.getLogger("soundcloud_dl.soundcloud_actions")
 
@@ -290,6 +308,100 @@ async def _post_comment(page: Page, item: Any, text: str) -> ActionResult:  # no
     return ActionResult("comment", ok=False, detail="comment never appeared")
 
 
+def _recorder(results: dict[str, ActionResult]) -> Callable[[ActionResult], None]:
+    """Log each outcome as it lands, not in a summary at the end.
+
+    A later action that throws must not take the record of the earlier successes with it.
+    """
+
+    def record(r: ActionResult) -> None:
+        results[r.action] = r
+        log = logger.info if r.ok else logger.warning
+        log("%s %-7s — %s", "OK  " if r.ok else "FAIL", r.action, r.detail)
+
+    return record
+
+
+async def _verified(
+    name: str,
+    write: Callable[[], Awaitable[tuple[bool, str]]],
+    read_back: Callable[[], Awaitable[bool]],
+    *,
+    want: bool,
+) -> ActionResult:
+    """Run a write, then ask SoundCloud what it thinks the state is.
+
+    The write's own status is not the verification. api-v2 answers 204 for a repost while
+    telling us nothing about whether it stuck.
+    """
+    ok, detail = await write()
+    if not ok:
+        return ActionResult(name, ok=False, detail=detail)
+    landed = await read_back()
+    if landed is want:
+        return ActionResult(name, ok=True, detail=f"{detail}, confirmed")
+    return ActionResult(name, ok=False, detail=f"{detail} but SoundCloud still says {landed}")
+
+
+async def _perform_via_api(
+    context: BrowserContext,
+    track_url: str,
+    *,
+    comment_text: str | None,
+    undo: bool,
+) -> dict[str, ActionResult]:
+    """Act by track id, so nothing depends on finding a control on a rendered page."""
+    want = not undo
+    results: dict[str, ActionResult] = {}
+    record = _recorder(results)
+
+    async with api_client() as client:
+        track = await resolve(client, track_url)
+        if track.get("kind") != "track":
+            msg = f"{track_url} resolved to {track.get('kind')!r}, not a track"
+            raise ApiError(msg)
+        track_id = int(track["id"])
+        artist_id = int(track["user"]["id"])
+        token_user_id = int((await me(client))["id"])
+
+        page = await new_page(context)
+        try:
+            await block_ads(page)
+            await ensure_on_soundcloud(page)
+            await _raise_on_captcha(page)
+            # Before anything is written, so a split account is caught while nothing has
+            # been half-done across two users.
+            user_id = await assert_same_account(page, token_user_id)
+            logger.info("Acting as user %d on track %d", user_id, track_id)
+
+            ok, detail = await set_following(client, artist_id, on=want)
+            record(ActionResult("follow", ok=ok, detail=detail))
+
+            record(
+                await _verified(
+                    "like",
+                    lambda: set_like(page, user_id, track_id, on=want),
+                    lambda: is_liked(client, track_id),
+                    want=want,
+                )
+            )
+            record(
+                await _verified(
+                    "repost",
+                    lambda: set_repost(page, track_id, on=want),
+                    lambda: is_reposted(client, track_id),
+                    want=want,
+                )
+            )
+
+            if comment_text and not undo:
+                ok, detail = await post_comment(client, track_id, comment_text)
+                record(ActionResult("comment", ok=ok, detail=detail))
+            return results
+        finally:
+            await page.close()
+
+
 async def perform(
     context: BrowserContext,
     track_url: str,
@@ -297,21 +409,38 @@ async def perform(
     comment_text: str | None = None,
     undo: bool = False,
 ) -> dict[str, ActionResult]:
-    """Do follow/like/repost (and optionally comment) on SoundCloud, verifying each."""
+    """Do follow/like/repost (and optionally comment) on SoundCloud, verifying each.
+
+    API first. Clicking is kept as the fallback because it is the only path that needs no
+    stored token, but it is the one that failed: a half-rendered track page still offers
+    the player bar's like button, which acts on whatever was played last.
+    """
+    try:
+        return await _perform_via_api(context, track_url, comment_text=comment_text, undo=undo)
+    except AccountMismatch:
+        # Never fall back. Clicking would act as the browser's user, which is exactly the
+        # mismatch that was just detected.
+        raise
+    except (ApiError, SoundCloudAuthError) as exc:
+        logger.warning("API path unavailable (%s) — falling back to clicking", exc)
+    return await _perform_via_ui(context, track_url, comment_text=comment_text, undo=undo)
+
+
+async def _perform_via_ui(
+    context: BrowserContext,
+    track_url: str,
+    *,
+    comment_text: str | None = None,
+    undo: bool = False,
+) -> dict[str, ActionResult]:
+    """Fallback: drive the buttons on the artist page."""
     page = await new_page(context)
     results: dict[str, ActionResult] = {}
     try:
         await block_ads(page)
         await page.goto(artist_url_for(track_url), wait_until="domcontentloaded", timeout=30_000)
         await _wait_for_actions(page)
-
-        def record(r: ActionResult) -> None:
-            # Logged as each one lands, not in a summary at the end: a later action that
-            # throws must not take the record of the earlier successes down with it.
-            results[r.action] = r
-            log = logger.info if r.ok else logger.warning
-            log("%s %-7s — %s", "OK  " if r.ok else "FAIL", r.action, r.detail)
-
+        record = _recorder(results)
         await _raise_on_captcha(page)
 
         bar = await page.query_selector(".userInfoBar__buttons")
