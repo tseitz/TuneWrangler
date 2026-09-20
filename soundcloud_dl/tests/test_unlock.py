@@ -237,3 +237,68 @@ def test_icon_gating_does_not_reach_buttons_that_carry_no_icons():
     assert find_download_target({"gateDownloadButton": UNLOCKED_BUTTON})["id"] == (
         "gateDownloadButton"
     )
+
+
+# Taken verbatim from logs/soundcloud_dl/debug/captures/influenceplanner-Na9k2IGP-20260920/,
+# the same button on the same page captured either side of a manual unlock. It is a
+# <button> with no id and no href, and the only tokens that move are at the tail.
+_IPLN_SHARED = (
+    "group/button shrink-0 border border-transparent bg-clip-padding text-xs font-medium "
+    "whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 "
+    "[&_svg]:pointer-events-none [&_svg]:shrink-0 w-full h-14 flex items-center "
+    "justify-center gap-2 bg-primary hover:opacity-90 cursor-pointer rounded-md"
+)
+IPLN_LOCKED = el(
+    tag="button",
+    text="Download",
+    cls=f"{_IPLN_SHARED} text-transparent opacity-50 pointer-events-none relative",
+    icons=["lock"],
+)
+IPLN_OPEN = el(tag="button", text="Download", cls=f"{_IPLN_SHARED} text-white", icons=["download"])
+
+
+def test_a_button_download_is_recognised_at_all():
+    """unlock.py used to require tag == 'a', so InfluencePlanner's button was invisible:
+    find_download_target returned None every turn and the model was offered no download."""
+    assert is_download_element(IPLN_OPEN)
+    assert is_download_element(IPLN_LOCKED)
+
+
+def test_the_open_influenceplanner_button_is_clickable():
+    assert is_download_enabled(IPLN_OPEN)
+    assert find_download_target({"d": IPLN_OPEN}) is IPLN_OPEN
+    assert unlock_reached({"d": IPLN_OPEN})
+
+
+def test_the_locked_influenceplanner_button_is_not():
+    assert not is_download_enabled(IPLN_LOCKED)
+    assert find_download_target({"d": IPLN_LOCKED}) is None
+    assert not unlock_reached({"d": IPLN_LOCKED})
+
+
+def test_the_tailwind_variants_of_pointer_events_none_do_not_disable():
+    """`disabled:pointer-events-none` and `[&_svg]:pointer-events-none` sit in the class
+    list of a perfectly clickable control. Only the bare token means disabled."""
+    assert is_download_enabled(IPLN_OPEN)
+    assert "disabled:pointer-events-none" in IPLN_OPEN["cls"]
+    assert "[&_svg]:pointer-events-none" in IPLN_OPEN["cls"]
+
+
+def test_a_padlock_locks_any_control_without_a_per_host_opt_in():
+    """The padlock is unambiguous wherever it shows up, unlike the open state's icon."""
+    assert not is_download_enabled(el(tag="button", text="Download", icons=["lock"]))
+    assert not is_download_enabled(el(tag="button", text="Download", icons=["lock-keyhole"]))
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["Download the app on iOS", "Download our mobile app", "Downloads", ""],
+)
+def test_a_button_that_merely_mentions_downloading_is_not_the_download(text):
+    """Fails closed: an unlisted label costs a run, a wrong match costs a burned key."""
+    assert not is_download_element(el(tag="button", text=text))
+
+
+@pytest.mark.parametrize("text", ["Download", "FREE DOWNLOAD", "  download  ", "Download."])
+def test_the_observed_download_labels_all_match(text):
+    assert is_download_element(el(tag="button", text=text))

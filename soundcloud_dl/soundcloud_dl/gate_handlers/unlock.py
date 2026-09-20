@@ -19,8 +19,24 @@ _HREF_GATED_CLASSES = frozenset({"dp"})
 _ICON_GATED_CLASSES = frozenset({"post-gate-btn"})
 _READY_ICON = "download"
 
-# Both spellings appear on the live page at the same time.
-_DISABLED_TOKENS = frozenset({"disable", "disabled"})
+# A padlock means locked wherever it appears, so this needs no per-host opt-in. The
+# converse is not true — an open control is free to show any icon — which is why
+# _ICON_GATED_CLASSES still exists alongside it.
+_LOCKED_ICONS = frozenset({"lock", "padlock", "lock-keyhole"})
+
+# Both spellings appear on the live page at the same time. `pointer-events-none` is the
+# Tailwind spelling of the same thing; it is matched as a whole token, never a substring,
+# because the same class list carries `disabled:pointer-events-none` and
+# `[&_svg]:pointer-events-none` while the control is perfectly clickable.
+_DISABLED_TOKENS = frozenset({"disable", "disabled", "pointer-events-none"})
+
+# A <button> is judged by its label, which an <a> is not: the miss that made
+# is_download_element id-and-class-only was hypeddit's site nav, and nav links are anchors.
+# Exact labels rather than a substring so "Download the app on iOS" cannot match; a gate
+# with a label not listed here fails closed, which costs a run rather than a wrong click.
+_DOWNLOAD_BUTTON_TEXTS = frozenset(
+    {"download", "free download", "download now", "download file", "download track"}
+)
 
 _DEAD_HREFS = frozenset({"", "#", "javascript:void(0)"})
 
@@ -32,6 +48,8 @@ def is_download_element(el: dict[str, Any]) -> bool:
     matched Hypeddit's own site navigation, and because those nav links carry real hrefs
     they outranked the actual button; one run clicked through to a genre listing page.
     """
+    if el["tag"] == "button":
+        return " ".join(el["text"].lower().split()).strip(".!… ") in _DOWNLOAD_BUTTON_TEXTS
     if el["tag"] != "a":
         return False
     if (el.get("id") or "").lower() in _DOWNLOAD_IDS:
@@ -46,6 +64,8 @@ def is_download_enabled(el: dict[str, Any]) -> bool:
     href="javascript:void(0);" even once it works, and clicking it is what serves the file.
     """
     if set(el["cls"].lower().split()) & _DISABLED_TOKENS or el["disabled"]:
+        return False
+    if set(el.get("icons") or ()) & _LOCKED_ICONS:
         return False
     if _is_icon_gated(el):
         return _READY_ICON in el.get("icons", ())
