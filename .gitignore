@@ -109,3 +109,6 @@ output/
 
 # Claude Code planning docs (ephemeral working artifacts)
 .claude/plans/
+
+# Claude Code worktrees (ephemeral)
+.claude/worktrees/
