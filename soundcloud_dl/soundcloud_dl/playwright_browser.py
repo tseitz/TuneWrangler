@@ -19,6 +19,7 @@ from soundcloud_dl.config import (
     CHROME_DEBUG_PORT,
     CHROME_PATH,
     CHROME_PROFILE_DIR,
+    HEADED,
 )
 
 logger = logging.getLogger("soundcloud_dl.playwright_browser")
@@ -27,7 +28,7 @@ _CDP_CONTEXT_ERROR = "Browser context management is not supported"
 
 
 @contextlib.asynccontextmanager
-async def attached_browser() -> AsyncIterator[BrowserContext]:
+async def attached_browser(*, headed: bool | None = None) -> AsyncIterator[BrowserContext]:
     """
     Async context manager yielding a BrowserContext attached to a real running Chrome.
 
@@ -38,10 +39,14 @@ async def attached_browser() -> AsyncIterator[BrowserContext]:
     If the existing Chrome session rejects CDP context management (e.g. launched
     without --enable-automation), kills it and relaunches before retrying once.
     """
+    # None means "whatever the config says". A caller that needs a human to look at the
+    # window — login, auth, record, inspect, pause — passes True and overrides it.
+    want_headed = HEADED if headed is None else headed
     ensure_chrome_running(
         chrome_path=CHROME_PATH,
         profile_dir=CHROME_PROFILE_DIR,
         port=CHROME_DEBUG_PORT,
+        headed=want_headed,
     )
 
     async with async_playwright() as pw:
@@ -60,6 +65,7 @@ async def attached_browser() -> AsyncIterator[BrowserContext]:
                 chrome_path=CHROME_PATH,
                 profile_dir=CHROME_PROFILE_DIR,
                 port=CHROME_DEBUG_PORT,
+                headed=want_headed,
             )
             browser = await pw.chromium.connect_over_cdp(f"http://localhost:{CHROME_DEBUG_PORT}")
 

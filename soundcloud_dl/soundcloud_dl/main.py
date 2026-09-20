@@ -410,7 +410,7 @@ async def _run_phase2(
         "failed": 0,
     }
 
-    async with attached_browser() as context:
+    async with attached_browser(headed=True if pause else None) as context:
         await _ensure_logged_in(context)
 
         for idx, track in enumerate(to_process, 1):
@@ -489,7 +489,8 @@ async def main_async(
 async def _run_login_bootstrap() -> None:
     """Open SoundCloud in attached Chrome and wait for manual login."""
     logger.info("Login session will persist in: %s", CHROME_PROFILE_DIR)
-    async with attached_browser() as context:
+    # A window is the whole point here: the user signs in by hand.
+    async with attached_browser(headed=True) as context:
         page = await context.new_page()
         await page.goto("https://soundcloud.com", wait_until="domcontentloaded", timeout=30_000)
         logger.info("Browser opened to SoundCloud for manual login.")

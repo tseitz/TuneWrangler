@@ -64,7 +64,8 @@ def _report(before: dict[str, dict[str, Any]], after: dict[str, dict[str, Any]])
 async def inspect_gate(url: str) -> None:
     """Open a gate page, wait for a manual unlock, and report what the unlock changed."""
     debug_dir = get_debug_dir()
-    async with attached_browser() as context:
+    # The unlock being measured is performed by hand, so this one always needs a window.
+    async with attached_browser(headed=True) as context:
         page = await context.new_page()
         await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
         logger.info("Gate page open: %s", page.url)

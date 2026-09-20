@@ -46,7 +46,10 @@ DOWNLOAD_EMAIL = os.getenv("TUNEWRANGLER_SC_EMAIL", "")
 DOWNLOAD_NAME = os.getenv("TUNEWRANGLER_SC_NAME", "Tom")
 DOWNLOAD_COMMENT = os.getenv("TUNEWRANGLER_SC_COMMENT", "🔥🔥🔥")
 
-# Headed browser (visible window). Set TUNEWRANGLER_SC_HEADED=1 in .env.
+# Headed browser (visible window). Set TUNEWRANGLER_SC_HEADED=1 in .env. Off by default:
+# a headed run raises its window on every turn to keep Chrome from throttling the tab,
+# which takes focus off whatever else is on screen. The flows that need a human to look at
+# the window ask for one directly, whatever this says.
 HEADED = os.getenv("TUNEWRANGLER_SC_HEADED", "").lower() in ("1", "true", "yes")
 
 # ── Phase 2: Chrome bring-up (CDP attach) ─────────────────────────────────────

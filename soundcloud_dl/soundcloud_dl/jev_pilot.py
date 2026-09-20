@@ -140,7 +140,9 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
 
     actions: dict[str, ActionResult] = {}
 
-    async with attached_browser() as context:
+    # --pause exists so the page can be inspected between steps; that needs a window.
+    # None rather than False otherwise, so a configured preference for headed still wins.
+    async with attached_browser(headed=True if pause else None) as context:
         # A gate URL is accepted directly so the gate can be exercised without loading a
         # SoundCloud page first — which matters when SoundCloud is rate-limiting this browser.
         if "soundcloud.com" in url:

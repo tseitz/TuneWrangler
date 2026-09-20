@@ -290,7 +290,7 @@ async def _open_sign_in(stack: contextlib.AsyncExitStack, url: str) -> str:
     try:
         from soundcloud_dl.playwright_browser import attached_browser, new_page  # noqa: PLC0415
 
-        context = await stack.enter_async_context(attached_browser())
+        context = await stack.enter_async_context(attached_browser(headed=True))
         page = await new_page(context)
         await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
     except Exception as exc:  # noqa: BLE001
