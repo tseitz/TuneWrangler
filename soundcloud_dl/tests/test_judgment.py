@@ -7,6 +7,7 @@ browser + real paid API call stay manual-only (see the plan's Verify section).
 import asyncio
 import contextlib
 import logging
+import types
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -1079,3 +1080,82 @@ def test_leaving_a_consent_popup_open_is_what_sets_the_flag():
 
     src = inspect.getsource(oauth_popup)
     assert src.count("on_keep_open(") == 1, "on_keep_open is no longer decline-only"
+
+
+@pytest.mark.asyncio
+async def test_a_page_with_nothing_on_screen_does_not_reach_the_model(monkeypatch):
+    """An empty choice list is a 400 that kills the run, so it must never be sent.
+
+    valorizd renders every control off-screen. The turn has no criteria to offer, and the
+    right answer is "no progress this turn", not an API error.
+    """
+    handler = JudgmentGateHandler(config={"gate": "valorizd", "steps": []})
+
+    def _no_client():
+        msg = "the model must not be reached when there is nothing to choose between"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(handler, "_get_client", _no_client)
+
+    page = types.SimpleNamespace(url="https://www.valorizd.app/gates/x")
+
+    assert await handler._ask_choice(page, {}) == ""
+
+
+@pytest.mark.asyncio
+async def test_a_gate_that_is_still_loading_is_waited_for_not_abandoned():
+    """An idle turn does not sleep, so three of them pass in well under a second.
+
+    valorizd serves a spinner and fetches its gate afterwards; without a wait the run gave
+    up before the page had drawn anything at all.
+    """
+    handler = JudgmentGateHandler(config={"gate": "valorizd", "steps": []})
+    waited: list[int] = []
+    page = types.SimpleNamespace(
+        url="https://www.valorizd.app/gates/x",
+        wait_for_timeout=_as_async(waited.append),
+    )
+    # Empty while the spinner is up, then the real gate.
+    rendered = _snap(_el("continue"))
+    snapshots = [{}, {}, rendered]
+
+    async def fake_snapshot(_page):
+        return snapshots.pop(0)
+
+    handler._snapshot = fake_snapshot
+
+    assert await handler._wait_for_the_gate_to_render(page, {}, 1) == rendered
+    assert waited, "the loading page was never waited on"
+
+
+def _as_async(fn):
+    async def inner(*a, **k):
+        return fn(*a, **k)
+
+    return inner
+
+
+@pytest.mark.asyncio
+async def test_the_loop_waits_for_a_late_rendering_gate_before_giving_up(monkeypatch):
+    """Through _run_steps, not the helper: the wait is only worth anything if it is wired in.
+
+    The page stays empty for longer than the three idle turns the loop allows, which is what
+    a gate fetched after load looks like.
+    """
+    # A sentinel, because _TRANSITION_MS is also 1500 and "the loop waited 1500ms" would
+    # not say which wait did it.
+    monkeypatch.setattr(judgment_module, "_RENDER_WAIT_MS", 4242)
+    waited: list[int] = []
+    page = make_page([[]], found_element=None)
+
+    async def record_wait(ms):
+        waited.append(ms)
+
+    page.wait_for_timeout = record_wait
+    stub_choice(monkeypatch, [""])
+    handler = make_handler()
+
+    with contextlib.suppress(StuckGate):
+        await handler._run_steps(page, {})
+
+    assert 4242 in waited, "an empty page was never waited on — the gate is abandoned mid-load"

@@ -77,6 +77,11 @@ _READY_POLL_ATTEMPTS = 30
 # turn is normal — an OAuth popup can still be resolving in another window.
 _MAX_IDLE_TURNS = 3
 
+#: How long to let a page that is still drawing itself finish before calling it stuck.
+#: An idle turn does not sleep, so without this a gate fetched after load loses all three.
+_RENDER_WAIT_MS = 1500
+_RENDER_WAIT_ATTEMPTS = 6
+
 # Long enough for a carousel slide to finish moving before the next click.
 _TRANSITION_MS = 1_500
 
@@ -394,6 +399,15 @@ class JudgmentGateHandler(GateHandler):
                 "The real free-download link/button is already enabled and ready to click; "
                 "no further element needs interaction."
             )
+        # A gate can put nothing clickable on screen — valorizd renders its page with every
+        # control off-screen, leaving no criteria at all. Asking anyway is a 400 that ends
+        # the whole run; answering "nothing" lets the caller count an idle turn and give up
+        # on this one gate.
+        if not criteria:
+            logger.info(
+                "[%s] nothing actionable on screen — not asking jev this turn", self.gate_name
+            )
+            return ""
         client = self._get_client()
         response = await client.system_one(
             state={
@@ -1168,6 +1182,31 @@ class JudgmentGateHandler(GateHandler):
         await page.wait_for_timeout(_SETTLE_POLL_MS)
         return await self._snapshot(page)
 
+    async def _wait_for_the_gate_to_render(
+        self, page: Page, snapshot: dict[str, dict[str, Any]], i: int
+    ) -> dict[str, dict[str, Any]]:
+        """Give a gate that is still drawing itself a chance before calling it stuck.
+
+        valorizd serves a spinner and fetches the gate after load. Nothing is in the DOM
+        yet, and because an idle turn does not sleep, the three the loop allows were spent
+        inside a second — the gate was abandoned before it had rendered at all.
+        """
+        if snapshot:
+            return snapshot
+        for _ in range(_RENDER_WAIT_ATTEMPTS):
+            await page.wait_for_timeout(_RENDER_WAIT_MS)
+            snapshot = await self._snapshot(page)
+            if snapshot:
+                logger.info("[%s] turn %d: gate rendered after a wait", self.gate_name, i)
+                return snapshot
+        logger.warning(
+            "[%s] turn %d: page is still empty after %.0fs",
+            self.gate_name,
+            i,
+            _RENDER_WAIT_ATTEMPTS * _RENDER_WAIT_MS / 1000,
+        )
+        return snapshot
+
     async def _log_turn(self, page: Page, i: int, snapshot: dict[str, dict[str, Any]]) -> None:
         logger.info(
             "[%s] turn %d: %d elements offered; gate actions=%s",
@@ -1196,6 +1235,7 @@ class JudgmentGateHandler(GateHandler):
                 return results
             await self._turn_guards(page, dead_keys, last_key)
             snapshot = await self._begin_turn(page, i)
+            snapshot = await self._wait_for_the_gate_to_render(page, snapshot, i)
 
             # Before the model is asked anything: a field we hold a value for is not a
             # decision, and leaving it empty disables the button the model then has to
