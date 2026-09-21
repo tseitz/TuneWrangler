@@ -223,3 +223,20 @@ def test_something_unrecognised_keeps_the_fallback():
 
     assert audio_extension_for(b"not audio at all") == ".mp3"
     assert audio_extension_for(b"", fallback=".bin") == ".bin"
+
+
+def test_a_free_download_tag_in_braces_is_stripped_too():
+    """ALIAS's track is titled "... {FREE DOWNLOAD}" and the tag went into the filename:
+    the pattern covered (), [] and not {}.
+    """
+    from soundcloud_dl.downloads import track_filename
+
+    got = track_filename("I CRY, JUST A LITTLE (ALIAS UKG FLIP) {FREE DOWNLOAD}", "ALIAS")
+    assert got == "ALIAS - I CRY, JUST A LITTLE (ALIAS UKG FLIP)"
+
+
+def test_the_bracket_and_paren_forms_still_strip():
+    from soundcloud_dl.downloads import track_filename
+
+    assert track_filename("Track [FREE DL]", "A") == "A - Track"
+    assert track_filename("Track (Free Download)", "A") == "A - Track"

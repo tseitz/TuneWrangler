@@ -129,7 +129,9 @@ def save_bytes(dest: Path, content: bytes) -> Path:
     return dest
 
 
-_FREE_DL_RE = re.compile(r"\s*[\(\[]\s*free\s*(download|dl)?\s*[\)\]]", re.IGNORECASE)
+# Braces as well as brackets: "{FREE DOWNLOAD}" is common enough in track titles that
+# leaving it out put the tag straight into a filename.
+_FREE_DL_RE = re.compile(r"\s*[\(\[{]\s*free\s*(download|dl)?\s*[\)\]}]", re.IGNORECASE)
 _UNSAFE_CHARS_RE = re.compile(r'[<>:"/\\|?*\x00-\x1f\x7f]')
 
 # macOS NAME_MAX is 255 bytes; the rest is headroom for the extension and any suffix a
