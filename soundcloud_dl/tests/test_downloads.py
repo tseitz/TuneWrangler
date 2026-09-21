@@ -189,3 +189,37 @@ def test_discard_if_fragment_removes_the_file_so_the_track_stays_retryable(tmp_p
     real.write_bytes(b"x" * MIN_TRACK_BYTES)
     assert discard_if_fragment(real, "https://cdn.x/track.wav") == real
     assert real.exists()
+
+
+def test_a_wav_is_not_named_mp3():
+    """SoundCloud's download endpoint serves the artist's original upload and does not
+    always name it. Falling back to .mp3 mislabels a wav for every tool downstream,
+    including this repo's own renamer.
+    """
+    from soundcloud_dl.downloads import audio_extension_for
+
+    assert audio_extension_for(b"RIFF\x00\x00\x00\x00WAVEfmt ") == ".wav"
+
+
+def test_each_container_is_named_from_its_own_bytes():
+    from soundcloud_dl.downloads import audio_extension_for
+
+    assert audio_extension_for(b"fLaC\x00\x00\x00\x22") == ".flac"
+    assert audio_extension_for(b"OggS\x00\x02\x00\x00") == ".ogg"
+    assert audio_extension_for(b"ID3\x04\x00\x00\x00\x00") == ".mp3"
+    assert audio_extension_for(b"\x00\x00\x00\x20ftypM4A ") == ".m4a"
+    assert audio_extension_for(b"FORM\x00\x00\x00\x00AIFF") == ".aiff"
+
+
+def test_a_tagless_mp3_is_still_an_mp3():
+    """No ID3 tag, just a bare MPEG frame sync — common after a tag stripper."""
+    from soundcloud_dl.downloads import audio_extension_for
+
+    assert audio_extension_for(b"\xff\xfb\x90\x00") == ".mp3"
+
+
+def test_something_unrecognised_keeps_the_fallback():
+    from soundcloud_dl.downloads import audio_extension_for
+
+    assert audio_extension_for(b"not audio at all") == ".mp3"
+    assert audio_extension_for(b"", fallback=".bin") == ".bin"

@@ -27,6 +27,12 @@ class TrackItem:
     title: str | None = None
     purchase_url: str | None = None
     artist: str | None = None
+    #: The API's own answer to "does this track have a free download", and where from.
+    #: Worth carrying because it needs no page: a track page renders nothing when
+    #: SoundCloud's SPA throws, and the download is then invisible to any amount of
+    #: scraping while the API keeps answering.
+    downloadable: bool = False
+    download_url: str | None = None
 
 
 def _get_access_token(client_id: str, client_secret: str) -> str:
@@ -88,11 +94,14 @@ def _track_to_item(track: dict) -> TrackItem | None:
     title = track.get("title")
     purchase_url = track.get("purchase_url")
     artist = track.get("user", {}).get("username")
+    download_url = track.get("download_url")
     return TrackItem(
         url=url,
         title=title if isinstance(title, str) else None,
         purchase_url=purchase_url if isinstance(purchase_url, str) else None,
         artist=artist if isinstance(artist, str) else None,
+        downloadable=track.get("downloadable") is True,
+        download_url=download_url if isinstance(download_url, str) else None,
     )
 
 

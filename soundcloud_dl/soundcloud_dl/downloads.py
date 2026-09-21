@@ -227,3 +227,38 @@ def discard_if_fragment(dest: Path, url: str) -> Path | None:
         return dest
     dest.unlink(missing_ok=True)
     return None
+
+
+#: Leading bytes that identify an audio container, longest-prefix first where they overlap.
+#: SoundCloud's download endpoint serves the artist's original upload and does not always
+#: name it, so the extension has to come from the bytes. Guessing mp3 for a wav mislabels
+#: the file for every tool downstream, including this repo's own renamer.
+_MAGIC: tuple[tuple[bytes, int, str], ...] = (
+    (b"fLaC", 0, ".flac"),
+    (b"OggS", 0, ".ogg"),
+    (b"ID3", 0, ".mp3"),
+    (b"ftyp", 4, ".m4a"),
+    (b"WAVE", 8, ".wav"),
+    (b"AIFF", 8, ".aiff"),
+    (b"AIFC", 8, ".aiff"),
+)
+
+
+#: An MPEG audio frame starts with eleven set bits. Matching it catches an mp3 that
+#: carries no ID3 tag, which is common once a file has been through a tag stripper.
+_MPEG_SYNC_BYTE = 0xFF
+_MPEG_SYNC_MASK = 0xE0
+
+
+def audio_extension_for(body: bytes, fallback: str = ".mp3") -> str:
+    """Name the container from its own bytes rather than from a header or a guess."""
+    for magic, offset, ext in _MAGIC:
+        if body[offset : offset + len(magic)] == magic:
+            return ext
+    if (
+        len(body) >= 2  # noqa: PLR2004
+        and body[0] == _MPEG_SYNC_BYTE
+        and (body[1] & _MPEG_SYNC_MASK) == _MPEG_SYNC_MASK
+    ):
+        return ".mp3"
+    return fallback

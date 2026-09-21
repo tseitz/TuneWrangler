@@ -21,7 +21,10 @@ import asyncio
 import contextlib
 import json
 import logging
+import re
 import urllib.parse
+from http import HTTPStatus
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -319,3 +322,65 @@ async def set_repost(page: Page, track_id: int, *, on: bool) -> tuple[bool, str]
     """
     method = "PUT" if on else "DELETE"
     return await _write_v2(page, method, f"/me/track_reposts/{track_id}")
+
+
+async def fetch_download(
+    track: dict[str, Any], dest_dir: Path, track_title: str | None = None
+) -> Path | None:
+    """Take a track's own free download straight from the API.
+
+    No page involved, which is the point: SoundCloud's track page renders nothing when
+    its SPA throws ("AF is not defined"), and the download is then invisible to any
+    amount of scraping while the API keeps answering. Returns None when the track has no
+    download to give.
+    """
+    from soundcloud_dl.downloads import (  # noqa: PLC0415
+        audio_extension_for,
+        discard_if_fragment,
+        rename_to_track,
+        save_bytes,
+    )
+
+    if track.get("downloadable") is not True:
+        return None
+    url = track.get("download_url")
+    if not isinstance(url, str) or not url:
+        logger.info("Track says downloadable but gives no download_url")
+        return None
+
+    async with api_client() as client:
+        resp = await client.get(url)
+        if resp.status_code != HTTPStatus.OK:
+            # 401/403 here means the grant does not cover downloads; 404 means the artist
+            # withdrew it between the playlist read and now. Neither is fatal to the run.
+            logger.warning("Download refused (%d) for %s", resp.status_code, url)
+            return None
+        body = resp.content
+        name = _filename_from(resp.headers.get("content-disposition"), track)
+
+    # The endpoint serves the original upload and does not reliably name it; a wav saved
+    # as .mp3 is wrong everywhere downstream.
+    if not Path(name).suffix:
+        name += audio_extension_for(body)
+
+    saved = discard_if_fragment(save_bytes(dest_dir / name, body), url)
+    if saved is None:
+        return None
+    final = rename_to_track(saved, track_title)
+    logger.info("Native API download saved: %s", final)
+    return final
+
+
+def _filename_from(content_disposition: str | None, track: dict[str, Any]) -> str:
+    """Prefer the name SoundCloud sends, because it carries the real extension.
+
+    A track's original upload can be wav, aiff or flac and the API does not say which
+    anywhere else; guessing mp3 mislabels the file for every tool downstream.
+    """
+    if content_disposition:
+        m = re.search(r'filename\*?=(?:UTF-8\'\')?"?([^";]+)"?', content_disposition)
+        if m:
+            return m.group(1).strip()
+    title = track.get("title") or "track"
+    safe = re.sub(r'[/\\:*?"<>|]', "_", str(title))[:120]
+    return f"{safe}.mp3"

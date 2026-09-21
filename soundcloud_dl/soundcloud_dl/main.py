@@ -246,6 +246,28 @@ def _get_tracks_to_process(
     return to_process
 
 
+async def _api_download(
+    track: TrackItem, download_dir: Path, track_title: str | None
+) -> Path | None:
+    """The track's own download, straight from the API. Never fatal — the gate is next.
+
+    The playlist read already said downloadable=True, so this only has to fetch. Resolve
+    again rather than carrying the raw dict: a playlist cache can be hours old and the
+    artist may have withdrawn the download since.
+    """
+    from soundcloud_dl.soundcloud_api import api_client, fetch_download, resolve  # noqa: PLC0415
+
+    try:
+        async with api_client() as client:
+            full = await resolve(client, track.url)
+        return await fetch_download(full, download_dir, track_title)
+    except Exception:  # noqa: BLE001
+        # Auth, network and a resolve that answers something other than a track all end
+        # the same way: say so, then let the gate flow have its turn.
+        logger.warning("API download failed for %s — trying the gate", track.url, exc_info=True)
+        return None
+
+
 async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
     context: object, track: TrackItem, *, pause: bool = False, sc_actions: bool = False
 ) -> TrackState:
@@ -262,6 +284,16 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
     # leave the tab open for a person to finish, and the gate is still checking.
     keep_follows = False
     try:
+        # The API's own answer, and the only path that needs no page at all. A track page
+        # renders nothing when SoundCloud's SPA throws, and the download is then invisible
+        # to any amount of scraping while this keeps working — which is how a track with
+        # downloadable=True came to be recorded as having no gate and no download.
+        if track.downloadable and DOWNLOAD_DIR:
+            saved = await _api_download(track, Path(DOWNLOAD_DIR), track_title)
+            if saved is not None:
+                logger.info("DOWNLOAD_SUCCESS | %s | API download → %s", track_label, saved)
+                return "done"
+
         # SoundCloud tracks with a native download button (no gate) are handled here.
         # Try this before the gate flow so we don't waste time hunting for a gate link.
         if (
