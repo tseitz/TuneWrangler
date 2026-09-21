@@ -258,31 +258,57 @@ async def try_native_sc_download(
     track_title: str | None = None,
 ) -> bool:
     """
-    Attempt SoundCloud's native "Download file" button (behind the more-actions menu).
-    Returns True if the file was saved, False if no native download is available.
+    Attempt SoundCloud's native "Download file" button.
+
+    Says why it declines. Every branch here used to return False in silence, which made
+    "the page had not rendered yet" indistinguishable from "this track has no download" —
+    and the caller turns the second into NO_GATE, a track written off with the file one
+    click away.
     """
+    # Local to keep the module-level import graph one-directional; soundcloud_actions
+    # already imports from the page helpers' neighbours.
+    from soundcloud_dl.soundcloud_actions import _wait_for_actions, block_ads  # noqa: PLC0415
+
     page = await new_page(context)
     try:
+        await block_ads(page)
         await page.goto(track_url, wait_until="domcontentloaded", timeout=30_000)
-        if PAGE_LOAD_WAIT_SECONDS > 0:
-            await page.wait_for_timeout(PAGE_LOAD_WAIT_SECONDS * 1000)
+        # A track page renders nothing in a background tab — Chrome throttles the timers
+        # its SPA draws on — and a fixed sleep read an empty document either way. This
+        # brings the tab to the front and waits for the engagement bar to actually exist.
+        await _wait_for_actions(page)
         await random_delay(page)
 
-        # Open the "..." more-actions dropdown to reveal the download button.
-        more_btn = await page.query_selector("button.sc-button-more")
-        if more_btn is None:
-            return False
-        await more_btn.click()
-
-        # Covers Playwright TimeoutError when the button never appears — narrow catch
-        # would require importing playwright's exception type; this path is best-effort.
-        try:
-            dl_btn = await page.wait_for_selector(
-                "button.sc-button-download", state="visible", timeout=3_000
-            )
-        except Exception:  # noqa: BLE001
-            return False
+        # The button is inline in the action bar when the artist allows the download, and
+        # behind the "..." menu on other layouts. Looking inline first means the common
+        # case never depends on the menu being present at all.
+        dl_btn = await page.query_selector("button.sc-button-download")
         if dl_btn is None:
+            more_btn = await page.query_selector("button.sc-button-more")
+            if more_btn is None:
+                # No "..." either: on a page that rendered, that means no action bar at
+                # all, which is the page not being a track page (or not having loaded).
+                logger.info(
+                    "No native download on %s — neither a download button nor a '...' "
+                    "menu is present",
+                    track_url,
+                )
+                return False
+            await more_btn.click()
+            try:
+                dl_btn = await page.wait_for_selector(
+                    "button.sc-button-download", state="visible", timeout=3_000
+                )
+            except Exception:  # noqa: BLE001
+                # Covers Playwright TimeoutError; a narrow catch would need its exception
+                # type imported here.
+                logger.info(
+                    "No native download on %s — the '...' menu has no download entry",
+                    track_url,
+                )
+                return False
+        if dl_btn is None:
+            logger.info("No native download on %s", track_url)
             return False
 
         dest = Path(download_dir)
@@ -305,7 +331,13 @@ async def try_native_sc_download(
         logger.info("Native SC download saved: %s", save_path)
 
     except Exception:  # noqa: BLE001
-        logger.debug("Native SC download not available for %s", track_url, exc_info=True)
+        # Was debug-level, so a download that failed mid-save looked exactly like a track
+        # that never offered one. The caller reports NO_GATE off the back of this.
+        logger.warning(
+            "Native SC download failed for %s — treating the track as ungated",
+            track_url,
+            exc_info=True,
+        )
         return False
     else:
         return True
