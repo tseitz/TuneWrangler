@@ -168,6 +168,9 @@ def test_ensure_chrome_running_launches_when_port_closed(tmp_path):
         assert f"--user-data-dir={profile_dir}" in args
         assert "--no-first-run" in args
         assert "--no-default-browser-check" in args
+        # Gate pages autoplay the track. A headless run has no window to mute it from, so
+        # the only person who can stop it is whoever is in the room.
+        assert "--mute-audio" in args
         assert profile_dir.exists()
 
 

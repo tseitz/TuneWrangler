@@ -217,6 +217,10 @@ def ensure_chrome_running(  # noqa: PLR0913
         "--disable-blink-features=AutomationControlled",
         "--disable-session-crashed-bubble",
         "--disable-infobars",
+        # Gate pages embed the track's own player and several autoplay it. Headless has no
+        # window to find and no tab strip to mute from, so the sound comes out of nowhere
+        # with nothing on screen to trace it to.
+        "--mute-audio",
         *_NO_THROTTLE_ARGS,
     ]
     if not headed:
