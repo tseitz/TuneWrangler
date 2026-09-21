@@ -53,7 +53,14 @@ from soundcloud_dl.playlist import TrackItem, extract_track_urls
 from soundcloud_dl.playlist_cache import load_cached_tracks, save_cached_tracks
 from soundcloud_dl.playwright_browser import attached_browser
 from soundcloud_dl.recorder import record
-from soundcloud_dl.resume import TrackState, load_states, record_state, should_skip
+from soundcloud_dl.resume import (
+    TrackState,
+    is_given_up_on,
+    load_attempts,
+    load_states,
+    record_state,
+    should_skip,
+)
 from soundcloud_dl.run_artifacts import RunRecorder
 from soundcloud_dl.sc_actions_flow import (
     do_soundcloud_actions,
@@ -236,13 +243,24 @@ def _get_tracks_to_process(
     if not RESUME_ENABLED:
         return tracks
     states = load_states(playlist_url)
+    attempts = load_attempts(playlist_url)
     if retry_unsupported:
         to_process = [t for t in tracks if states.get(t.url) != "done"]
     else:
-        to_process = [t for t in tracks if not should_skip(t.url, states)]
+        to_process = [t for t in tracks if not should_skip(t.url, states, attempts)]
     skipped = len(tracks) - len(to_process)
     if skipped:
         logger.info("Resume: skipping %d already-done tracks.", skipped)
+    # Named individually, because a gate this gave up on is the one thing in the run that
+    # nothing will raise again and that only a person can decide to take further.
+    for t in tracks:
+        if is_given_up_on(t.url, states, attempts):
+            logger.info(
+                "Resume: %s stayed stuck for %d runs — not trying it again. "
+                "Use --retry-unsupported to force it.",
+                t.url,
+                attempts.get(t.url, 0),
+            )
     return to_process
 
 
