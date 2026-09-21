@@ -30,6 +30,7 @@ from soundcloud_dl.config import (
     PLAYLIST_CACHE_ENABLED,
     RESUME_ENABLED,
     SCROLL_BEFORE_CLICK,
+    TRACK_TIMEOUT_SECONDS,
     TUNEWRANGLER_SC_PLAYLIST_URL,
     TYPE_DELAY_MS,
     get_debug_dir,
@@ -91,6 +92,9 @@ class BrowserGoneError(RuntimeError):
 #: Enough of a reason to act on later without going back to the log. Kept short because it
 #: is written per track into processed.json, which is read by eye.
 _MAX_REASON_CHARS = 180
+
+#: Hangs in a row before the run stops rather than spending the timeout on every track left.
+_MAX_CONSECUTIVE_TIMEOUTS = 2
 
 
 class TrackOutcome(NamedTuple):
@@ -630,10 +634,26 @@ async def _run_phase2(
         if sc_actions:
             await pending_follows.sweep()
 
+        timed_out_in_a_row = 0
         for idx, track in enumerate(to_process, 1):
             logger.info("Phase 2 track %d/%d: %s", idx, len(to_process), track.url)
             try:
-                outcome = await _process_track(context, track, pause=pause, sc_actions=sc_actions)
+                outcome = await asyncio.wait_for(
+                    _process_track(context, track, pause=pause, sc_actions=sc_actions),
+                    timeout=TRACK_TIMEOUT_SECONDS,
+                )
+            except TimeoutError:
+                # Playwright's TimeoutError subclasses its own Error, not this one, so a
+                # bounded step timing out inside the track still lands on its own handler.
+                timed_out_in_a_row += 1
+                logger.warning(
+                    "Gave up on %s after %ds — it stopped making progress.",
+                    track.title or track.url,
+                    TRACK_TIMEOUT_SECONDS,
+                )
+                outcome = TrackOutcome(
+                    "manual_review", f"hung; no progress for {TRACK_TIMEOUT_SECONDS}s"
+                )
             except BrowserGoneError:
                 # Deliberately no record_state: this track and the ones after it were never
                 # tried, and writing "failed" would spend their retry budget on a browser
@@ -645,11 +665,24 @@ async def _run_phase2(
                     len(to_process),
                 )
                 break
+            else:
+                timed_out_in_a_row = 0
             counts[outcome.state] += 1
             if outcome.state != "done":
                 needs_attention.append((track, outcome))
             if RESUME_ENABLED:
                 record_state(playlist_url, track.url, outcome.state, reason=outcome.reason)
+            if timed_out_in_a_row >= _MAX_CONSECUTIVE_TIMEOUTS:
+                # One hang is a bad gate; several running together is the browser itself,
+                # and every track after it would burn the full timeout to reach the same
+                # place. Their state is left alone, so the next run still has them.
+                logger.error(
+                    "Stopping: %d tracks in a row hung. Chrome is wedged — the remaining "
+                    "%d keep their current state. Re-run once it has been restarted.",
+                    timed_out_in_a_row,
+                    len(to_process) - idx,
+                )
+                break
             if idx < len(to_process) and DELAY_SECONDS > 0:
                 await asyncio.sleep(DELAY_SECONDS)
 

@@ -93,6 +93,17 @@ SCROLL_BEFORE_CLICK = _scroll not in ("0", "false", "no")
 # Seconds to wait after a SoundCloud track page load before interacting (SPA render time).
 PAGE_LOAD_WAIT_SECONDS = max(0, _parse_int_env("TUNEWRANGLER_SC_PAGE_LOAD_WAIT", 3))
 
+# How long one track gets before the run gives up on it and moves to the next.
+#
+# Every wait inside a track is bounded (expect_download 45s, goto 30s), yet a run still
+# stopped dead for 50 minutes after saving a file — the event loop sat in select with
+# nothing left to fire. Whatever await that was, no per-step timeout caught it, so the
+# budget belongs here, around the whole track, where it holds regardless of the cause.
+#
+# A track usually takes 45-90s. Ten minutes is deliberately far above that: this exists to
+# end a hang, not to cut short a slow gate or a 100 MB file on a cold external drive.
+TRACK_TIMEOUT_SECONDS = max(60, _parse_int_env("TUNEWRANGLER_SC_TRACK_TIMEOUT_SECONDS", 600))
+
 # ── Logging ────────────────────────────────────────────────────────────────────
 # A plain FileHandler appends forever; this log once reached 84 MB, which made it useless
 # to read back after a run. Generous while the gates are still being worked out, because
