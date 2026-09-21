@@ -240,3 +240,42 @@ def test_the_bracket_and_paren_forms_still_strip():
 
     assert track_filename("Track [FREE DL]", "A") == "A - Track"
     assert track_filename("Track (Free Download)", "A") == "A - Track"
+
+
+@pytest.mark.parametrize(
+    ("title", "artist", "expected"),
+    [
+        # A tag written as a trailing segment rather than in brackets.
+        (
+            "Iiidiot - FREE DOWNLOAD (link in description)",
+            "Sustance",
+            "Sustance - Iiidiot",
+        ),
+        # Styled Unicode in the uploader's name, plus feed decoration.
+        (
+            "Rayment - Wicked & Dark",
+            "\U0001d5e6\U0001d5e7\U0001d5e3\U0001d5e7\U0001d5d5\U0001d5e2\U0001d5e2\U0001d5e7"
+            "\U0001d5e6###",
+            "STPTBOOTS - Rayment - Wicked & Dark",
+        ),
+        # Trailing decoration on the title. The double space is the gap a stripped slash
+        # leaves, which is pre-existing behaviour for every unsafe character.
+        ("TBKI / TYBG ~~~", "Kae", "Kae - TBKI  TYBG"),
+    ],
+)
+def test_upload_titles_are_tidied_into_filenames(title, artist, expected):
+    assert downloads.track_filename(title, artist) == expected
+
+
+@pytest.mark.parametrize(
+    ("title", "expected"),
+    [
+        # "free" is an ordinary word far more often than it is a tag.
+        ("Free Your Mind", "Artist - Free Your Mind"),
+        ("Freedom Dive", "Artist - Freedom Dive"),
+        # Bare trailing "- Free" is not enough to strip: unrecoverable if it was the title.
+        ("Track - Free", "Artist - Track - Free"),
+    ],
+)
+def test_a_title_that_merely_says_free_is_left_alone(title, expected):
+    assert downloads.track_filename(title, "Artist") == expected

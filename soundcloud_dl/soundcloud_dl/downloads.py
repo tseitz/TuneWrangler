@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import unicodedata
 import urllib.parse
 from typing import TYPE_CHECKING, Any
 
@@ -132,11 +133,42 @@ def save_bytes(dest: Path, content: bytes) -> Path:
 # Braces as well as brackets: "{FREE DOWNLOAD}" is common enough in track titles that
 # leaving it out put the tag straight into a filename.
 _FREE_DL_RE = re.compile(r"\s*[\(\[{]\s*free\s*(download|dl)?\s*[\)\]}]", re.IGNORECASE)
+
+# The same tag written as a trailing segment rather than a bracketed one, which is how
+# "Iiidiot - FREE DOWNLOAD (link in description)" reached a filename intact. "download" or
+# "dl" is required here, unlike the bracketed form: a bare trailing "- Free" is more likely
+# to be part of a title than a tag, and dropping it would be unrecoverable.
+_TRAILING_FREE_DL_RE = re.compile(
+    # The en and em dashes are meant: uploaders separate with those as often as with a
+    # plain hyphen, and a tag after one would otherwise survive into the filename.
+    r"\s*[-–—]\s*free\s*(download|dl)\b[^)\]]*(\([^)]*\)|\[[^\]]*\])?\s*$",  # noqa: RUF001
+    re.IGNORECASE,
+)
+
+# Trailing decoration an uploader adds to make a name stand out in a feed — "###", "~~~".
+# Trailing only, and deliberately not "." or "-": "DEVOWR." is how that artist spells it,
+# and a leading dash is _usable_filename's to deal with.
+_EDGE_DECORATION_RE = re.compile(r"[\s~#*|]+$")
+
 _UNSAFE_CHARS_RE = re.compile(r'[<>:"/\\|?*\x00-\x1f\x7f]')
 
 # macOS NAME_MAX is 255 bytes; the rest is headroom for the extension and any suffix a
 # caller adds after this.
 _MAX_NAME_BYTES = 200
+
+
+def tidy_title_part(text: str) -> str:
+    """One artist or title as it should appear in a filename.
+
+    NFKC first, because uploaders write their name in styled Unicode to stand out — the
+    mathematical-bold "STPTBOOTS" is seven codepoints no other tool here matches against,
+    and it sorts nowhere near the plain spelling.
+    """
+    text = unicodedata.normalize("NFKC", text)
+    text = _FREE_DL_RE.sub("", text)
+    text = _TRAILING_FREE_DL_RE.sub("", text)
+    text = _UNSAFE_CHARS_RE.sub("", text)
+    return _EDGE_DECORATION_RE.sub("", text).strip()
 
 
 def _same_name(a: str, b: str) -> bool:
@@ -160,10 +192,10 @@ def track_filename(title: str | None, artist: str | None) -> str | None:
     """
     if not title:
         return None
-    clean = _UNSAFE_CHARS_RE.sub("", _FREE_DL_RE.sub("", title)).strip()
+    clean = tidy_title_part(title)
     if not clean:
         return None
-    safe_artist = _UNSAFE_CHARS_RE.sub("", artist or "").strip()
+    safe_artist = tidy_title_part(artist or "")
     if safe_artist and not _same_name(clean.split(" - ", 1)[0], safe_artist):
         clean = f"{safe_artist} - {clean}"
     return _usable_filename(clean)
