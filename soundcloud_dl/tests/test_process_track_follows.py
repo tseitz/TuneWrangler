@@ -76,7 +76,7 @@ async def test_a_finished_run_hands_its_follows_back(released, monkeypatch):
 
     _handler_that(_run, monkeypatch)
     outcome = await main_mod._process_track(_context(), TRACK, sc_actions=True)
-    assert outcome == "manual_review"
+    assert outcome.state == "manual_review"
     assert seen == [ACTIONS]
     assert held == []
 
@@ -93,7 +93,7 @@ async def test_a_captcha_keeps_the_follows(released, monkeypatch):
 
     _handler_that(_run, monkeypatch)
     outcome = await main_mod._process_track(_context(), TRACK, sc_actions=True)
-    assert outcome == "captcha_pending"
+    assert outcome.state == "captcha_pending"
     assert seen == []
     # Held, not forgotten: a re-run cannot re-derive these, so they go on the ledger.
     assert held == [ACTIONS]
@@ -107,7 +107,7 @@ async def test_a_login_wall_keeps_the_follows(released, monkeypatch):
 
     _handler_that(_run, monkeypatch)
     outcome = await main_mod._process_track(_context(), TRACK, sc_actions=True)
-    assert outcome == "login_required"
+    assert outcome.state == "login_required"
     assert seen == []
     assert held == [ACTIONS]
 
@@ -123,7 +123,7 @@ async def test_a_crashing_gate_still_hands_the_follows_back(released, monkeypatc
 
     _handler_that(_run, monkeypatch)
     outcome = await main_mod._process_track(_context(), TRACK, sc_actions=True)
-    assert outcome == "failed"
+    assert outcome.state == "failed"
     assert seen == [ACTIONS]
     assert held == []
 

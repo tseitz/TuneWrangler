@@ -143,3 +143,48 @@ def test_a_track_with_budget_left_is_still_queued(tmp_processed_file: Path) -> N
     resume.record_state(playlist, stuck.url, "manual_review")
 
     assert _get_tracks_to_process([stuck], playlist) == [stuck]
+
+
+def test_a_track_that_needs_attention_says_why(tmp_processed_file: Path) -> None:
+    """Otherwise picking the work back up means correlating against a rotating log."""
+    playlist = "https://soundcloud.com/u/sets/p"
+    url = "https://soundcloud.com/u/stuck"
+
+    resume.record_state(playlist, url, "manual_review", reason="stuck at jev_cap_25")
+
+    assert resume.load_reasons(playlist)[url] == "stuck at jev_cap_25"
+
+
+def test_a_later_attempt_replaces_the_earlier_reason(tmp_processed_file: Path) -> None:
+    playlist = "https://soundcloud.com/u/sets/p"
+    url = "https://soundcloud.com/u/flaky"
+
+    resume.record_state(playlist, url, "failed", reason="TimeoutError: page took too long")
+    resume.record_state(playlist, url, "manual_review", reason="stuck at jev_cap_25")
+
+    assert resume.load_reasons(playlist)[url] == "stuck at jev_cap_25"
+
+
+def test_a_successful_track_stores_no_reason(tmp_processed_file: Path) -> None:
+    """Nothing to say, so nothing written — the file stays readable."""
+    playlist = "https://soundcloud.com/u/sets/p"
+    url = "https://soundcloud.com/u/fine"
+
+    resume.record_state(playlist, url, "done")
+
+    stored = json.loads(tmp_processed_file.read_text())[playlist][url]
+    assert "reason" not in stored
+    assert resume.load_reasons(playlist)[url] == ""
+
+
+def test_reasons_survive_an_entry_written_before_they_existed(tmp_processed_file: Path) -> None:
+    playlist = "https://soundcloud.com/u/sets/p"
+    tmp_processed_file.write_text(
+        json.dumps({playlist: {"https://soundcloud.com/u/a": {"state": "failed", "attempts": 1}}}),
+        encoding="utf-8",
+    )
+
+    assert resume.load_reasons(playlist) == {"https://soundcloud.com/u/a": ""}
+    # And recording a fresh one does not lose the neighbouring record.
+    resume.record_state(playlist, "https://soundcloud.com/u/b", "failed", reason="boom")
+    assert resume.load_states(playlist)["https://soundcloud.com/u/a"] == "failed"

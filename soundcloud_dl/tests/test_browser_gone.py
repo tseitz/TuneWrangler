@@ -53,10 +53,12 @@ async def test_the_run_stops_and_leaves_the_remaining_tracks_untouched(monkeypat
         if track.url.endswith("t1"):
             msg = "Chrome closed"
             raise main.BrowserGoneError(msg)
-        return "done"
+        return main.TrackOutcome("done")
 
     monkeypatch.setattr(main, "_process_track", fake_process)
-    monkeypatch.setattr(main, "record_state", lambda _p, u, s: recorded.append((u, s)))
+    monkeypatch.setattr(
+        main, "record_state", lambda _p, u, s, reason="": recorded.append((u, s))
+    )
     monkeypatch.setattr(main, "validate_phase2_config", lambda: None)
     monkeypatch.setattr(main, "_ensure_logged_in", AsyncMock())
     monkeypatch.setattr(main, "DELAY_SECONDS", 0)

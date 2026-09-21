@@ -84,7 +84,7 @@ async def test_a_failed_run_still_records_how_it_ended(
     _jev_handler_that(_run, monkeypatch)
     outcome = await main_mod._process_track(_context(), TRACK)
 
-    assert outcome == expected_state
+    assert outcome.state == expected_state
     results = _results(runs_dir)
     assert len(results) == 1, "the run directory has screenshots but no result.json"
     assert results[0]["terminal"] == expected_terminal
@@ -103,7 +103,7 @@ async def test_a_successful_run_keeps_its_detailed_record(runs_dir, monkeypatch)
     _jev_handler_that(_run, monkeypatch)
     outcome = await main_mod._process_track(_context(), TRACK)
 
-    assert outcome == "done"
+    assert outcome.state == "done"
     results = _results(runs_dir)
     assert len(results) == 1
     assert results[0]["terminal"] == "downloaded"
@@ -117,3 +117,61 @@ def test_finish_keeps_the_first_call(tmp_path, monkeypatch):
     rec.finish(terminal="StuckGate", downloaded=False)
     rec.finish(terminal="backstop", downloaded=False)
     assert json.loads((rec.dir / "result.json").read_text())["terminal"] == "StuckGate"
+
+
+@pytest.mark.asyncio
+async def test_the_outcome_carries_a_reason_a_person_can_act_on(runs_dir, monkeypatch):
+    async def _run(_self, _page):
+        raise StuckGate("gate stuck", last_step_id="jev_cap_25")
+
+    _jev_handler_that(_run, monkeypatch)
+    outcome = await main_mod._process_track(_context(), TRACK)
+
+    assert outcome.state == "manual_review"
+    assert outcome.reason == "stuck at jev_cap_25"
+
+
+@pytest.mark.asyncio
+async def test_a_reason_is_kept_short_enough_to_read(runs_dir, monkeypatch):
+    """It goes in processed.json, which is read by eye; a stack-sized string ruins that."""
+
+    async def _run(_self, _page):
+        raise RuntimeError("x" * 5000)
+
+    _jev_handler_that(_run, monkeypatch)
+    outcome = await main_mod._process_track(_context(), TRACK)
+
+    assert outcome.state == "failed"
+    assert len(outcome.reason) <= main_mod._MAX_REASON_CHARS
+    assert outcome.reason.startswith("RuntimeError: ")
+
+
+@pytest.mark.asyncio
+async def test_the_run_writes_the_reason_to_the_resume_file(monkeypatch):
+    """Through _run_phase2: a reason the run never passes on is a reason nobody reads."""
+    from soundcloud_dl.playlist import TrackItem as _TrackItem
+
+    recorded: list[tuple[str, str, str]] = []
+
+    async def fake_process(_ctx, _track, **_kw):
+        return main_mod.TrackOutcome("manual_review", "stuck at jev_cap_25")
+
+    monkeypatch.setattr(main_mod, "_process_track", fake_process)
+    monkeypatch.setattr(
+        main_mod,
+        "record_state",
+        lambda _p, u, s, reason="": recorded.append((u, s, reason)),
+    )
+    monkeypatch.setattr(main_mod, "validate_phase2_config", lambda: None)
+    monkeypatch.setattr(main_mod, "_ensure_logged_in", AsyncMock())
+    monkeypatch.setattr(main_mod, "DELAY_SECONDS", 0)
+
+    track = _TrackItem(url="https://soundcloud.com/a/b", title="A - B")
+    with pytest.MonkeyPatch.context() as mp:
+        attach = MagicMock()
+        attach.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
+        attach.return_value.__aexit__ = AsyncMock(return_value=False)
+        mp.setattr(main_mod, "attached_browser", attach)
+        await main_mod._run_phase2("https://soundcloud.com/u/sets/p", [track])
+
+    assert recorded == [(track.url, "manual_review", "stuck at jev_cap_25")]

@@ -93,6 +93,14 @@ SCROLL_BEFORE_CLICK = _scroll not in ("0", "false", "no")
 # Seconds to wait after a SoundCloud track page load before interacting (SPA render time).
 PAGE_LOAD_WAIT_SECONDS = max(0, _parse_int_env("TUNEWRANGLER_SC_PAGE_LOAD_WAIT", 3))
 
+# ── Logging ────────────────────────────────────────────────────────────────────
+# A plain FileHandler appends forever; this log once reached 84 MB, which made it useless
+# to read back after a run. Generous while the gates are still being worked out, because
+# the log is the only place a failure's reason is written in full — turn it down with
+# TUNEWRANGLER_SC_MAX_LOG_MB / _LOG_BACKUPS once they are behaving.
+MAX_LOG_BYTES = _parse_int_env("TUNEWRANGLER_SC_MAX_LOG_MB", 50) * 1024 * 1024
+LOG_BACKUP_COUNT = _parse_int_env("TUNEWRANGLER_SC_LOG_BACKUPS", 10)
+
 # ── Resume / cache ─────────────────────────────────────────────────────────────
 _resume = os.getenv("TUNEWRANGLER_SC_RESUME", "1").strip().lower()
 RESUME_ENABLED = _resume not in ("0", "false", "no")

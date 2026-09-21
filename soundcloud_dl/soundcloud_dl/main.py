@@ -7,7 +7,7 @@ import logging
 import re
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 if TYPE_CHECKING:
     from playwright.async_api import Page
@@ -86,6 +86,30 @@ class BrowserGoneError(RuntimeError):
     Every track after the browser dies fails identically and instantly on its first
     page open. Recording those as "failed" says the gate was tried and it was not.
     """
+
+
+#: Enough of a reason to act on later without going back to the log. Kept short because it
+#: is written per track into processed.json, which is read by eye.
+_MAX_REASON_CHARS = 180
+
+
+class TrackOutcome(NamedTuple):
+    """What happened to one track, and why.
+
+    The state alone said a track needed attention but never what was wrong with it, so
+    picking the work back up meant correlating processed.json against a rotating log that
+    had often already aged the answer out.
+    """
+
+    state: TrackState
+    reason: str = ""
+
+
+def _why(exc: BaseException) -> str:
+    """A one-line reason from an exception, short enough to sit in the resume file."""
+    text = " ".join(str(exc).split())
+    label = f"{type(exc).__name__}: {text}" if text else type(exc).__name__
+    return label[:_MAX_REASON_CHARS]
 
 
 #: How a dead browser announces itself. Playwright raises TargetClosedError for this but
@@ -315,7 +339,7 @@ async def _api_download(
 
 async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
     context: object, track: TrackItem, *, pause: bool = False, sc_actions: bool = False
-) -> TrackState:
+) -> TrackOutcome:
     """Attempt the gate flow for one track; return outcome string."""
     track_label = track.title or track.url
     track_title = await judge_track_filename(track.title, track.artist)
@@ -342,7 +366,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             saved = await _api_download(track, Path(DOWNLOAD_DIR), track_title)
             if saved is not None:
                 logger.info("DOWNLOAD_SUCCESS | %s | API download → %s", track_label, saved)
-                return "done"
+                return TrackOutcome("done")
 
         # SoundCloud tracks with a native download button (no gate) are handled here.
         # Try this before the gate flow so we don't waste time hunting for a gate link.
@@ -357,7 +381,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             )
         ):
             logger.info("DOWNLOAD_SUCCESS | %s | native SC download", track_label)
-            return "done"
+            return TrackOutcome("done")
 
         if track.purchase_url:
             gate_url = track.purchase_url
@@ -366,7 +390,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             gate_url = await get_gate_url(context, track.url)  # type: ignore[arg-type]
         if is_url_blacklisted(gate_url):
             logger.warning("UNSUPPORTED | %s | blacklisted gate: %s", track_label, gate_url)
-            return "unsupported"
+            return TrackOutcome("unsupported", f"blacklisted gate: {gate_url}")
 
         # After the blacklist check, because a gate we will not open must not cost
         # anything: the follow is given back but the comment is permanent and only the
@@ -482,14 +506,14 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         page = None
         if downloaded:
             logger.info("DOWNLOAD_SUCCESS | %s | steps=%s", track_label, results)
-            return "done"
+            return TrackOutcome("done")
         else:  # noqa: RET505
             logger.warning(
                 "GATE_INCOMPLETE | %s | no download step reached | steps=%s",
                 track_label,
                 results,
             )
-            return "manual_review"
+            return TrackOutcome("manual_review", "gate ran out of steps with no download")
     except CaptchaEncountered as e:
         terminal = "captcha"
         keep_follows = True
@@ -498,7 +522,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             track_label,
             e.kind,
         )
-        return "captcha_pending"
+        return TrackOutcome("captcha_pending", str(e.kind))
     except LoginWallEncountered as e:
         terminal = "login_required"
         keep_follows = True
@@ -507,7 +531,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             track_label,
             e.reason,
         )
-        return "login_required"
+        return TrackOutcome("login_required", e.reason)
     except StuckGate as e:
         terminal = "StuckGate"
         if page:
@@ -517,11 +541,11 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             track_label,
             e.last_step_id,
         )
-        return "manual_review"
+        return TrackOutcome("manual_review", f"stuck at {e.last_step_id}")
     except GateNotSupportedError as e:
         terminal = "unsupported"
         logger.warning("UNSUPPORTED | %s | no handler for gate: %s", track_label, e)
-        return "unsupported"
+        return TrackOutcome("unsupported", f"no handler: {e}")
     except SoundCloudPageError as e:
         terminal = "no_gate"
         # SC page issues (no gate button found, "FREE DL" text not a real gate link,
@@ -529,13 +553,13 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         if page:
             await _save_debug_artifacts(page, track_label)
         logger.warning("NO_GATE | %s | %s", track_label, e)
-        return "manual_review"
-    except GateStepError:
+        return TrackOutcome("manual_review", f"no gate: {e}")
+    except GateStepError as e:
         terminal = "GateStepError"
         if page:
             await _save_debug_artifacts(page, track_label)
         logger.exception("FAILED | %s", track_label)
-        return "failed"
+        return TrackOutcome("failed", _why(e))
     except PlaywrightError as e:
         terminal = type(e).__name__
         if _is_browser_gone(e):
@@ -544,13 +568,13 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         if page:
             await _save_debug_artifacts(page, track_label)
         logger.exception("FAILED | %s | %s", track_label, type(e).__name__)
-        return "failed"
+        return TrackOutcome("failed", _why(e))
     except Exception as e:
         terminal = type(e).__name__
         if page:
             await _save_debug_artifacts(page, track_label)
         logger.exception("FAILED | %s | unexpected error", track_label)
-        return "failed"
+        return TrackOutcome("failed", _why(e))
     finally:
         # Whatever happened, the run dir gets a result. finish() keeps the first call, so
         # the detailed record written on the way through wins and this only fills the gap
@@ -594,6 +618,7 @@ async def _run_phase2(
         "manual_review": 0,
         "failed": 0,
     }
+    needs_attention: list[tuple[TrackItem, TrackOutcome]] = []
 
     # --pause forces a window regardless of config, and the login guard below has to ask
     # about the browser it actually got, not the one the config asked for.
@@ -620,13 +645,29 @@ async def _run_phase2(
                     len(to_process),
                 )
                 break
-            counts[outcome] += 1
+            counts[outcome.state] += 1
+            if outcome.state != "done":
+                needs_attention.append((track, outcome))
             if RESUME_ENABLED:
-                record_state(playlist_url, track.url, outcome)
+                record_state(playlist_url, track.url, outcome.state, reason=outcome.reason)
             if idx < len(to_process) and DELAY_SECONDS > 0:
                 await asyncio.sleep(DELAY_SECONDS)
 
     _print_summary(counts)
+    _print_worklist(needs_attention)
+
+
+def _print_worklist(items: list[tuple[TrackItem, TrackOutcome]]) -> None:
+    """List what did not finish, and why, so the next run has somewhere to start."""
+    if not items:
+        return
+    logger.info("Needs attention (%d):", len(items))
+    for track, outcome in items:
+        logger.info("  %-14s %s", outcome.state, track.title or track.url)
+        if outcome.reason:
+            logger.info("  %-14s   ↳ %s", "", outcome.reason)
+        logger.info("  %-14s   %s", "", track.url.split("?")[0])
+    logger.info("─" * 50)
 
 
 def _print_summary(counts: dict[str, int]) -> None:

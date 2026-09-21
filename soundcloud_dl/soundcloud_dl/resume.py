@@ -47,6 +47,19 @@ def _entry_attempts(value: object) -> int:
     return 0
 
 
+def _entry_reason(value: object) -> str:
+    if isinstance(value, dict):
+        reason = cast("dict[str, object]", value).get("reason")
+        if isinstance(reason, str):
+            return reason
+    return ""
+
+
+def load_reasons(playlist_url: str) -> dict[str, str]:
+    """Why each track ended where it did, for the ones that said."""
+    return _coerce_to_reason_map(_read_raw().get(_normalize_playlist_url(playlist_url)))
+
+
 def _normalize_playlist_url(url: str) -> str:
     return url.rstrip("/")
 
@@ -79,6 +92,21 @@ def _coerce_to_attempt_map(entry: object) -> dict[str, int]:
     return {k: _entry_attempts(v) for k, v in entry.items() if isinstance(k, str)}
 
 
+def _coerce_to_reason_map(entry: object) -> dict[str, str]:
+    if not isinstance(entry, dict):
+        return {}
+    return {k: _entry_reason(v) for k, v in entry.items() if isinstance(k, str)}
+
+
+def _entry(state: str, attempts: int, reason: str) -> dict[str, object]:
+    """One stored track record. The reason is omitted when there is nothing to say, so a
+    file of successful tracks stays as readable as it was before reasons existed."""
+    record: dict[str, object] = {"state": state, "attempts": attempts}
+    if reason:
+        record["reason"] = reason
+    return record
+
+
 def load_states(playlist_url: str) -> dict[str, str]:
     """
     Load track-state map for this playlist. Empty dict if none.
@@ -96,11 +124,14 @@ def load_attempts(playlist_url: str) -> dict[str, int]:
     return _coerce_to_attempt_map(_read_raw().get(_normalize_playlist_url(playlist_url)))
 
 
-def record_state(playlist_url: str, track_url: str, state: TrackState) -> None:
+def record_state(playlist_url: str, track_url: str, state: TrackState, reason: str = "") -> None:
     """Set the state for one track in this playlist; overwrites prior state.
 
     A budgeted state also bumps that track's attempt count, and any other state clears it:
     a track that got somewhere new has not spent an attempt on being stuck.
+
+    The reason is kept alongside so a track that needs attention says what is wrong with
+    it here, rather than only in a rotating log that ages the answer out.
     """
     path = get_processed_file()
     key = _normalize_playlist_url(playlist_url)
@@ -109,10 +140,12 @@ def record_state(playlist_url: str, track_url: str, state: TrackState) -> None:
         entry = data.get(key)
         states = _coerce_to_state_map(entry)
         attempts = _coerce_to_attempt_map(entry)
+        reasons = _coerce_to_reason_map(entry)
         states[track_url] = state
         attempts[track_url] = attempts.get(track_url, 0) + 1 if state in _BUDGETED_STATES else 0
+        reasons[track_url] = reason
         data[key] = {
-            url: {"state": s, "attempts": attempts.get(url, 0)} for url, s in states.items()
+            url: _entry(s, attempts.get(url, 0), reasons.get(url, "")) for url, s in states.items()
         }
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2), encoding="utf-8")
