@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import signal
@@ -54,10 +55,19 @@ def is_debug_port_open(port: int, *, timeout_seconds: float = 1.0) -> bool:
 
 
 def pids_on_port(port: int) -> list[int]:
-    """Process ids listening on a TCP port, or an empty list if they cannot be read."""
+    """Process ids *listening* on a TCP port, or an empty list if they cannot be read.
+
+    These ids get signalled, so a client of the port must never appear among them: point a
+    browser at localhost:9222 to watch what the automation is doing and a plain ":9222"
+    match returns that browser too, which the shutdown then terminates.
+
+    "-a" is the load-bearing part. lsof ORs its selection flags, so "-sTCP:LISTEN" on its
+    own widens the match instead of narrowing it and every client comes back anyway —
+    measured, not assumed.
+    """
     try:
         result = subprocess.run(  # noqa: S603
-            ["lsof", "-ti", f":{port}"],  # noqa: S607
+            ["lsof", "-ti", f"tcp:{port}", "-a", "-sTCP:LISTEN"],  # noqa: S607
             capture_output=True,
             check=False,
             text=True,
@@ -94,6 +104,58 @@ def kill_chrome_on_port(port: int, *, wait_seconds: float = 5.0) -> None:
     logger.warning("Port %d still answering %.0fs after kill.", port, wait_seconds)
 
 
+def shutdown_chrome_on_port(profile_dir: Path, port: int, *, wait_seconds: float = 8.0) -> None:
+    """Stop the Chrome on this port, giving it the chance to write its profile out first.
+
+    SIGTERM rather than kill_chrome_on_port's SIGKILL: the saved SoundCloud session and the
+    OAuth grants a gate run collects live in cookies Chrome only flushes on a clean exit,
+    and losing them means signing in again before the next run.
+    """
+    owners = pids_on_port(port)
+    for pid in owners:
+        with contextlib.suppress(ProcessLookupError, PermissionError):
+            os.kill(pid, signal.SIGTERM)
+
+    if _wait_for_port_to_free(port, wait_seconds):
+        _clear_marker(profile_dir)
+        logger.info("Shut down the Chrome this run launched (port %d).", port)
+        return
+
+    # Only the processes actually asked to stop, and only those still holding the port.
+    # Re-reading the port here instead would SIGKILL whatever owns it now: the wait above
+    # is long enough for Chrome to exit and for the next thing — another run, a browser
+    # someone started by hand — to bind a port number as predictable as 9222.
+    logger.warning("Chrome ignored SIGTERM after %.0fs — killing it.", wait_seconds)
+    for pid in set(pids_on_port(port)) & set(owners):
+        with contextlib.suppress(ProcessLookupError, PermissionError):
+            os.kill(pid, signal.SIGKILL)
+
+    if _wait_for_port_to_free(port, wait_seconds=2.0):
+        _clear_marker(profile_dir)
+        return
+    # Marker left in place on purpose: it is what stops the next run attaching to, and
+    # driving, whatever is on this port. Deleting it here would disarm that guard at the
+    # one moment something really is still listening.
+    logger.warning(
+        "Port %d is still held — leaving the mode marker so the next run "
+        "does not adopt whatever owns it.",
+        port,
+    )
+
+
+def _wait_for_port_to_free(port: int, wait_seconds: float) -> bool:
+    deadline = time.monotonic() + wait_seconds
+    while time.monotonic() < deadline:
+        if not is_debug_port_open(port):
+            return True
+        time.sleep(DEFAULT_POLL_INTERVAL_SECONDS)
+    return not is_debug_port_open(port)
+
+
+def _clear_marker(profile_dir: Path) -> None:
+    (profile_dir / _MODE_MARKER).unlink(missing_ok=True)
+
+
 def _running_mode(profile_dir: Path, port: int) -> str | None:
     """The mode of the Chrome on this port, or None if that cannot be established.
 
@@ -120,7 +182,7 @@ def ensure_chrome_running(  # noqa: PLR0913
     headed: bool = False,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
     poll_interval_seconds: float = DEFAULT_POLL_INTERVAL_SECONDS,
-) -> None:
+) -> bool:
     """
     Attach to an existing Chrome debug session if one is already running on `port`,
     otherwise kill any stale process and launch a fresh instance.
@@ -129,13 +191,16 @@ def ensure_chrome_running(  # noqa: PLR0913
     started against a headless Chrome shows the user nothing to act on, and the login and
     record flows depend on there being a window.
 
+    Returns True when this call started the browser, so the caller can shut down what it
+    started and leave a session someone else is using alone.
+
     Raises ChromeBringupError if the port doesn't open within `timeout_seconds`.
     """
     want = "headed" if headed else "headless"
     if is_debug_port_open(port):
         if _running_mode(profile_dir, port) == want:
             logger.info("Chrome already running on port %d — reusing existing session.", port)
-            return
+            return False
         logger.info("Chrome on port %d is not %s — restarting it.", port, want)
 
     kill_chrome_on_port(port)
@@ -174,7 +239,7 @@ def ensure_chrome_running(  # noqa: PLR0913
             owners = ",".join(str(pid) for pid in pids_on_port(port))
             (profile_dir / _MODE_MARKER).write_text(f"{want}:{owners}")
             logger.info("Chrome debug port %d is up (%s).", port, want)
-            return
+            return True
         time.sleep(poll_interval_seconds)
 
     msg = f"Chrome debug port {port} did not respond within {timeout_seconds}s"
