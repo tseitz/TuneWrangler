@@ -182,9 +182,10 @@ def validate_phase2_config() -> None:
     """Raise if config required for Phase 2 (stealth Playwright) is invalid."""
     # No LLM required. Playwright + browser profile are enough.
     validate_gate_form_config()
-    if DOWNLOAD_DIR is not None and not DOWNLOAD_DIR.parent.exists():
-        msg = f"TUNEWRANGLER_SC_DOWNLOAD_DIR parent does not exist: {DOWNLOAD_DIR.parent}"
-        raise RuntimeError(msg)
+    # Warn, never raise. An unreachable download dir means an unplugged drive far more
+    # often than a typo, both save paths already fall back to the log directory, and
+    # refusing to start is how a whole run is lost to a detachable disk.
+    warn_if_download_dir_unreachable()
 
 
 def validate_jev_config() -> None:
@@ -215,7 +216,8 @@ def warn_if_download_dir_unreachable() -> None:
     if DOWNLOAD_DIR is None or DOWNLOAD_DIR.parent.exists():
         return
     logging.getLogger("soundcloud_dl.config").warning(
-        "TUNEWRANGLER_SC_DOWNLOAD_DIR is unreachable (%s) — downloads will fall back to the "
-        "log directory. Plug the drive in now if you want them filed properly.",
+        "TUNEWRANGLER_SC_DOWNLOAD_DIR is unreachable (%s) — downloads will be saved to %s "
+        "instead. Plug the drive in now if you want them filed properly.",
         DOWNLOAD_DIR.parent,
+        get_log_dir() / "downloads",
     )

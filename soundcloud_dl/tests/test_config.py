@@ -150,3 +150,31 @@ def test_a_reachable_download_dir_says_nothing(monkeypatch, caplog, tmp_path):
     with caplog.at_level(logging.WARNING):
         cfg.warn_if_download_dir_unreachable()
     assert caplog.text == ""
+
+
+def test_phase2_does_not_refuse_to_run_on_an_unplugged_drive(monkeypatch, tmp_path, caplog):
+    """An unreachable download dir is an unplugged external far more often than a typo.
+    Both save paths already fall back to the log directory, so raising here loses a whole
+    run — including gates whose follow, repost and OAuth grant a re-run cannot get back.
+    """
+    import logging
+
+    from soundcloud_dl import config
+
+    monkeypatch.setattr(config, "DOWNLOAD_DIR", tmp_path / "gone" / "Downloaded")
+    monkeypatch.setattr(config, "DOWNLOAD_EMAIL", "a@b.c")
+    with caplog.at_level(logging.WARNING):
+        config.validate_phase2_config()
+    assert any("unreachable" in r.getMessage() for r in caplog.records)
+
+
+def test_a_reachable_download_dir_warns_about_nothing(monkeypatch, tmp_path, caplog):
+    import logging
+
+    from soundcloud_dl import config
+
+    monkeypatch.setattr(config, "DOWNLOAD_DIR", tmp_path / "Downloaded")
+    monkeypatch.setattr(config, "DOWNLOAD_EMAIL", "a@b.c")
+    with caplog.at_level(logging.WARNING):
+        config.validate_phase2_config()
+    assert not any("unreachable" in r.getMessage() for r in caplog.records)
