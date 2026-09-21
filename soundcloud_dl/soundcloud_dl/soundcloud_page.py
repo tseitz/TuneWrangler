@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlparse
 if TYPE_CHECKING:
     from playwright.async_api import BrowserContext, Page
 
-from soundcloud_dl.config import PAGE_LOAD_WAIT_SECONDS, get_debug_dir
+from soundcloud_dl.config import get_debug_dir
 from soundcloud_dl.playwright_browser import new_page, random_delay
 
 logger = logging.getLogger("soundcloud_dl.soundcloud_page")
@@ -155,15 +155,22 @@ async def get_gate_url(context: BrowserContext, track_url: str) -> str:  # noqa:
 
     Raises SoundCloudPageError if no free download button is found.
     """
+    # Local import: soundcloud_actions pulls in the API client, and this module is imported
+    # by main.py before any of that is needed.
+    from soundcloud_dl.soundcloud_actions import _wait_for_actions, block_ads  # noqa: PLC0415
+
     page = await new_page(context)
     try:
         logger.info("Navigating to track: %s", track_url)
+        await block_ads(page)
         await page.goto(track_url, wait_until="domcontentloaded", timeout=30_000)
 
-        # Wait for SPA to render
-        if PAGE_LOAD_WAIT_SECONDS > 0:
-            await page.wait_for_timeout(PAGE_LOAD_WAIT_SECONDS * 1000)
-
+        # A fixed sleep read whatever was there and moved on, and a track page renders
+        # nothing in a background tab — Chrome throttles the timers its SPA draws on. So a
+        # track whose buy link says "Free Download" was searched for in an empty document
+        # and reported as having no download at all. This brings the tab to the front and
+        # waits for the engagement bar to exist before anything is looked for.
+        await _wait_for_actions(page)
         await random_delay(page)
 
         # Find the free download element
@@ -195,6 +202,16 @@ async def get_gate_url(context: BrowserContext, track_url: str) -> str:  # noqa:
                 logger.info("DEBUG screenshot saved → %s", path)
             except Exception:  # noqa: BLE001, S110
                 pass
+            # "Nothing found" and "nothing rendered" are not the same answer, and the
+            # caller retires the track on the first. If the engagement bar is missing the
+            # page never drew its content, so no conclusion about the track is available.
+            rendered = await page.query_selector(".soundActions, .userInfoBar")
+            if rendered is None:
+                msg = (
+                    f"SoundCloud served no track content for {track_url} — the page body "
+                    f"never rendered, so whether it has a download is unknown"
+                )
+                raise SoundCloudPageError(msg)
             msg = f"No free download button found on: {track_url}"
             raise SoundCloudPageError(msg)
 

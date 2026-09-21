@@ -16,7 +16,6 @@ def _no_real_page(monkeypatch):
     )
     monkeypatch.setattr("soundcloud_dl.soundcloud_actions.block_ads", AsyncMock(return_value=None))
     monkeypatch.setattr(soundcloud_page, "random_delay", AsyncMock(return_value=None))
-    monkeypatch.setattr(soundcloud_page, "PAGE_LOAD_WAIT_SECONDS", 0)
 
 
 def _page(*, inline_download=False, more=False, menu_download=False) -> MagicMock:
