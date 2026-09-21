@@ -1025,3 +1025,57 @@ def test_a_data_step_element_counts_as_a_control_whatever_its_tag():
 
     assert _is_control(_ctl("a", step="follow"))
     assert not _is_control(_ctl("a"))
+
+
+@pytest.mark.asyncio
+async def test_a_declined_grant_ends_the_run_instead_of_looping():
+    """gaterush asks for an account grant its handler will not approve. The model cannot
+    know that, so it keeps choosing the control that asks — 22 turns reopening the same
+    consent screen before the iteration cap ended the run with nothing.
+    """
+    from unittest.mock import MagicMock
+
+    from soundcloud_dl.gate_handlers.judgment import JudgmentGateHandler
+    from soundcloud_dl.gate_handlers.login_wall import LoginWallEncountered
+
+    h = JudgmentGateHandler(config={"gate": "g", "steps": []})
+    page = MagicMock()
+    page.url = "https://gaterush.me/x"
+
+    h._raise_if_consent_declined(page)  # no grant seen yet — must not raise
+
+    h.consent_declined = True
+    with pytest.raises(LoginWallEncountered) as exc:
+        h._raise_if_consent_declined(page)
+    assert "grant" in exc.value.reason
+
+
+@pytest.mark.asyncio
+async def test_the_turn_loop_is_what_checks_the_declined_grant():
+    """Testing the method alone passes with the call site deleted — the wiring is the
+    part that stops the loop.
+    """
+    from unittest.mock import MagicMock
+
+    from soundcloud_dl.gate_handlers.judgment import JudgmentGateHandler
+    from soundcloud_dl.gate_handlers.login_wall import LoginWallEncountered
+
+    h = JudgmentGateHandler(config={"gate": "g", "steps": []})
+    h.consent_declined = True
+    page = MagicMock()
+    page.url = "https://gaterush.me/x"
+
+    with pytest.raises(LoginWallEncountered):
+        await h._turn_guards(page, set(), None)
+
+
+def test_leaving_a_consent_popup_open_is_what_sets_the_flag():
+    """on_keep_open fires only when a consent popup is declined, so it is the exact
+    signal — if that ever changes, the run stops on popups it should have ignored.
+    """
+    import inspect
+
+    from soundcloud_dl.gate_handlers import oauth_popup
+
+    src = inspect.getsource(oauth_popup)
+    assert src.count("on_keep_open(") == 1, "on_keep_open is no longer decline-only"

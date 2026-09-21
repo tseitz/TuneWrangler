@@ -1074,11 +1074,27 @@ class JudgmentGateHandler(GateHandler):
         # stall a CSS carousel transition mid-flight. Re-focus before every snapshot.
         with contextlib.suppress(Exception):
             await page.bring_to_front()
+        self._raise_if_consent_declined(page)
         await self._raise_on_login_wall(page)
         if await self._reanchor_page(page):
             self._note_off_gate(dead_keys, last_key)
         await self._reanchor_scroll(page)
         await self._raise_on_captcha(page)
+
+    def _raise_if_consent_declined(self, page: Page) -> None:
+        """End the run once a grant was left for a person to decide on.
+
+        The gate cannot advance without it and the model cannot know that, so it keeps
+        picking the control that asks — the same consent screen reopening every few turns
+        until the iteration cap ends the run. Stopping here says what is actually needed.
+        """
+        if not self.consent_declined:
+            return
+        reason = (
+            "the gate wants a grant on your SoundCloud account, which this handler will "
+            "not approve for you — approve it on the open tab, then re-run"
+        )
+        raise LoginWallEncountered(page.url, reason, self.gate_name)
 
     def _note_off_gate(self, dead_keys: set[str], last_key: str | None) -> None:
         """Book-keeping for a turn that had to be dragged back to the gate."""

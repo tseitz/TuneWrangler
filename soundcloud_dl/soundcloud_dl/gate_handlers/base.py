@@ -105,6 +105,9 @@ class GateHandler:
         self.download_dir = download_dir
         self.track_title = track_title
         self.downloaded = False
+        #: Set when a consent popup was left for a person instead of approved. Nothing on
+        #: the gate can advance past that point, so a run that sees it is over.
+        self.consent_declined = False
         self._pause_warned = False
 
     def _note_saved(self, dest: Path, via: str = "") -> None:
@@ -488,6 +491,14 @@ class GateHandler:
         _popups: list[Page] = []
         _keep_open: set[Page] = set()
 
+        def _consent_left_open(popup: Page) -> None:
+            _keep_open.add(popup)
+            # The gate asked for a grant this handler is configured not to give, so the
+            # control that asks for it will never complete. Without this the model keeps
+            # choosing that control — gaterush spent 22 turns reopening the same consent
+            # screen — and the run ends on the iteration cap with nothing to show.
+            self.consent_declined = True
+
         def _on_popup(popup: Page) -> None:
             _popups.append(popup)
             # Ahead of the OAuth handler, and synchronously: that handler closes every popup
@@ -503,7 +514,7 @@ class GateHandler:
                         popup,
                         self.gate_name,
                         approve=self.auto_approve_oauth,
-                        on_keep_open=_keep_open.add,
+                        on_keep_open=_consent_left_open,
                     )
                 )
             )
