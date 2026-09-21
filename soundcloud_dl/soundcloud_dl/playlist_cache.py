@@ -50,6 +50,8 @@ def _item_to_track(item: object) -> TrackItem | None:
         title=_str_or_none(d.get("title")),
         purchase_url=_str_or_none(d.get("purchase_url")),
         artist=_str_or_none(d.get("artist")),
+        downloadable=d.get("downloadable") is True,
+        download_url=_str_or_none(d.get("download_url")),
     )
 
 
@@ -86,6 +88,12 @@ def load_cached_tracks(playlist_url: str) -> list[TrackItem] | None:
     stored = _get_stored_list(data, key)
     if not isinstance(stored, list):
         return None
+    # An entry written before downloadable/download_url existed cannot answer whether a
+    # track has its own download, and absent would read as "no" — silently retiring every
+    # cached track to the gate flow, or to NO_GATE. Re-read the playlist instead.
+    if any(isinstance(i, dict) and "url" in i and "downloadable" not in i for i in stored):
+        logger.info("Playlist cache predates the download fields — re-reading from the API")
+        return None
     tracks: list[TrackItem] = []
     for item in stored:
         track = _item_to_track(item)
@@ -101,7 +109,14 @@ def save_cached_tracks(playlist_url: str, tracks: list[TrackItem]) -> None:
     path = get_playlist_cache_file()
     key = _normalize_playlist_url(playlist_url)
     payload = [
-        {"url": t.url, "title": t.title, "purchase_url": t.purchase_url, "artist": t.artist}
+        {
+            "url": t.url,
+            "title": t.title,
+            "purchase_url": t.purchase_url,
+            "artist": t.artist,
+            "downloadable": t.downloadable,
+            "download_url": t.download_url,
+        }
         for t in tracks
     ]
     try:
