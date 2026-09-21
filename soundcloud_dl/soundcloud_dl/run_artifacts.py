@@ -39,6 +39,7 @@ class RunRecorder:
         safe = _UNSAFE_NAME_RE.sub("_", gate_name)[:80] or "gate"
         self.dir: Path = get_runs_dir() / f"{safe}-{stamp}"
         self.dir.mkdir(parents=True, exist_ok=True)
+        self._finished = False
         logger.info("[%s] recording run → %s", gate_name, self.dir)
 
     async def screenshot(self, page: Page, label: str) -> None:
@@ -49,6 +50,15 @@ class RunRecorder:
             logger.warning("[%s] screenshot %r failed", self.gate_name, label, exc_info=True)
 
     def finish(self, **outcome: Any) -> None:  # noqa: ANN401
+        """Write the outcome once. Later calls are ignored.
+
+        Callers record on the path they know most about and again from a finally, so that
+        no exit can leave a run dir with screenshots and nothing saying how it ended. The
+        first call is the specific one; the backstop must not overwrite it with less.
+        """
+        if self._finished:
+            return
+        self._finished = True
         payload = {
             "gate": self.gate_name,
             "finished_at": datetime.now(UTC).isoformat(),

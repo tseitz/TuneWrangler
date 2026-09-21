@@ -328,6 +328,11 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
     # into SoundCloud's 2000-following cap. The two states below are the exceptions: both
     # leave the tab open for a person to finish, and the gate is still checking.
     keep_follows = False
+    # Set as the run goes, so the finally can record how it ended whichever way it left.
+    final_url: str | None = None
+    results: dict[str, Any] = {}
+    downloaded = False
+    terminal = "no_gate_reached"
     try:
         # The API's own answer, and the only path that needs no page at all. A track page
         # renders nothing when SoundCloud's SPA throws, and the download is then invisible
@@ -486,6 +491,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             )
             return "manual_review"
     except CaptchaEncountered as e:
+        terminal = "captcha"
         keep_follows = True
         logger.warning(
             "CAPTCHA | %s | %s — tab left open, manual followup needed",
@@ -494,6 +500,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         )
         return "captcha_pending"
     except LoginWallEncountered as e:
+        terminal = "login_required"
         keep_follows = True
         logger.warning(
             "LOGIN_REQUIRED | %s | %s — tab left open, finish it there and re-run",
@@ -502,6 +509,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         )
         return "login_required"
     except StuckGate as e:
+        terminal = "StuckGate"
         if page:
             await _save_debug_artifacts(page, track_label)
         logger.warning(
@@ -511,9 +519,11 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         )
         return "manual_review"
     except GateNotSupportedError as e:
+        terminal = "unsupported"
         logger.warning("UNSUPPORTED | %s | no handler for gate: %s", track_label, e)
         return "unsupported"
     except SoundCloudPageError as e:
+        terminal = "no_gate"
         # SC page issues (no gate button found, "FREE DL" text not a real gate link,
         # no new tab opened) are human-review candidates, not automatic retries.
         if page:
@@ -521,11 +531,13 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         logger.warning("NO_GATE | %s | %s", track_label, e)
         return "manual_review"
     except GateStepError:
+        terminal = "GateStepError"
         if page:
             await _save_debug_artifacts(page, track_label)
         logger.exception("FAILED | %s", track_label)
         return "failed"
     except PlaywrightError as e:
+        terminal = type(e).__name__
         if _is_browser_gone(e):
             msg = f"Chrome closed while working on {track_label}"
             raise BrowserGoneError(msg) from e
@@ -533,12 +545,25 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             await _save_debug_artifacts(page, track_label)
         logger.exception("FAILED | %s | %s", track_label, type(e).__name__)
         return "failed"
-    except Exception:
+    except Exception as e:
+        terminal = type(e).__name__
         if page:
             await _save_debug_artifacts(page, track_label)
         logger.exception("FAILED | %s | unexpected error", track_label)
         return "failed"
     finally:
+        # Whatever happened, the run dir gets a result. finish() keeps the first call, so
+        # the detailed record written on the way through wins and this only fills the gap
+        # left by an exception — which is precisely the run worth looking at afterwards.
+        if recorder is not None:
+            recorder.finish(
+                url=track.url,
+                gate_url=final_url,
+                downloaded=downloaded,
+                turns=len(results),
+                terminal=terminal,
+                steps={k: str(v) for k, v in results.items()},
+            )
         if page:
             # A page belonging to a browser that has gone raises on close, which would
             # replace whatever is already on its way out with a less useful error.
