@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import contextlib
 import logging
 import re
 import sys
@@ -12,6 +13,8 @@ if TYPE_CHECKING:
     from playwright.async_api import Page
 
     from soundcloud_dl.soundcloud_actions import ActionResult
+
+from playwright.async_api import Error as PlaywrightError
 
 from soundcloud_dl import pending_follows
 from soundcloud_dl.config import (
@@ -75,6 +78,30 @@ logger = logging.getLogger("soundcloud_dl.main")
 
 class SoundCloudLoginRequiredError(RuntimeError):
     """Raised when the profile is signed out and nothing can ask a human to fix it."""
+
+
+class BrowserGoneError(RuntimeError):
+    """Raised when Chrome disappears mid-run, so the remaining tracks are not burned.
+
+    Every track after the browser dies fails identically and instantly on its first
+    page open. Recording those as "failed" says the gate was tried and it was not.
+    """
+
+
+#: How a dead browser announces itself. Playwright raises TargetClosedError for this but
+#: does not export the class from playwright.async_api, so the message is the only public
+#: signal — same bind as playwright_browser._CDP_CONTEXT_ERROR.
+_BROWSER_GONE_MARKERS = (
+    "target page, context or browser has been closed",
+    "browser has been closed",
+    "target closed",
+    "connection closed",
+)
+
+
+def _is_browser_gone(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return any(marker in text for marker in _BROWSER_GONE_MARKERS)
 
 
 _UNSAFE_FILENAME_RE = re.compile(r"[^\w\-]")
@@ -498,6 +525,14 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             await _save_debug_artifacts(page, track_label)
         logger.exception("FAILED | %s", track_label)
         return "failed"
+    except PlaywrightError as e:
+        if _is_browser_gone(e):
+            msg = f"Chrome closed while working on {track_label}"
+            raise BrowserGoneError(msg) from e
+        if page:
+            await _save_debug_artifacts(page, track_label)
+        logger.exception("FAILED | %s | %s", track_label, type(e).__name__)
+        return "failed"
     except Exception:
         if page:
             await _save_debug_artifacts(page, track_label)
@@ -505,7 +540,10 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         return "failed"
     finally:
         if page:
-            await page.close()
+            # A page belonging to a browser that has gone raises on close, which would
+            # replace whatever is already on its way out with a less useful error.
+            with contextlib.suppress(Exception):
+                await page.close()
         # Never before the run has ended: giving a follow back mid-run takes it away from
         # the gate that is still checking for it.
         if keep_follows:
@@ -544,7 +582,19 @@ async def _run_phase2(
 
         for idx, track in enumerate(to_process, 1):
             logger.info("Phase 2 track %d/%d: %s", idx, len(to_process), track.url)
-            outcome = await _process_track(context, track, pause=pause, sc_actions=sc_actions)
+            try:
+                outcome = await _process_track(context, track, pause=pause, sc_actions=sc_actions)
+            except BrowserGoneError:
+                # Deliberately no record_state: this track and the ones after it were never
+                # tried, and writing "failed" would spend their retry budget on a browser
+                # crash rather than on anything the gates did.
+                logger.exception(
+                    "Stopping: the browser went away with %d of %d tracks left. "
+                    "They keep their current state and will be picked up next run.",
+                    len(to_process) - idx + 1,
+                    len(to_process),
+                )
+                break
             counts[outcome] += 1
             if RESUME_ENABLED:
                 record_state(playlist_url, track.url, outcome)
