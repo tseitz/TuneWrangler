@@ -1,6 +1,8 @@
 """Unit tests for the manual-unlock inspector (inspect_gate.py)."""
 
+import asyncio
 import sys
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -164,3 +166,74 @@ def test_enter_is_never_read_when_stdin_is_not_a_terminal(monkeypatch):
     monkeypatch.setattr(sys, "stdin", None)
     assert ig._stdin_is_a_terminal() is False
     assert ig._enter_pressed() is False
+
+
+class FakeEmitter:
+    """Just enough of Page/BrowserContext's .on() to fire events by hand."""
+
+    def __init__(self) -> None:
+        self.handlers: dict[str, list] = {}
+
+    def on(self, event: str, handler) -> None:
+        self.handlers.setdefault(event, []).append(handler)
+
+    def emit(self, event: str, arg: object) -> None:
+        for handler in self.handlers.get(event, []):
+            handler(arg)
+
+
+def fake_download(name: str = "track.wav", *, hang: bool = False) -> MagicMock:
+    download = MagicMock()
+    download.suggested_filename = name
+
+    async def save_as(path: str) -> None:
+        if hang:
+            await asyncio.Event().wait()
+        await asyncio.to_thread(Path(path).write_bytes, b"RIFF")
+
+    download.save_as = save_as
+    return download
+
+
+@pytest.mark.asyncio
+async def test_a_download_the_operator_starts_is_saved(tmp_path):
+    """Playwright routes an attached browser's downloads into a temp dir it deletes on
+    disconnect, so the file a person unlocked by hand vanished the moment they clicked Done.
+    A gate is one-shot, and that download cannot be had again."""
+    context, page = FakeEmitter(), FakeEmitter()
+    saves = ig._keep_downloads(context, page, tmp_path)
+
+    page.emit("download", fake_download("gate.wav"))
+    popup = FakeEmitter()
+    context.emit("page", popup)
+    popup.emit("download", fake_download("popup.wav"))
+    await ig._finish_saves(saves)
+
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["gate.wav", "popup.wav"]
+
+
+@pytest.mark.asyncio
+async def test_a_download_still_transferring_is_reported_not_dropped(tmp_path, monkeypatch, caplog):
+    monkeypatch.setattr(ig, "_SAVE_TIMEOUT_S", 0.01)
+    context, page = FakeEmitter(), FakeEmitter()
+    saves = ig._keep_downloads(context, page, tmp_path)
+
+    page.emit("download", fake_download(hang=True))
+    await ig._finish_saves(saves)
+
+    assert "still transferring" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_a_download_never_overwrites_an_earlier_one(tmp_path):
+    """Inspect keeps the gate's own filename, and artists reuse names like master.wav, so a
+    second gate's file would silently replace the first track."""
+    (tmp_path / "master.wav").write_bytes(b"first")
+    context, page = FakeEmitter(), FakeEmitter()
+    saves = ig._keep_downloads(context, page, tmp_path)
+
+    page.emit("download", fake_download("master.wav"))
+    await ig._finish_saves(saves)
+
+    assert (tmp_path / "master.wav").read_bytes() == b"first"
+    assert (tmp_path / "master (1).wav").exists()

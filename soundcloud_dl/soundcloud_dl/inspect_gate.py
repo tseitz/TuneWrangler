@@ -16,11 +16,13 @@ import asyncio
 import logging
 import select
 import sys
+from pathlib import Path
 from typing import Any
 
 from playwright.async_api import Page
 
-from soundcloud_dl.config import get_debug_dir
+from soundcloud_dl.config import DOWNLOAD_DIR, get_debug_dir, get_log_dir
+from soundcloud_dl.downloads import save_download
 from soundcloud_dl.gate_handlers.dom_snapshot import snapshot_elements
 from soundcloud_dl.playwright_browser import attached_browser
 
@@ -38,6 +40,9 @@ _SETTLE_ATTEMPTS = 30
 _DONE_POLL_MS = 400
 # ~2s of consecutive failures. Below that it is a navigation and will fix itself.
 _DONE_STALL_WARN_AFTER = 5
+
+# A WAV can still be transferring when Done is clicked.
+_SAVE_TIMEOUT_S = 120
 
 _DONE_BUTTON_ID = "tw-inspect-done"
 _DONE_FLAG = "__tw_inspect_done"
@@ -220,29 +225,87 @@ async def _write_page(page: Page, path: Any, label: str) -> None:  # noqa: ANN40
     logger.info("Snapshot → %s", path)
 
 
+def _keep_downloads(context: Any, page: Any, dest_dir: Path) -> list[asyncio.Future]:  # noqa: ANN401
+    """Save every download the operator starts, on the gate page or any popup.
+
+    An attached browser's downloads land in a Playwright temp dir that is deleted on
+    disconnect, so without this the file unlocked by hand is gone the moment Done is clicked.
+    """
+    saves: list[asyncio.Future] = []
+
+    # Plain functions: Playwright tags a handler with an attribute, which a bound method
+    # cannot carry, so page.on raises at attach time.
+    def keep(download: Any) -> None:  # noqa: ANN401
+        saves.append(asyncio.ensure_future(_save(download, dest_dir)))
+
+    def watch(new_page: Any) -> None:  # noqa: ANN401
+        new_page.on("download", keep)
+
+    page.on("download", keep)
+    context.on("page", watch)
+    return saves
+
+
+async def _save(download: Any, dest_dir: Path) -> None:  # noqa: ANN401
+    dest = await save_download(download, _free_path(dest_dir / download.suggested_filename))
+    logger.info("Saved inspect download → %s", dest)
+
+
+def _free_path(path: Path) -> Path:
+    """`path`, or `name (n).ext` if taken — these files keep the gate's own name, and
+    artists reuse names like master.wav."""
+    n = 1
+    candidate = path
+    while candidate.exists():
+        candidate = path.with_name(f"{path.stem} ({n}){path.suffix}")
+        n += 1
+    return candidate
+
+
+async def _finish_saves(saves: list[asyncio.Future]) -> None:
+    if not saves:
+        return
+    logger.info("Waiting for %d download(s) to finish saving…", len(saves))
+    done, pending = await asyncio.wait(saves, timeout=_SAVE_TIMEOUT_S)
+    if pending:
+        logger.warning(
+            "%d download(s) still transferring after %ss — they are lost when the browser "
+            "detaches. Download them again from the gate page.",
+            len(pending),
+            _SAVE_TIMEOUT_S,
+        )
+    for task in done:
+        if task.exception() is not None:
+            logger.warning("A download could not be saved: %s", task.exception())
+
+
 async def inspect_gate(url: str) -> None:
     """Open a gate page, wait for a manual unlock, and report what the unlock changed."""
     debug_dir = get_debug_dir()
     # The unlock being measured is performed by hand, so this one always needs a window.
     async with attached_browser(headed=True) as context:
         page = await context.new_page()
-        await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
-        logger.info("Gate page open: %s", page.url)
-
-        before = await _settled_snapshot(page, "before")
-        logger.info("Captured %d elements.", len(before))
-        await _write_page(page, debug_dir / "inspect-before.html", "before")
-
-        await _wait_for_done(page)
-
-        # Before the after-snapshot, or our own button lands in the diff as a NEW element.
+        saves = _keep_downloads(context, page, DOWNLOAD_DIR or get_log_dir() / "downloads")
         try:
-            await page.evaluate(_REMOVE_DONE_BUTTON_JS)
-        except Exception:  # noqa: BLE001
-            logger.warning("Could not remove the Done button; expect it in the diff below.")
+            await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
+            logger.info("Gate page open: %s", page.url)
 
-        after = await _settled_snapshot(page, "after")
-        await _write_page(page, debug_dir / "inspect-after.html", "after")
-        logger.info("─" * 60)
-        _report(before, after)
-        logger.info("─" * 60)
+            before = await _settled_snapshot(page, "before")
+            logger.info("Captured %d elements.", len(before))
+            await _write_page(page, debug_dir / "inspect-before.html", "before")
+
+            await _wait_for_done(page)
+
+            # Before the after-snapshot, or our own button lands in the diff as a NEW element.
+            try:
+                await page.evaluate(_REMOVE_DONE_BUTTON_JS)
+            except Exception:  # noqa: BLE001
+                logger.warning("Could not remove the Done button; expect it in the diff below.")
+
+            after = await _settled_snapshot(page, "after")
+            await _write_page(page, debug_dir / "inspect-after.html", "after")
+            logger.info("─" * 60)
+            _report(before, after)
+            logger.info("─" * 60)
+        finally:
+            await _finish_saves(saves)
