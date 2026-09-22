@@ -48,18 +48,18 @@ async def detect_handler_from_page(page: Page) -> type[GateHandler] | None:
     # ToneDen: has the toneden-player or fan-gate wrapper.
     el = await page.query_selector(".toneden-player, [data-toneden], #fan-gate")
     if el is not None:
-        from soundcloud_dl.gate_handlers.toneden import TonedenHandler  # noqa: PLC0415
+        from soundcloud_dl.gate_handlers.jev import TonedenJevHandler  # noqa: PLC0415
 
-        return TonedenHandler
+        return TonedenJevHandler
 
     # PumpYourSound: has the socBtn__soundcloud or fangatex comment input.
     el = await page.query_selector(
         "div.socBtn__soundcloud, input.fangatex__icomment, [data-fangate-url]"
     )
     if el is not None:
-        from soundcloud_dl.gate_handlers.pumpyoursound import PumpYourSoundHandler  # noqa: PLC0415
+        from soundcloud_dl.gate_handlers.jev import PumpYourSoundJevHandler  # noqa: PLC0415
 
-        return PumpYourSoundHandler
+        return PumpYourSoundJevHandler
 
     return None
 
@@ -75,19 +75,20 @@ def get_handler_for_url(url: str) -> type[GateHandler]:  # noqa: PLR0911
     """
     lower = url.lower()
 
-    # hypeddit.yaml and HypedditHandler are still here and still pass their tests, but
-    # nothing routes to them any more: the flow needs the position of a control, which a
-    # step list cannot express. See HypedditJevHandler. Re-pointing this at the YAML
-    # handler brings back a gate that clicks an off-screen download and saves no file.
+    # The YAML handlers for hypeddit, toneden, pumpyoursound and followeb are still here and
+    # still pass their tests, but nothing routes to them. Re-pointing a host at its YAML brings
+    # back the bug that retired it: hypeddit's step list clicks an off-screen download
+    # (see HypedditJevHandler), and toneden's waits on the gate page while the file arrives
+    # in a popup, so a whole download lands and the run reports it failed.
     if "hypeddit.com" in lower:
         from soundcloud_dl.gate_handlers.jev import HypedditJevHandler  # noqa: PLC0415
 
         return HypedditJevHandler
 
     if "toneden.io" in lower:
-        from soundcloud_dl.gate_handlers.toneden import TonedenHandler  # noqa: PLC0415
+        from soundcloud_dl.gate_handlers.jev import TonedenJevHandler  # noqa: PLC0415
 
-        return TonedenHandler
+        return TonedenJevHandler
 
     if "fanlink.tv" in lower or "fanlink.to" in lower:
         from soundcloud_dl.gate_handlers.fanlink import FanLinkHandler  # noqa: PLC0415
@@ -95,14 +96,14 @@ def get_handler_for_url(url: str) -> type[GateHandler]:  # noqa: PLR0911
         return FanLinkHandler
 
     if "pumpyoursound.com" in lower:
-        from soundcloud_dl.gate_handlers.pumpyoursound import PumpYourSoundHandler  # noqa: PLC0415
+        from soundcloud_dl.gate_handlers.jev import PumpYourSoundJevHandler  # noqa: PLC0415
 
-        return PumpYourSoundHandler
+        return PumpYourSoundJevHandler
 
     if "followeb.de" in lower:
-        from soundcloud_dl.gate_handlers.followeb import FollowebHandler  # noqa: PLC0415
+        from soundcloud_dl.gate_handlers.jev import FollowebJevHandler  # noqa: PLC0415
 
-        return FollowebHandler
+        return FollowebJevHandler
 
     if "droploud.com" in lower:
         from soundcloud_dl.gate_handlers.jev import DroploudHandler  # noqa: PLC0415

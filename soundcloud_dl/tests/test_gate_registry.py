@@ -14,10 +14,25 @@ def test_hypeddit_url_returns_handler():
     assert handler_class.__name__ == "HypedditJevHandler"
 
 
-def test_toneden_url_returns_handler():
-    handler_class = get_handler_for_url("https://toneden.io/artist/sometrack")
-    assert handler_class is not None
-    assert handler_class.__name__ == "TonedenHandler"
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://toneden.io/artist/sometrack", "TonedenJevHandler"),
+        ("https://www.toneden.io/artist/post/123", "TonedenJevHandler"),
+        ("https://pumpyoursound.com/f/abc", "PumpYourSoundJevHandler"),
+        ("https://followeb.de/abc", "FollowebJevHandler"),
+    ],
+)
+def test_former_step_list_gates_are_driven_by_judgment(url, expected):
+    """toneden.yaml's download step waited on the gate page while ToneDen served the file
+    from a popup: the file downloaded in full and the run still reported it failed."""
+    assert get_handler_for_url(url).__name__ == expected
+
+
+def test_fanlink_stays_a_redirector():
+    """Fanlink is a link page, not a gate. Its handler lands on the real gate and main.py
+    runs that gate's own handler, so judgment on the link page would drive nothing."""
+    assert get_handler_for_url("https://fanlink.tv/abc123").__name__ == "FanLinkHandler"
 
 
 def test_unknown_url_raises():

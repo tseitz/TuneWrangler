@@ -244,3 +244,40 @@ async def test_a_download_step_does_not_click_an_off_screen_button():
     # A force step may still take a hidden match — overlaid or mid-transition is fine.
     # The download must not, which is the whole of the fix.
     assert asked == [True, False]
+
+
+@pytest.mark.asyncio
+async def test_a_download_wait_that_fails_says_why(tmp_path, caplog):
+    """The wait's exception was discarded with a bare pass. ToneDen's file then downloaded
+    in full from a popup while the log said only "no audio response intercepted", so the
+    miss read as a dead gate instead of a download the handler never heard about.
+    """
+    handler = GateHandler(config={"gate": "g", "steps": []}, download_dir=tmp_path)
+    handler.scroll_before_click = False
+    handler._random_delay = AsyncMock()
+    el = MagicMock()
+    el.get_attribute = AsyncMock(return_value=None)
+    found = iter([el, None])
+
+    async def find(_page, _trigger, *, allow_hidden=False):
+        return next(found)
+
+    handler._find_element = find
+
+    class NoDownload:
+        async def __aenter__(self):
+            msg = "Timeout 45000ms exceeded"
+            raise TimeoutError(msg)
+
+        async def __aexit__(self, *_exc):
+            return False
+
+    page = MagicMock()
+    page.expect_download = MagicMock(return_value=NoDownload())
+    page.wait_for_timeout = AsyncMock()
+
+    step = {"id": "final_download", "trigger": "a", "action": "click", "download": True}
+    with caplog.at_level("INFO"), pytest.raises(GateStepError):
+        await handler._execute_step(page, step)
+
+    assert "no download event on the gate page (TimeoutError" in caplog.text

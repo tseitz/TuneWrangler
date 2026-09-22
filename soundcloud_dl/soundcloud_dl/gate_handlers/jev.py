@@ -69,6 +69,18 @@ class DroploudHandler(JevHandler):
     gate_slug = "droploud_jev"
 
 
+class TonedenJevHandler(JevHandler):
+    gate_slug = "toneden_jev"
+
+
+class PumpYourSoundJevHandler(JevHandler):
+    gate_slug = "pumpyoursound_jev"
+
+
+class FollowebJevHandler(JevHandler):
+    gate_slug = "followeb_jev"
+
+
 class GaterushHandler(JevHandler):
     """Gaterush, whose Connect SoundCloud is not satisfied by approving the popup.
 

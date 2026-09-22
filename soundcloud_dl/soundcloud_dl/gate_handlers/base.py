@@ -256,8 +256,14 @@ class GateHandler:
                             dest = rename_to_track(saved, self.track_title)
                             self._note_saved(dest)
                             downloaded = True
-                except Exception:  # noqa: BLE001, S110
-                    pass
+                except Exception as exc:  # noqa: BLE001
+                    logger.info(
+                        "[%s] no download event on the gate page (%s: %s)",
+                        self.gate_name,
+                        type(exc).__name__,
+                        exc,
+                    )
+                    logger.debug("[%s] download wait failed", self.gate_name, exc_info=True)
                 if not downloaded:
                     # Fallback 1: fetch the href directly.
                     # Handles both absolute URLs and relative paths (e.g. /download/6353).
