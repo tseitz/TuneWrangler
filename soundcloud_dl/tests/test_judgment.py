@@ -409,6 +409,7 @@ async def test_an_empty_field_we_have_a_value_for_is_filled_before_the_model_is_
     spent the turn on a control it could not press. This is not a decision, so it is not
     put to the model — and that also saves the API call.
     """
+
     class Asked(Exception):
         """Raised the moment the model is consulted, to pin which turn that first happens."""
 
@@ -523,6 +524,53 @@ async def test_unlocked_gate_downloads_without_consulting_the_model(monkeypatch)
     assert results["el_1_download"] == StepResult.SKIPPED
     assert not any(asked_before_download)
     el.click.assert_awaited()
+
+
+def test_download_due_spaces_retries_and_caps_attempts():
+    """A fresh key is due immediately; a tried one waits, then is retired for good.
+
+    Droploud's download button carries no locked class or icon at any point, so the fast
+    path calls it ready before the gate's real requirements are met. A miss there is not
+    proof the click was wrong — only that it was early — so it must stay retryable rather
+    than banked forever the first time.
+    """
+    handler = make_handler()
+    assert handler._download_due("k", 1) is True
+
+    handler._download_attempts["k"] = 1
+    handler._download_last_attempt_turn["k"] = 1
+    assert handler._download_due("k", 2) is False
+    assert handler._download_due("k", 1 + judgment_module._DOWNLOAD_RETRY_EVERY_TURNS) is True
+
+    handler._download_attempts["k"] = judgment_module._MAX_DOWNLOAD_ATTEMPTS_PER_KEY
+    handler._download_last_attempt_turn["k"] = 4
+    assert handler._download_due("k", 1_000) is False
+
+
+@pytest.mark.asyncio
+async def test_a_missed_download_is_retried_once_the_gate_has_had_more_turns(monkeypatch):
+    """The fast path's first miss must not lock the real download out for the rest of the run.
+
+    Revert _download_due to the old set-based _tried_downloads and this fails: the second
+    attempt never fires, _try_download is called once, and the run spends the rest of its
+    turns asking Jev to click el_btn instead.
+    """
+    handler = make_handler()
+    page = make_page([[PLAIN_BUTTON, READY_DOWNLOAD_LINK]], found_element=make_element())
+    stub_choice(monkeypatch, ["el_btn"] * 30)
+
+    attempts: list[int] = []
+
+    async def fake_try_download(self, _page, _results, _target, i):
+        attempts.append(i)
+        return len(attempts) == 2
+
+    monkeypatch.setattr(JudgmentGateHandler, "_try_download", fake_try_download)
+
+    results = await handler._run_steps(page, {})
+
+    assert attempts == [1, 1 + judgment_module._DOWNLOAD_RETRY_EVERY_TURNS]
+    assert results is not None
 
 
 @pytest.mark.asyncio
@@ -943,9 +991,9 @@ async def test_the_gate_pages_own_download_is_still_returned():
     async def arrives():
         return download
 
-    assert await handler._download_unless_a_popup_took_it(
-        asyncio.ensure_future(arrives())
-    ) is download
+    assert (
+        await handler._download_unless_a_popup_took_it(asyncio.ensure_future(arrives())) is download
+    )
 
 
 @pytest.mark.asyncio
@@ -991,8 +1039,12 @@ async def test_the_click_is_made_before_the_wait_is_raced():
 
 def _ctl(tag, *, onscreen=True, step="", visible=True, chrome=False):
     return {
-        "tag": tag, "step": step, "cls": "", "visible": visible,
-        "chrome": chrome, "onscreen": onscreen,
+        "tag": tag,
+        "step": step,
+        "cls": "",
+        "visible": visible,
+        "chrome": chrome,
+        "onscreen": onscreen,
     }
 
 

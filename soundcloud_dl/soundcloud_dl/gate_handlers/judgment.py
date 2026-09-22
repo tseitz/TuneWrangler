@@ -101,6 +101,15 @@ _MAX_REQUIREMENT_BLOCKS = 10
 # which does page outside itself ends the run saying so, instead of being fought every turn.
 _MAX_OFF_GATE_RETURNS = 3
 
+# Droploud's download button carries no disabled class or icon at any point — nothing in the
+# DOM says whether follow/repost/OAuth have actually landed, so the first click can easily
+# be too early. A miss must stay retryable, but not every turn: 3 turns gives Jev room to
+# drive the gate's real requirements before the same click is tried again, and 3 attempts is
+# enough to survive one early miss without letting a track that will never unlock burn its
+# whole turn budget on the same button.
+_DOWNLOAD_RETRY_EVERY_TURNS = 3
+_MAX_DOWNLOAD_ATTEMPTS_PER_KEY = 3
+
 # Domain knowledge ported from hypeddit.yaml's comments (lines 200-327): the download
 # button is usually visible from the start but stays locked — class contains "disable" or
 # "disabled", href stays "javascript:void(0)" — until required actions are completed first.
@@ -277,8 +286,11 @@ class JudgmentGateHandler(GateHandler):
         self._caught: list[Any] = []
         self._off_gate_returns = 0
         # Per element, not a single global flag: a wrong guess early must not lock out the
-        # real download button when it appears later.
-        self._tried_downloads: set[str] = set()
+        # real download button when it appears later. Keyed on the element, not banked as a
+        # single tried/untried bit — a miss on a gate with no visible locked state (droploud)
+        # is not proof the click was wrong, only that it was early.
+        self._download_attempts: dict[str, int] = {}
+        self._download_last_attempt_turn: dict[str, int] = {}
         self._warned_collisions: set[str] = set()
         # Constructed lazily so importing this module never requires TYPESAFE_API_KEY.
         self._client: AsyncTypeSafeClient | None = None
@@ -966,6 +978,23 @@ class JudgmentGateHandler(GateHandler):
                 # out-of-band must not end a run that has not tried the page itself yet.
                 logger.exception("[%s] acting on the gate's stated terms failed", self.gate_name)
 
+    def _download_due(self, key: str, i: int) -> bool:
+        """Whether the download at `key` deserves another click on turn `i`.
+
+        Not a one-shot: a gate that shows no locked state in the DOM (droploud) is called
+        ready before its real requirements are met, and a miss there proves nothing except
+        that it was tried too soon. Spacing retries by turn, rather than firing again as soon
+        as this is next asked, gives the turns in between a chance to actually satisfy the
+        gate — follow, repost, an OAuth grant — before the same click is spent again.
+        """
+        attempts = self._download_attempts.get(key, 0)
+        if attempts == 0:
+            return True
+        if attempts >= _MAX_DOWNLOAD_ATTEMPTS_PER_KEY:
+            return False
+        last_turn = self._download_last_attempt_turn.get(key, 0)
+        return i - last_turn >= _DOWNLOAD_RETRY_EVERY_TURNS
+
     async def _maybe_download(
         self,
         page: Page,
@@ -984,9 +1013,10 @@ class JudgmentGateHandler(GateHandler):
         if deferred is not None and self._offscreen_download is None:
             await self._why_hidden(page, deferred)
         self._offscreen_download = deferred or self._offscreen_download
-        if target is None or target["key"] in self._tried_downloads:
+        if target is None or not self._download_due(target["key"], i):
             return download_key, "not_ready"
-        self._tried_downloads.add(target["key"])
+        self._download_attempts[target["key"]] = self._download_attempts.get(target["key"], 0) + 1
+        self._download_last_attempt_turn[target["key"]] = i
         if await self._try_download(page, results, target, i):
             return download_key, "got_it"
         return download_key, "missed"
