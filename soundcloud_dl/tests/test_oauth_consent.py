@@ -140,6 +140,28 @@ async def test_a_consent_popup_is_still_approved_by_default():
     allow.click.assert_awaited_once()
 
 
+@pytest.mark.asyncio
+async def test_a_spotify_popup_is_closed_without_looking_for_allow():
+    """Hypeddit records the step from the popup opening, not from what happens inside it.
+
+    query_selector never awaited proves this: the old code waited up to 15s for an Allow
+    button that a plain Spotify login screen (no active session) never shows, then closed
+    anyway. Closing immediately is strictly better, not just equivalent.
+    """
+    popup = MagicMock()
+    popup.url = "https://accounts.spotify.com/authorize?client_id=x"
+    popup.wait_for_load_state = AsyncMock()
+    popup.wait_for_timeout = AsyncMock()
+    popup.is_closed = MagicMock(return_value=False)
+    popup.close = AsyncMock()
+    popup.query_selector = AsyncMock()
+
+    await handle_oauth_popup(popup, "hypeddit", approve=True)
+
+    popup.query_selector.assert_not_awaited()
+    popup.close.assert_awaited()
+
+
 class _FiresAPopupMidRun(GateHandler):
     """Minimal handler that produces one popup while run() is in progress."""
 

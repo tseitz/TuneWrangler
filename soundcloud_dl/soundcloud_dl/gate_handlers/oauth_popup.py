@@ -36,31 +36,24 @@ _SC_ALLOW = (
     "button:has-text('Allow'), button:has-text('Authorize'), "
     "button:has-text('Connect'), input[type='submit'], button[type='submit']"
 )
-# Spotify's consent screen uses data-testid="auth-accept" or text "Agree"/"Allow".
-_SPOTIFY_ALLOW = (
-    "button[data-testid='auth-accept'], "
-    "button:has-text('Agree'), button:has-text('Allow'), "
-    "button:has-text('Accept'), button:has-text('Authorize')"
-)
 
 
-async def _approve(popup: Page, gate_name: str, *, vendor: str) -> None:
-    """Click the consent button on a loaded OAuth popup."""
-    selector = _SC_ALLOW if vendor == "SoundCloud" else _SPOTIFY_ALLOW
+async def _approve(popup: Page, gate_name: str) -> None:
+    """Click the consent button on a loaded SoundCloud OAuth popup."""
     # Best-effort wait; on timeout fall through to query_selector below
     # which logs explicitly if the Allow button is still missing.
     with contextlib.suppress(Exception):
-        await popup.wait_for_selector(selector, state="visible", timeout=15_000)
+        await popup.wait_for_selector(_SC_ALLOW, state="visible", timeout=15_000)
 
-    allow = await popup.query_selector(selector)
+    allow = await popup.query_selector(_SC_ALLOW)
     if allow is None:
-        await _dump_buttons(popup, gate_name, vendor)
+        await _dump_buttons(popup, gate_name)
         return
 
-    logger.info("[%s] %s OAuth popup: clicking Allow", gate_name, vendor)
+    logger.info("[%s] SoundCloud OAuth popup: clicking Allow", gate_name)
     await popup.wait_for_timeout(500)
     await allow.click()
-    logger.info("[%s] %s OAuth popup: clicked Allow", gate_name, vendor)
+    logger.info("[%s] SoundCloud OAuth popup: clicked Allow", gate_name)
     # Wait for the popup to redirect back to the gate host or close itself.
     # ToneDen redirects to toneden.io/auth/spotify/callback then closes;
     # Hypeddit redirects back to hypeddit.com. Either way the popup is done.
@@ -71,7 +64,7 @@ async def _approve(popup: Page, gate_name: str, *, vendor: str) -> None:
         await popup.wait_for_timeout(500)
 
 
-async def _dump_buttons(popup: Page, gate_name: str, vendor: str) -> None:
+async def _dump_buttons(popup: Page, gate_name: str) -> None:
     """Log what the popup did show, so a changed consent screen is diagnosable."""
     try:
         btns = await popup.evaluate(
@@ -81,29 +74,38 @@ async def _dump_buttons(popup: Page, gate_name: str, vendor: str) -> None:
         )
     except Exception:  # noqa: BLE001
         logger.debug(
-            "[%s] %s OAuth popup: Allow button not found (could not dump)", gate_name, vendor
+            "[%s] SoundCloud OAuth popup: Allow button not found (could not dump)", gate_name
         )
         return
     logger.debug(
-        "[%s] %s OAuth popup: Allow button not found. Visible elements: %s",
+        "[%s] SoundCloud OAuth popup: Allow button not found. Visible elements: %s",
         gate_name,
-        vendor,
         btns,
     )
+
+
+async def _close_after_load(popup: Page, timeout_ms: int) -> None:
+    """Give a popup that needs no interaction a moment to settle, then close it.
+
+    Suppressed rather than let bubble: the popup may close itself between the wait and
+    the close call, and either way run() would close it anyway once the turn ends.
+    """
+    with contextlib.suppress(Exception):
+        await popup.wait_for_timeout(timeout_ms)
+        if not popup.is_closed():
+            await popup.close()
 
 
 def _decline(
     popup: Page,
     gate_name: str,
-    vendor: str,
     on_keep_open: Callable[[Page], None] | None,
 ) -> None:
     """Leave a consent popup for a person, and make sure run() leaves it alone too."""
     logger.warning(
-        "[%s] %s is asking for a grant on your account. Not clicking Allow — decide on "
-        "the open tab yourself, then re-run.",
+        "[%s] SoundCloud is asking for a grant on your account. Not clicking Allow — decide "
+        "on the open tab yourself, then re-run.",
         gate_name,
-        vendor,
     )
     if on_keep_open is not None:
         on_keep_open(popup)
@@ -157,29 +159,31 @@ async def handle_oauth_popup(
         # after they load — no OAuth interaction required.
         if is_instagram:
             logger.debug("[%s] Instagram follow popup: %s", gate_name, url)
-            # Popup may close itself between is_closed() check and close() call.
-            with contextlib.suppress(Exception):
-                await popup.wait_for_timeout(1_000)
-                if not popup.is_closed():
-                    await popup.close()
+            await _close_after_load(popup, 1_000)
             return
 
         # ToneDen's Instagram (and other URL-visit) steps open a popup that just
         # records the visit — no OAuth flow needed, just close it after it loads.
         if is_toneden_visit:
             logger.debug("[%s] ToneDen URL-visit popup: %s", gate_name, url)
-            await popup.wait_for_timeout(1_500)
-            if not popup.is_closed():
-                await popup.close()
+            await _close_after_load(popup, 1_500)
             return
 
-        vendor = "SoundCloud" if is_sc else "Spotify"
-        logger.debug("[%s] %s OAuth popup: %s", gate_name, vendor, url)
+        # Hypeddit's gate never checks whether Spotify granted anything back — the
+        # client-side step is recorded by opening the popup, not by what happens inside
+        # it. Trying to click Allow here waited 15s for a button a plain login screen
+        # (no active Spotify session) never shows, for no benefit over just closing it.
+        if is_sp:
+            logger.debug("[%s] Spotify popup: %s", gate_name, url)
+            await _close_after_load(popup, 1_000)
+            return
+
+        logger.debug("[%s] SoundCloud OAuth popup: %s", gate_name, url)
         if not approve:
             keep_open = True
-            _decline(popup, gate_name, vendor, on_keep_open)
+            _decline(popup, gate_name, on_keep_open)
             return
-        await _approve(popup, gate_name, vendor=vendor)
+        await _approve(popup, gate_name)
     except Exception:  # noqa: BLE001
         logger.debug("[%s] OAuth popup handler error", gate_name, exc_info=True)
     finally:
