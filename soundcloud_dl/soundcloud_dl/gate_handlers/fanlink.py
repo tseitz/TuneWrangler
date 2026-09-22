@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from playwright.async_api import Page
@@ -19,7 +18,16 @@ _FREE_DL_SELECTOR = (
 
 
 class FanLinkHandler(GateHandler):
-    config_path = Path(__file__).parent / "fanlink.yaml"
+    """The whole flow is run() below, so there is no step list and no YAML to load.
+
+    config_path pointed at a fanlink.yaml that has never existed, and the base class opens
+    it in __init__ — so every fanlink track died on FileNotFoundError before the gate was
+    even fetched. Supplying the config inline is what JevHandler does for the same reason.
+    """
+
+    def __init__(self, **kwargs: Any) -> None:  # noqa: ANN401
+        kwargs.setdefault("config", {"gate": "fanlink", "steps": []})
+        super().__init__(**kwargs)
 
     async def run(self, page: Page) -> dict[str, StepResult]:
         """
