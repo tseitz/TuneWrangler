@@ -106,6 +106,7 @@ async def attached_browser(*, headed: bool | None = None) -> AsyncIterator[Brows
                 msg = "Connected to Chrome but no browser context found"
                 raise RuntimeError(msg)
             context = browser.contexts[0]
+            await _silence(context)
 
             try:
                 yield context
@@ -115,6 +116,34 @@ async def attached_browser(*, headed: bool | None = None) -> AsyncIterator[Brows
     finally:
         if launched:
             _settle_browser(held, headed=want_headed)
+
+
+#: Mute anything that starts playing, in every frame, for the life of the context.
+#:
+#: Chrome's own --mute-audio is set at launch and is still not enough: a run carrying the
+#: flag played a gate page's embedded track out loud. This is the layer that can be tested
+#: from JavaScript, which the flag cannot be.
+#:
+#: A capturing "play" listener rather than a sweep of the elements present at load: gate
+#: pages build their player after load and inside an iframe, so anything enumerated up
+#: front is the wrong set. Capturing catches the event on the way down, before the element
+#: has produced sound.
+_MUTE_ON_PLAY_JS = """
+document.addEventListener('play', (e) => {
+  e.target.muted = true;
+  e.target.volume = 0;
+}, true);
+"""
+
+
+async def _silence(context: BrowserContext) -> None:
+    """Keep the run quiet. Never fatal — a noisy run still beats no run."""
+    try:
+        await context.add_init_script(_MUTE_ON_PLAY_JS)
+    except Exception:  # noqa: BLE001
+        logger.warning(
+            "Could not install the audio muter — this run may play sound.", exc_info=True
+        )
 
 
 def _settle_browser(held: list[str] | None, *, headed: bool) -> None:
