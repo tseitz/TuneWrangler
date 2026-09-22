@@ -1,7 +1,7 @@
 """Single-URL pilot runner for JudgmentGateHandler.
 
 Not routed through the playlist/resume/cache machinery in main.py — same category as
---inspect/--record. Run it with: deno task py -- --jev <gate-or-track-url>
+--inspect/--record. Run it with: deno task py --jev <gate-or-track-url>
 """
 
 from __future__ import annotations
