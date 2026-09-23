@@ -15,19 +15,21 @@ class GateNotSupportedError(ValueError):
     """Raised when no handler is registered for a given URL."""
 
 
-# Domains we explicitly refuse to support. Tracks with these gate URLs are
-# marked 'unsupported' immediately without loading the page.
-_BLACKLISTED_DOMAINS: frozenset[str] = frozenset(
-    [
-        "laylo.com",
-    ]
-)
+# Gates we never open, each with the reason recorded against the track. Matched on the
+# host, so a store's per-artist subdomains are covered.
+_SKIPPED_DOMAINS: dict[str, str] = {
+    "laylo.com": "laylo wants a phone number and a texted code",
+    "bandcamp.com": "a Bandcamp store page, not a gate — download it yourself",
+}
 
 
-def is_url_blacklisted(url: str) -> bool:
-    """Return True if the URL's domain is in the blacklist."""
-    lower = url.lower()
-    return any(domain in lower for domain in _BLACKLISTED_DOMAINS)
+def skip_reason(url: str) -> str | None:
+    """Why this gate is never opened, or None if it should be."""
+    host = (urlparse(url).hostname or "").lower()
+    for domain, reason in _SKIPPED_DOMAINS.items():
+        if host == domain or host.endswith(f".{domain}"):
+            return reason
+    return None
 
 
 async def detect_handler_from_page(page: Page) -> type[GateHandler] | None:

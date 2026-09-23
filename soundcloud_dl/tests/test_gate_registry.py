@@ -156,3 +156,20 @@ def test_gaterush_routes_to_a_handler_that_does_not_reapprove_oauth():
     handler = get_handler_for_url("https://gaterush.me/GiMVei")
     assert handler.gate_slug == "gaterush_jev"
     assert handler.auto_approve_oauth is False
+
+
+@pytest.mark.parametrize(
+    ("url", "skipped"),
+    [
+        ("https://dubdenrecords.bandcamp.com/album/tiip-trainwreck", True),
+        ("https://bandcamp.com/download?id=1", True),
+        ("https://laylo.com/spagheddy/flips", True),
+        ("https://hypeddit.com/virxmusic/eyes", False),
+        # A host match, not a substring one: a gate that merely links to a store is a gate.
+        ("https://gaterush.me/x?next=https://a.bandcamp.com", False),
+    ],
+)
+def test_skip_reason(url, skipped):
+    from soundcloud_dl.gate_handlers import skip_reason  # noqa: PLC0415
+
+    assert (skip_reason(url) is not None) is skipped

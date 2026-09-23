@@ -31,7 +31,7 @@ def runs_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(main_mod, "judge_track_filename", AsyncMock(return_value="A - B"))
     monkeypatch.setattr(main_mod, "try_native_sc_download", AsyncMock(return_value=False))
     monkeypatch.setattr(main_mod, "get_gate_url", AsyncMock(return_value="https://gate.io/x"))
-    monkeypatch.setattr(main_mod, "is_url_blacklisted", lambda _u: False)
+    monkeypatch.setattr(main_mod, "skip_reason", lambda _u: None)
     monkeypatch.setattr(main_mod, "_save_debug_artifacts", AsyncMock())
     monkeypatch.setattr(main_mod, "validate_jev_config", lambda: None)
     monkeypatch.setattr(main_mod, "gate_name_for", lambda _u: "testgate")

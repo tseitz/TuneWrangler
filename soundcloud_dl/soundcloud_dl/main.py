@@ -42,7 +42,7 @@ from soundcloud_dl.gate_handlers import (
     GateNotSupportedError,
     detect_handler_from_page,
     get_handler_for_url,
-    is_url_blacklisted,
+    skip_reason,
 )
 from soundcloud_dl.gate_handlers.base import (
     GateStepError,
@@ -376,9 +376,9 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             logger.info("Using purchase_url from API: %s", gate_url)
         else:
             gate_url = await get_gate_url(context, track.url)  # type: ignore[arg-type]
-        if is_url_blacklisted(gate_url):
-            logger.warning("UNSUPPORTED | %s | blacklisted gate: %s", track_label, gate_url)
-            return TrackOutcome("unsupported", f"blacklisted gate: {gate_url}")
+        if (skipped := skip_reason(gate_url)) is not None:
+            logger.warning("UNSUPPORTED | %s | %s: %s", track_label, skipped, gate_url)
+            return TrackOutcome("unsupported", f"{skipped}: {gate_url}")
 
         # After the blacklist check, because a gate we will not open must not cost
         # anything: the follow is given back but the comment is permanent and only the
