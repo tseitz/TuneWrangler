@@ -36,6 +36,7 @@ from soundcloud_dl.soundcloud_api import (
     set_following,
     set_like,
     set_repost,
+    write_by_token,
 )
 from soundcloud_dl.soundcloud_auth import SoundCloudAuthError
 
@@ -380,6 +381,25 @@ async def _comment_once(
     return ActionResult("comment", ok=ok, detail=detail, changed=ok)
 
 
+async def _token_then_page(
+    by_token: Callable[[], Awaitable[tuple[bool, str]]],
+    by_page: Callable[[], Awaitable[tuple[bool, str]]],
+    *,
+    want: bool,
+) -> tuple[bool, str]:
+    """Write through the token API, falling back to the page's api-v2.
+
+    Undo goes straight to the page: the token API's DELETE has never been checked.
+    """
+    if not want:
+        return await by_page()
+    ok, detail = await by_token()
+    if ok:
+        return ok, detail
+    page_ok, page_detail = await by_page()
+    return page_ok, f"{detail}; then {page_detail}"
+
+
 async def _perform_via_api(
     context: BrowserContext,
     track_url: str,
@@ -420,7 +440,11 @@ async def _perform_via_api(
             record(
                 await _verified(
                     "like",
-                    lambda: set_like(page, user_id, track_id, on=want),
+                    lambda: _token_then_page(
+                        lambda: write_by_token(client, "likes", track_id),
+                        lambda: set_like(page, user_id, track_id, on=want),
+                        want=want,
+                    ),
                     lambda: is_liked(client, track_id),
                     want=want,
                 )
@@ -428,7 +452,11 @@ async def _perform_via_api(
             record(
                 await _verified(
                     "repost",
-                    lambda: set_repost(page, track_id, on=want),
+                    lambda: _token_then_page(
+                        lambda: write_by_token(client, "reposts", track_id),
+                        lambda: set_repost(page, track_id, on=want),
+                        want=want,
+                    ),
                     lambda: is_reposted(client, track_id),
                     want=want,
                 )

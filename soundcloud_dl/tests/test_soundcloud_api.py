@@ -367,3 +367,32 @@ async def test_a_page_already_on_soundcloud_is_left_alone() -> None:
     page = FakePage(url="https://soundcloud.com/indacollective/pressure")
     await api.ensure_on_soundcloud(page)
     assert page.goto_urls == []
+
+
+# ── likes and reposts by token ─────────────────────────────────────────────────
+
+
+async def test_a_like_or_repost_by_token_is_addressed_by_urn() -> None:
+    """Probed live 2026-09-22: POST /reposts/tracks/<urn> answered 201 and the repost read
+    back. The id-only shapes tried before all answered 405, which is why these once went
+    through the page, where SoundCloud's bot protection rejects them."""
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(f"{request.method} {request.url.path}")
+        return httpx.Response(201 if "reposts" in request.url.path else 200)
+
+    async with client_for(handler) as c:
+        assert (await api.write_by_token(c, "reposts", 7))[0] is True
+        assert (await api.write_by_token(c, "likes", 7))[0] is True
+    assert seen == [
+        "POST /reposts/tracks/soundcloud:tracks:7",
+        "POST /likes/tracks/soundcloud:tracks:7",
+    ]
+
+
+async def test_a_refused_token_write_says_why() -> None:
+    async with client_for(lambda _r: httpx.Response(403, text="forbidden")) as c:
+        ok, detail = await api.write_by_token(c, "reposts", 7)
+    assert ok is False
+    assert "403" in detail

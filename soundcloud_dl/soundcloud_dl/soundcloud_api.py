@@ -2,11 +2,12 @@
 
 Three surfaces, because no one of them does everything:
 
-  - api.soundcloud.com with a user token — follows, and reading back what landed. It has
-    no write route for likes or reposts; every shape tried answered 405 unknown route.
-  - api-v2.soundcloud.com, called from inside the signed-in page — the like and repost
-    writes. This is what the web app itself does, so the calls carry the page's session
-    and look like the UI rather than like a script.
+  - api.soundcloud.com with a user token — follows, likes and reposts, and reading back
+    what landed. Likes and reposts are only routed when addressed by URN
+    (`/reposts/tracks/soundcloud:tracks:<id>`); every id-only shape answered 405.
+  - api-v2.soundcloud.com, called from inside the signed-in page — the fallback for a like
+    or repost, and the only route for undoing one. SoundCloud's bot protection answers
+    many of these with a 403 captcha challenge, which is why it is no longer first.
   - the buttons, still in soundcloud_actions.py, as the fallback.
 
 Clicking failed on finding the controls rather than on the actions. A half-rendered track
@@ -167,6 +168,17 @@ async def set_following(
     # The body carries the real reason and is often the whole answer: hitting SoundCloud's
     # 2000-following cap reads as a bare 422 without it.
     return False, f"{method} returned {resp.status_code}: {resp.text[:160]}", False
+
+
+async def write_by_token(
+    client: httpx.AsyncClient, collection: str, track_id: int
+) -> tuple[bool, str]:
+    """Like or repost a track through the token API. `collection` is "likes" or "reposts"."""
+    path = f"/{collection}/tracks/soundcloud:tracks:{track_id}"
+    resp = await client.post(path)
+    if resp.status_code in (_HTTP_OK, _HTTP_CREATED):
+        return True, f"POST {collection} {resp.status_code}"
+    return False, f"POST {path} returned {resp.status_code}: {resp.text[:80]}"
 
 
 async def post_comment(client: httpx.AsyncClient, track_id: int, text: str) -> tuple[bool, str]:
