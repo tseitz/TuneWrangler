@@ -89,11 +89,13 @@ class GaterushHandler(JevHandler):
     nothing on the gate — a run approved it on seven consecutive turns and the download
     stayed LOCKED, the same shape InfluencePlanner showed on thirteen. Re-granting an
     account-wide authorization once per turn is worth stopping whether or not the grant is
-    the reason the gate will not open.
+    the reason the gate will not open. Approving once, then doing the comment, is how a
+    person gets through it.
     """
 
     gate_slug = "gaterush_jev"
     auto_approve_oauth = False
+    oauth_approve_once = True
 
 
 class InfluencePlannerHandler(JevHandler):
@@ -101,6 +103,7 @@ class InfluencePlannerHandler(JevHandler):
 
     # This gate opens by asking SoundCloud for authType SUPERFAN_CONNECT: a broad,
     # non-expiring grant on the account, not the per-download connect the other gates use.
-    # That is the operator's to give, once, by hand. Clicking it automatically re-granted
-    # it on thirteen consecutive turns and never unlocked the gate.
+    # Approving it on every turn re-granted it thirteen times and never unlocked the gate;
+    # after one Allow the gate moves on to its comment step.
     auto_approve_oauth = False
+    oauth_approve_once = True

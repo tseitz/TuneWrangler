@@ -71,6 +71,11 @@ class GateHandler:
     #: run stops with the tab open so a person decides. See InfluencePlannerHandler.
     auto_approve_oauth: bool = True
 
+    #: With auto_approve_oauth False: approve the first consent screen of a run anyway, and
+    #: stop on the next. Those gates stayed locked when approved every turn, but approving
+    #: once and then doing the gate's other steps is how a person gets through them.
+    oauth_approve_once: bool = False
+
     def __init__(  # noqa: PLR0913
         self,
         *,
@@ -108,7 +113,17 @@ class GateHandler:
         #: Set when a consent popup was left for a person instead of approved. Nothing on
         #: the gate can advance past that point, so a run that sees it is over.
         self.consent_declined = False
+        self._oauth_approved = False
         self._pause_warned = False
+
+    def take_oauth_approval(self) -> bool:
+        """Whether this consent screen may be approved. Spends the one-shot allowance."""
+        if self.auto_approve_oauth:
+            return True
+        if not self.oauth_approve_once or self._oauth_approved:
+            return False
+        self._oauth_approved = True
+        return True
 
     def _note_saved(self, dest: Path, via: str = "") -> None:
         """Record that a file actually landed on disk.
@@ -519,7 +534,7 @@ class GateHandler:
                     handle_oauth_popup(
                         popup,
                         self.gate_name,
-                        approve=self.auto_approve_oauth,
+                        approve=self.take_oauth_approval,
                         on_keep_open=_consent_left_open,
                     )
                 )

@@ -1,10 +1,10 @@
 """Tell an OAuth consent screen apart from a sign-in form, and say so accurately.
 
-Detection only. Nothing here clicks anything, and that is the point: approving one of
-these is a decision about the operator's own account rather than a gate step.
-InfluencePlanner asks for SUPERFAN_CONNECT — a broad, non-expiring grant — and a build
-that clicked Allow automatically re-granted it on thirteen consecutive turns without ever
-unlocking the gate.
+Detection never clicks. Approving is a decision about the operator's own account, so
+approve_consent is its own call, made only by a handler that opted in via
+GateHandler.oauth_approve_once. InfluencePlanner asks for SUPERFAN_CONNECT — a broad,
+non-expiring grant — and a build that clicked Allow on every turn re-granted it thirteen
+times without ever unlocking the gate.
 
 What this replaces is a misdiagnosis: landing on secure.soundcloud.com/authorize was
 reported as "sign in on that tab", to an operator who was already signed in and only
@@ -42,6 +42,7 @@ _ALLOW = (
 _CREDENTIAL_FIELD = "input[type='password']"
 
 _ALLOW_WAIT_MS = 5_000
+_RETURN_WAIT_MS = 15_000
 
 
 def is_consent_url(url: str) -> bool:
@@ -90,3 +91,23 @@ async def stop_reason(page: Page, fallback: str) -> str:
             "— press Allow on the open tab once, then re-run"
         )
     return fallback
+
+
+async def approve_consent(page: Page, gate_name: str) -> bool:
+    """Press Allow on a consent screen `looks_like_consent` already confirmed.
+
+    True once the page has left the consent screen, which is the only sign the grant went
+    through: the provider redirects back to the gate after it.
+    """
+    allow = await page.query_selector(_ALLOW)
+    if allow is None:
+        return False
+    logger.info("[%s] SoundCloud consent: clicking Allow (once for this gate)", gate_name)
+    await allow.click()
+    try:
+        await page.wait_for_url(lambda u: not is_consent_url(u), timeout=_RETURN_WAIT_MS)
+    except Exception:  # noqa: BLE001
+        logger.warning("[%s] still on the consent screen after Allow: %s", gate_name, page.url)
+        return False
+    logger.info("[%s] SoundCloud consent approved; back on %s", gate_name, page.url)
+    return True

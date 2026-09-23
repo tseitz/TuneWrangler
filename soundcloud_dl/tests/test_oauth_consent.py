@@ -228,3 +228,110 @@ async def test_run_still_closes_a_popup_it_did_approve():
     await handler.run(_page_with_context())
 
     popup.close.assert_awaited()
+
+
+def _allowable_consent_popup():
+    popup = _consent_popup()
+    allow = MagicMock()
+    allow.click = AsyncMock()
+    popup.allow = allow
+    popup.wait_for_selector = AsyncMock()
+    popup.wait_for_timeout = AsyncMock()
+    popup.wait_for_url = AsyncMock()
+    popup.query_selector = AsyncMock(return_value=allow)
+    return popup
+
+
+class _FiresTwoPopups(_FiresAPopupMidRun):
+    oauth_approve_once = True
+
+    async def _run_steps(self, page, results):
+        for popup in self._popup:
+            for callback in page.context.listeners:
+                callback(popup)
+        return results
+
+
+@pytest.mark.asyncio
+async def test_an_approve_once_gate_approves_the_first_consent_popup_only():
+    """Approving on every turn looped without unlocking; approving once and moving on to
+    the comment is how a person gets through gaterush."""
+    first, second = _allowable_consent_popup(), _allowable_consent_popup()
+    handler = _FiresTwoPopups([first, second], config={"gate": "gaterush", "steps": []})
+
+    await handler.run(_page_with_context())
+
+    first.allow.click.assert_awaited_once()
+    second.allow.click.assert_not_awaited()
+    assert handler.consent_declined is True
+
+
+@pytest.mark.asyncio
+async def test_a_popup_that_is_not_consent_does_not_spend_the_allowance():
+    popup = MagicMock()
+    popup.url = "https://www.instagram.com/someone"
+    popup.wait_for_load_state = AsyncMock()
+    popup.wait_for_timeout = AsyncMock()
+    popup.is_closed = MagicMock(return_value=False)
+    popup.close = AsyncMock()
+    approve = MagicMock(return_value=True)
+
+    await handle_oauth_popup(popup, "gaterush", approve=approve)
+
+    approve.assert_not_called()
+
+
+def test_influenceplanner_and_gaterush_approve_once():
+    from soundcloud_dl.gate_handlers.jev import GaterushHandler  # noqa: PLC0415
+
+    assert InfluencePlannerHandler.oauth_approve_once is True
+    assert GaterushHandler.oauth_approve_once is True
+
+
+def _in_tab_handler(*, once: bool):
+    from soundcloud_dl.gate_handlers.judgment import JudgmentGateHandler  # noqa: PLC0415
+
+    handler = JudgmentGateHandler(config={"gate": "ipln", "steps": []})
+    handler.auto_approve_oauth = False
+    handler.oauth_approve_once = once
+    handler._gate_host = "gate.influenceplanner.com"
+    handler._wait_for_gate_ready = AsyncMock()
+    return handler
+
+
+def _in_tab_consent_page():
+    allow = MagicMock()
+    allow.click = AsyncMock()
+    page = fake_page("https://secure.soundcloud.com/authorize?client_id=x", allow=allow)
+    page.wait_for_url = AsyncMock()
+    return page, allow
+
+
+@pytest.mark.asyncio
+async def test_an_in_tab_consent_is_approved_once_then_stops():
+    """InfluencePlanner navigates the gate tab itself to the consent screen, so the popup
+    path never sees it. After one Allow the gate shows its comment step."""
+    from soundcloud_dl.gate_handlers.login_wall import LoginWallEncountered  # noqa: PLC0415
+
+    handler = _in_tab_handler(once=True)
+    page, allow = _in_tab_consent_page()
+
+    await handler._raise_on_login_wall(page)
+    allow.click.assert_awaited_once()
+    handler._wait_for_gate_ready.assert_awaited_once()
+
+    with pytest.raises(LoginWallEncountered, match="asked again"):
+        await handler._raise_on_login_wall(page)
+    allow.click.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_an_in_tab_consent_is_left_alone_without_the_opt_in():
+    from soundcloud_dl.gate_handlers.login_wall import LoginWallEncountered  # noqa: PLC0415
+
+    handler = _in_tab_handler(once=False)
+    page, allow = _in_tab_consent_page()
+
+    with pytest.raises(LoginWallEncountered, match="press Allow"):
+        await handler._raise_on_login_wall(page)
+    allow.click.assert_not_awaited()

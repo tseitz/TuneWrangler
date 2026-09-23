@@ -35,7 +35,11 @@ from soundcloud_dl.gate_handlers.login_wall import (
     detect_login_wall,
     normalize_host,
 )
-from soundcloud_dl.gate_handlers.oauth_consent import stop_reason
+from soundcloud_dl.gate_handlers.oauth_consent import (
+    approve_consent,
+    looks_like_consent,
+    stop_reason,
+)
 from soundcloud_dl.gate_handlers.unlock import (
     find_download_target,
     is_download_element,
@@ -52,6 +56,11 @@ if TYPE_CHECKING:
     from soundcloud_dl.run_artifacts import RunRecorder
 
 logger = logging.getLogger("soundcloud_dl.gate_handlers.judgment")
+
+_ASKED_AGAIN = (
+    "approved this gate's SoundCloud grant once and it asked again — approving on every "
+    "turn loops without unlocking, so finish this one on the open tab"
+)
 
 # A backstop, not the stop condition — _MAX_IDLE_TURNS is what ends a gate that has stopped
 # moving. Sized for the longest gate seen: hypeddit spends a turn per slide (email, then one
@@ -997,8 +1006,14 @@ class JudgmentGateHandler(GateHandler):
         if reason is None:
             return
         # A consent screen reads as "left the gate" because the provider is on its own
-        # host. Still a stop — nothing here approves it — but reported as the one-button
-        # decision it is rather than as a sign-in the operator has already done.
+        # host. Reported as the one-button decision it is rather than as a sign-in the
+        # operator has already done — unless this handler may approve it once.
+        if await looks_like_consent(page):
+            if self._oauth_approved:
+                raise LoginWallEncountered(page.url, _ASKED_AGAIN, self.gate_name)
+            if self.take_oauth_approval() and await approve_consent(page, self.gate_name):
+                await self._wait_for_gate_ready(page)
+                return
         raise LoginWallEncountered(page.url, await stop_reason(page, reason), self.gate_name)
 
     async def _raise_on_captcha(self, page: Page) -> None:
@@ -1196,7 +1211,9 @@ class JudgmentGateHandler(GateHandler):
         if not self.consent_declined:
             return
         reason = (
-            "the gate wants a grant on your SoundCloud account, which this handler will "
+            _ASKED_AGAIN
+            if self._oauth_approved
+            else "the gate wants a grant on your SoundCloud account, which this handler will "
             "not approve for you — approve it on the open tab, then re-run"
         )
         raise LoginWallEncountered(page.url, reason, self.gate_name)

@@ -115,13 +115,15 @@ async def handle_oauth_popup(
     popup: Page,
     gate_name: str,
     *,
-    approve: bool = True,
+    approve: bool | Callable[[], bool] = True,
     on_keep_open: Callable[[Page], None] | None = None,
 ) -> None:
     """Auto-approve SoundCloud/Spotify OAuth popups; close ToneDen URL-visit popups.
 
     `gate_name` is only used for log message prefixes. `approve=False` leaves a consent
     popup open and untouched for a person to decide on — see GateHandler.auto_approve_oauth.
+    A callable is asked only once a SoundCloud consent popup has loaded, so the other popups
+    this handles never spend a one-shot allowance.
 
     `on_keep_open` is how that decision reaches the caller. Suppressing this function's own
     close is not enough on its own: run() closes every popup it saw when the run ends, so
@@ -179,7 +181,7 @@ async def handle_oauth_popup(
             return
 
         logger.debug("[%s] SoundCloud OAuth popup: %s", gate_name, url)
-        if not approve:
+        if not (approve() if callable(approve) else approve):
             keep_open = True
             _decline(popup, gate_name, on_keep_open)
             return

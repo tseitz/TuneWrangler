@@ -22,7 +22,7 @@ from soundcloud_dl.config import (
     validate_jev_config,
 )
 from soundcloud_dl.gate_handlers import GateNotSupportedError, get_handler_for_url
-from soundcloud_dl.gate_handlers.base import StepResult
+from soundcloud_dl.gate_handlers.base import GateHandler, StepResult
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered
 from soundcloud_dl.gate_handlers.jev import gate_name_for
 from soundcloud_dl.gate_handlers.judgment import JudgmentGateHandler
@@ -44,8 +44,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger("soundcloud_dl.jev_pilot")
 
 
-def _auto_approve_oauth_for(gate_url: str) -> bool:
-    """The OAuth policy registered for this host, read off a class we deliberately do not use.
+def _apply_oauth_policy(handler: GateHandler, gate_url: str) -> None:
+    """Copy the OAuth policy registered for this host, off a class we deliberately do not use.
 
     --jev means "drive this with JudgmentGateHandler whatever the host", so this path builds
     that class directly instead of the registered one. The policy is not part of what --jev
@@ -53,9 +53,11 @@ def _auto_approve_oauth_for(gate_url: str) -> bool:
     auto-approved gets it auto-approved here and nowhere else.
     """
     try:
-        return get_handler_for_url(gate_url).auto_approve_oauth
+        policy = get_handler_for_url(gate_url)
     except GateNotSupportedError:
-        return JudgmentGateHandler.auto_approve_oauth
+        policy = JudgmentGateHandler
+    handler.auto_approve_oauth = policy.auto_approve_oauth
+    handler.oauth_approve_once = policy.oauth_approve_once
 
 
 async def _resolve_track_title(url: str) -> str | None:
@@ -157,7 +159,7 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
             recorder=recorder,
             on_requirements=requirement_follower(actions) if sc_actions else None,
         )
-        handler.auto_approve_oauth = _auto_approve_oauth_for(gate_url)
+        _apply_oauth_policy(handler, gate_url)
 
         # Released in the finally, so a run that ends without a file still gives back what
         # it spent. A gate that charges follows and then never unlocks is how the account
