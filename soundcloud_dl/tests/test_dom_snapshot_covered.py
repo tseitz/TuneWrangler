@@ -81,3 +81,25 @@ async def test_only_a_page_level_header_or_footer_is_site_chrome() -> None:
         "dialog_continue": False,
         "site_terms": True,
     }
+
+
+_FADED = """
+<!doctype html><html><body>
+  <div style="opacity:0"><div><button id="in_faded">Connect with SoundCloud</button></div></div>
+  <button id="plain">Download</button>
+</body></html>
+"""
+
+
+@pytest.mark.asyncio
+async def test_a_control_inside_a_transparent_overlay_is_not_visible() -> None:
+    """InfluencePlanner's step panel waits at opacity 0; the button inside reports 1."""
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch()
+        page = await browser.new_page()
+        await page.set_content(_FADED)
+        els = await snapshot_elements(page)
+        await browser.close()
+    visible = {el["id"]: el["visible"] for el in els if el["id"]}
+    assert visible["in_faded"] is False
+    assert visible["plain"] is True

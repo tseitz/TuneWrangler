@@ -62,10 +62,20 @@ const elKey = (el) => {
   ].join('|');
   return el.tagName.toLowerCase() + '@' + hash(parts);
 };
+// Opacity is not inherited, so an element in a transparent overlay reports 1 itself.
+// InfluencePlanner keeps its step panel over the artwork at opacity 0 until Download is
+// pressed; offering what is inside it had the model clicking a control nobody can see.
+const isFaded = (el) => {
+  for (let e = el; e !== null; e = e.parentElement) {
+    if (getComputedStyle(e).opacity === '0') return true;
+  }
+  return false;
+};
 const isVisible = (el) => (
   el.offsetParent !== null
   && getComputedStyle(el).display !== 'none'
   && el.closest('.upcomming-slide') === null
+  && !isFaded(el)
 );
 const TOGGLE_SEL = 'input[type="checkbox"], input[type="radio"]';
 // A styled checkbox hides the real input (droploud: display:none, 0x0) and paints a span
