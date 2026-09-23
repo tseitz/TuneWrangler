@@ -65,3 +65,15 @@ async def test_detects_datadome() -> None:
         await page.goto((FIXTURE_DIR / "captcha_datadome.html").as_uri())
         assert await detect_captcha(page) == CaptchaKind.DATADOME
         await browser.close()
+
+
+@pytest.mark.asyncio
+async def test_detects_the_current_cloudflare_interstitial() -> None:
+    """The wording changed from "verify you are human", so a headless pl8list click that hit
+    this page crashed the run instead of stopping it as a captcha."""
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch()
+        page = await browser.new_page()
+        await page.goto((FIXTURE_DIR / "captcha_cloudflare_interstitial.html").as_uri())
+        assert await detect_captcha(page) == CaptchaKind.CLOUDFLARE_INTERSTITIAL
+        await browser.close()

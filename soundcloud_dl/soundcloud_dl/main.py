@@ -55,7 +55,7 @@ from soundcloud_dl.inspect_gate import inspect_gate
 from soundcloud_dl.logger import setup_logging
 from soundcloud_dl.playlist import TrackItem, extract_track_urls
 from soundcloud_dl.playlist_cache import load_cached_tracks, save_cached_tracks
-from soundcloud_dl.playwright_browser import attached_browser
+from soundcloud_dl.playwright_browser import attached_browser, is_browser_gone
 from soundcloud_dl.recorder import record
 from soundcloud_dl.resume import (
     TrackState,
@@ -114,22 +114,6 @@ def _why(exc: BaseException) -> str:
     text = " ".join(str(exc).split())
     label = f"{type(exc).__name__}: {text}" if text else type(exc).__name__
     return label[:_MAX_REASON_CHARS]
-
-
-#: How a dead browser announces itself. Playwright raises TargetClosedError for this but
-#: does not export the class from playwright.async_api, so the message is the only public
-#: signal — same bind as playwright_browser._CDP_CONTEXT_ERROR.
-_BROWSER_GONE_MARKERS = (
-    "target page, context or browser has been closed",
-    "browser has been closed",
-    "target closed",
-    "connection closed",
-)
-
-
-def _is_browser_gone(exc: Exception) -> bool:
-    text = str(exc).lower()
-    return any(marker in text for marker in _BROWSER_GONE_MARKERS)
 
 
 _UNSAFE_FILENAME_RE = re.compile(r"[^\w\-]")
@@ -566,12 +550,13 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         return TrackOutcome("failed", _why(e))
     except PlaywrightError as e:
         terminal = type(e).__name__
-        if _is_browser_gone(e):
+        if is_browser_gone(e):
             msg = f"Chrome closed while working on {track_label}"
             raise BrowserGoneError(msg) from e
         if page:
             await _save_debug_artifacts(page, track_label)
-        logger.exception("FAILED | %s | %s", track_label, type(e).__name__)
+        # The header line is what a grep for FAILED shows; the traceback is not.
+        logger.exception("FAILED | %s | %s", track_label, _why(e))  # noqa: TRY401
         return TrackOutcome("failed", _why(e))
     except Exception as e:
         terminal = type(e).__name__

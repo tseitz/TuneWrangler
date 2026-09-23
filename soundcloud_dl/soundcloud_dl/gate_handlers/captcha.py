@@ -42,6 +42,8 @@ _CAPTCHA_SELECTORS: tuple[tuple[CaptchaKind, str], ...] = (
 _CLOUDFLARE_TEXT_PATTERNS = (
     "verify you are human",
     "checking your browser",
+    "performing security verification",
+    "verifies you are not a bot",
 )
 
 # reCAPTCHA v3 background iframes have near-zero size; only iframes at least this

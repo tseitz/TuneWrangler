@@ -91,6 +91,17 @@ const onScreen = (el) => {
   return r.bottom > -m && r.top < window.innerHeight + m
     && r.right > -m && r.left < window.innerWidth + m;
 };
+// Something else is on top of it, so a click would land there instead — pl8list's dialog
+// over its own comment box. Centre point only, and a centre off the viewport is unknown,
+// not covered: onScreen already decides those.
+const isCovered = (el) => {
+  const r = el.getBoundingClientRect();
+  const x = r.left + r.width / 2;
+  const y = r.top + r.height / 2;
+  if (x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) return false;
+  const hit = document.elementFromPoint(x, y);
+  return hit !== null && !el.contains(hit) && !hit.contains(el);
+};
 """
 
 _SELECTOR = "a, button, input, textarea, form, label"
@@ -126,6 +137,7 @@ SNAPSHOT_JS = _js("""
       visible: isVisible(el),
       chrome: isChrome(el),
       onscreen: onScreen(el),
+      covered: isCovered(el),
       text: (el.innerText || el.value || '').trim().slice(0, 60),
       placeholder: el.getAttribute('placeholder') || '',
       name: el.getAttribute('name') || '',

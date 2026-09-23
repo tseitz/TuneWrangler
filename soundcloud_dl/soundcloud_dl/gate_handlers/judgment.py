@@ -14,6 +14,7 @@ import urllib.parse
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
+from playwright.async_api import Error as PlaywrightError
 from typesafe_sdk import AsyncTypeSafeClient, Choice
 
 from soundcloud_dl.downloads import (
@@ -41,6 +42,7 @@ from soundcloud_dl.gate_handlers.unlock import (
     is_unlocked_href,
     unlock_reached,
 )
+from soundcloud_dl.playwright_browser import is_browser_gone
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -144,7 +146,7 @@ _DEFAULT_GOAL = (
 _FIELD_HINTS: dict[str, tuple[str, ...]] = {
     "email": ("email",),
     "name": ("name", "fullname", "full_name", "firstname"),
-    "comment": ("comment", "message", "note"),
+    "comment": ("comment", "message", "note", "thoughts"),
 }
 
 
@@ -215,7 +217,26 @@ def _on_screen(snapshot: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]
     # this a no-op for them rather than hiding everything.
     body = {k: el for k, el in visible.items() if not el.get("chrome", False)}
     near = {k: el for k, el in body.items() if el.get("onscreen", True)}
-    return near or body or visible
+    clear = {k: el for k, el in near.items() if not el.get("covered", False)}
+    return clear or near or body or visible
+
+
+def _reachable(el: dict[str, Any]) -> bool:
+    """On screen and not under a dialog: a click would actually land on it."""
+    return el["visible"] and not el.get("covered", False)
+
+
+def _same_page(a: dict[str, dict[str, Any]], b: dict[str, dict[str, Any]]) -> bool:
+    """Whether two snapshots show the same page, ignoring `covered`.
+
+    A spinner or toast passing over a control flips it, and counting that as the page
+    moving clears dead keys and keeps the stuck-detector quiet on a gate going nowhere.
+    """
+
+    def strip(snap: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        return {k: {f: v for f, v in el.items() if f != "covered"} for k, el in snap.items()}
+
+    return strip(a) == strip(b)
 
 
 #: Tags that make an element something a gate asks you to operate. A gate always offers at
@@ -251,7 +272,7 @@ def _visible_download_key(snapshot: dict[str, dict[str, Any]]) -> str | None:
     click into the 45s capture path for a button the carousel has not brought forward yet.
     """
     target = find_download_target(snapshot)
-    return target["key"] if target is not None and target["visible"] else None
+    return target["key"] if target is not None and _reachable(target) else None
 
 
 class JudgmentGateHandler(GateHandler):
@@ -292,6 +313,7 @@ class JudgmentGateHandler(GateHandler):
         self._download_attempts: dict[str, int] = {}
         self._download_last_attempt_turn: dict[str, int] = {}
         self._warned_collisions: set[str] = set()
+        self._warned_covered: set[str] = set()
         # Constructed lazily so importing this module never requires TYPESAFE_API_KEY.
         self._client: AsyncTypeSafeClient | None = None
 
@@ -321,7 +343,20 @@ class JudgmentGateHandler(GateHandler):
             else:
                 dropped.append(el)
         self._log_dropped(dropped)
+        self._log_covered(snapshot)
         return snapshot
+
+    def _log_covered(self, snapshot: dict[str, dict[str, Any]]) -> None:
+        """Name each control withheld because something sits on top of it, once per run.
+
+        Without this a filter hiding the one real control is indistinguishable from a gate
+        that has nothing left to click.
+        """
+        for key, el in snapshot.items():
+            if not el.get("covered") or not el["visible"] or key in self._warned_covered:
+                continue
+            self._warned_covered.add(key)
+            logger.info("[%s] withholding %r: covered (%r)", self.gate_name, key, el["text"][:40])
 
     def _log_dropped(self, dropped: list[dict[str, Any]]) -> None:
         """A dropped element is one the model is never offered and can never click.
@@ -504,7 +539,7 @@ class JudgmentGateHandler(GateHandler):
                 continue
             if any(el["step"] for el in _on_screen(snapshot).values()) or unlock_reached(snapshot):
                 return
-            if snapshot == previous:
+            if previous is not None and _same_page(snapshot, previous):
                 logger.info("[%s] no gate actions found; DOM settled", self.gate_name)
                 return
             previous = snapshot
@@ -533,7 +568,7 @@ class JudgmentGateHandler(GateHandler):
             # from the moment the button is enabled, which is long before it is reachable,
             # and short-circuiting on it turned every settle into a single 500ms poll.
             target = find_download_target(snapshot)
-            if snapshot != before or (target is not None and target["visible"]):
+            if not _same_page(snapshot, before) or (target is not None and _reachable(target)):
                 return snapshot
         return snapshot
 
@@ -586,6 +621,7 @@ class JudgmentGateHandler(GateHandler):
             return False
 
         downloaded = False
+        url_before = page.url.split("#")[0]
         try:
             # Safe to cancel on the popup's behalf: _collect_download drained _caught at the
             # top of this turn, so anything landing in it is a consequence of the click this
@@ -613,6 +649,14 @@ class JudgmentGateHandler(GateHandler):
                     downloaded = True
         except Exception:  # noqa: BLE001
             logger.debug("[%s] expect_download did not fire", self.gate_name, exc_info=True)
+
+        # The button belongs to the page the click left, so the href and intercept fallbacks
+        # would read a dead element or click on whatever replaced it. Let the next turn look.
+        if not downloaded and page.url.split("#")[0] != url_before:
+            logger.info(
+                "[%s] the download click navigated to %s; ending the turn", self.gate_name, page.url
+            )
+            return False
 
         if not downloaded:
             href = await el.get_attribute("href")
@@ -762,7 +806,19 @@ class JudgmentGateHandler(GateHandler):
             "[%s] turn %d: gate unlocked — download on %r", self.gate_name, i, target["key"]
         )
         await self._maybe_pause("download", target)
-        result, downloaded = await self._act(page, "download", target)
+        try:
+            result, downloaded = await self._act(page, "download", target)
+        except PlaywrightError as exc:
+            if is_browser_gone(exc):
+                raise
+            logger.info(
+                "[%s] turn %d: download on %r failed (%s); treating it as a miss",
+                self.gate_name,
+                i,
+                target["key"],
+                str(exc).splitlines()[0] if str(exc) else type(exc).__name__,
+            )
+            result, downloaded = StepResult.SKIPPED, False
         results[f"el_{i}_download"] = result
         return downloaded
 
@@ -770,7 +826,7 @@ class JudgmentGateHandler(GateHandler):
         if self._offscreen_download is not None:
             return (
                 f"download {self._offscreen_download!r} was enabled but never came on screen — "
-                "the carousel slide holding it did not render"
+                "the carousel slide holding it did not render, or something stayed on top of it"
             )
         return fallback
 
@@ -783,10 +839,10 @@ class JudgmentGateHandler(GateHandler):
         used for an element with no box is silently ignored — it cost 65s and did not even
         open the SoundCloud popup. Let the carousel bring it forward, then click for real.
         """
-        if target is None or target["visible"]:
+        if target is None or _reachable(target):
             return target, None
         logger.info(
-            "[%s] turn %d: download %r is enabled but off-screen; advancing first",
+            "[%s] turn %d: download %r is enabled but off-screen or covered; advancing first",
             self.gate_name,
             i,
             target["key"],
@@ -823,7 +879,7 @@ class JudgmentGateHandler(GateHandler):
         # mid-transition, which is what left the next slide rendering blank.
         await page.wait_for_timeout(_TRANSITION_MS)
         settled = await self._settle(page, before, _settle_attempts(target))
-        changed = settled != before
+        changed = not _same_page(settled, before)
         logger.info(
             "[%s] turn %d: %s on %r → changed=%s unlocked=%s",
             self.gate_name,
@@ -1120,10 +1176,12 @@ class JudgmentGateHandler(GateHandler):
             await page.bring_to_front()
         self._raise_if_consent_declined(page)
         await self._raise_on_login_wall(page)
+        # Before the reanchor: a click that landed on a wall off the gate path would
+        # otherwise be dragged back to the gate before anything classified the wall.
+        await self._raise_on_captcha(page)
         if await self._reanchor_page(page):
             self._note_off_gate(dead_keys, last_key)
         await self._reanchor_scroll(page)
-        await self._raise_on_captcha(page)
 
     def _raise_if_consent_declined(self, page: Page) -> None:
         """End the run once a grant was left for a person to decide on.

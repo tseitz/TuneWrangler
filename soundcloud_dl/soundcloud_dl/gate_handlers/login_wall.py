@@ -25,6 +25,10 @@ _LOGIN_PATHS: tuple[str, ...] = (
     "/account/login",
 )
 
+# Paths that are a sign-in only on one host. pl8list's email-code login lives at /verify,
+# which elsewhere is as likely to be an ordinary gate step.
+_HOST_LOGIN_PATHS: tuple[tuple[str, str], ...] = (("pl8list.com", "/verify"),)
+
 
 class LoginWallEncountered(RuntimeError):  # noqa: N818
     """Raised when the driven page lands on a login, signup, or off-gate host."""
@@ -64,6 +68,7 @@ def detect_login_wall(current_url: str, gate_host: str) -> str | None:
     if not same_site(current_url, gate_host):
         return f"left the gate for {normalize_host(current_url)}"
     path = (urlparse(current_url).path or "").lower()
-    if any(path.startswith(p) or f"{p}/" in path for p in _LOGIN_PATHS):
+    host_paths = [p for host, p in _HOST_LOGIN_PATHS if same_site(current_url, host)]
+    if any(path.startswith(p) or f"{p}/" in path for p in (*_LOGIN_PATHS, *host_paths)):
         return "the gate asked us to sign in"
     return None

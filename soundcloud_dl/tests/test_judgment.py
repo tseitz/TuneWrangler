@@ -12,6 +12,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from playwright.async_api import Error as PlaywrightError
 
 from soundcloud_dl.downloads import MIN_TRACK_BYTES
 from soundcloud_dl.gate_handlers import dom_snapshot
@@ -1211,3 +1212,138 @@ async def test_the_loop_waits_for_a_late_rendering_gate_before_giving_up(monkeyp
         await handler._run_steps(page, {})
 
     assert 4242 in waited, "an empty page was never waited on — the gate is abandoned mid-load"
+
+
+def test_on_screen_drops_what_a_dialog_covers():
+    """pl8list opens a dialog over its page, and the page's own comment box behind it is
+    what got filled — the dialog's continue stayed disabled and the run stalled."""
+    offered = judgment_module._on_screen(
+        _snap(_el("dialog_input"), _el("page_textarea", tag="textarea", covered=True))
+    )
+    assert set(offered) == {"dialog_input"}
+
+
+def test_on_screen_keeps_covered_controls_rather_than_offering_nothing():
+    offered = judgment_module._on_screen(_snap(_el("only_one", covered=True)))
+    assert set(offered) == {"only_one"}
+
+
+def test_share_your_thoughts_is_a_comment_field():
+    handler = make_handler(template_vars={"comment": "fire", "email": "a@b.c", "name": "T"})
+    field = _el("input@x", tag="input", placeholder="share your thoughts")
+    assert handler._match_template_field(field) == "comment"
+
+
+def test_a_covered_download_waits_like_an_off_screen_one():
+    """Force-clicking a download under a dialog lands on the backdrop and closes it."""
+    handler = make_handler()
+    target, deferred = handler._defer_offscreen_download(_el("dl", covered=True), 1)
+    assert target is None
+    assert deferred == "dl"
+    assert judgment_module._visible_download_key(_snap(_el("dl", covered=True))) is None
+
+
+def test_a_cover_coming_or_going_is_not_the_page_moving():
+    """A spinner or toast flipping `covered` must not read as progress, or the stuck-detector
+    never fires."""
+    before = _snap(_el("b", covered=False))
+    after = _snap(_el("b", covered=True))
+    assert judgment_module._same_page(before, after)
+    assert not judgment_module._same_page(before, _snap(_el("b", text="changed")))
+
+
+@pytest.mark.asyncio
+async def test_a_download_click_that_navigates_ends_the_turn(tmp_path):
+    """pl8list's download click led to Cloudflare or its sign-in page. Reading the stale
+    button afterwards raised "Execution context was destroyed" and ended the whole run as a
+    bare "Error" instead of letting the next turn see where the page had gone."""
+    handler = make_handler(download_dir=tmp_path)
+    handler.scroll_before_click = False
+    handler._random_delay = AsyncMock()
+    el = MagicMock()
+    el.is_visible = AsyncMock(return_value=True)
+    el.get_attribute = AsyncMock(side_effect=AssertionError("read a stale element"))
+    handler._find_element_by_key = AsyncMock(return_value=el)
+    page = MagicMock()
+    page.url = "https://pl8list.com/finnuh/actin-up"
+
+    async def click_that_navigates(_page, _el, _key):
+        page.url = "https://pl8list.com/verify"
+        msg = "Timeout 45000ms exceeded"
+        raise TimeoutError(msg)
+
+    handler._click_then_wait_for_download = click_that_navigates
+
+    assert await handler._click_and_capture_download(page, "button@dl") is False
+
+
+@pytest.mark.asyncio
+async def test_a_download_that_errors_is_a_miss_not_a_crash():
+    handler = make_handler()
+    handler._maybe_pause = AsyncMock()
+    handler._act = AsyncMock(side_effect=PlaywrightError("Execution context was destroyed"))
+    results: dict = {}
+    assert await handler._try_download(MagicMock(), results, _el("dl"), 1) is False
+
+
+@pytest.mark.asyncio
+async def test_a_closed_browser_still_ends_the_run_from_a_download():
+    handler = make_handler()
+    handler._maybe_pause = AsyncMock()
+    handler._act = AsyncMock(
+        side_effect=PlaywrightError("Target page, context or browser has been closed")
+    )
+    with pytest.raises(PlaywrightError):
+        await handler._try_download(MagicMock(), {}, _el("dl"), 1)
+
+
+@pytest.mark.asyncio
+async def test_a_captcha_is_seen_before_the_run_is_dragged_back_to_the_gate():
+    """A click that navigated onto a Cloudflare wall off the gate path was pulled back to
+    the gate first, so the wall was never classified."""
+    handler = make_handler()
+    order: list[str] = []
+
+    async def captcha(_page):
+        order.append("captcha")
+        raise CaptchaEncountered(CaptchaKind.TURNSTILE, handler.gate_name)
+
+    async def reanchor(_page):
+        order.append("reanchor")
+        return False
+
+    handler._raise_on_captcha = captcha
+    handler._reanchor_page = reanchor
+    handler._raise_on_login_wall = AsyncMock()
+    handler._reanchor_scroll = AsyncMock()
+    page = MagicMock()
+    page.bring_to_front = AsyncMock()
+    with pytest.raises(CaptchaEncountered):
+        await handler._turn_guards(page, set(), None)
+    assert order == ["captcha"]
+
+
+@pytest.mark.asyncio
+async def test_a_hash_change_is_not_the_download_click_navigating(tmp_path):
+    """A single-page gate can set #fragment on click without leaving the page, and the href
+    fallback after it is still reading a live button."""
+    handler = make_handler(download_dir=tmp_path)
+    handler.scroll_before_click = False
+    handler._random_delay = AsyncMock()
+    el = MagicMock()
+    el.is_visible = AsyncMock(return_value=True)
+    el.get_attribute = AsyncMock(return_value=None)
+    handler._find_element_by_key = AsyncMock(side_effect=[el, None])
+    page = MagicMock()
+    page.url = "https://gate.example/track"
+    page.wait_for_timeout = AsyncMock()
+
+    async def click_that_sets_a_hash(_page, _el, _key):
+        page.url = "https://gate.example/track#download"
+        msg = "Timeout 45000ms exceeded"
+        raise TimeoutError(msg)
+
+    handler._click_then_wait_for_download = click_that_sets_a_hash
+
+    await handler._click_and_capture_download(page, "button@dl")
+    el.get_attribute.assert_awaited_once_with("href")

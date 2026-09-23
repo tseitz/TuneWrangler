@@ -67,3 +67,14 @@ def test_the_gate_itself_is_never_a_stop(url):
 def test_no_anchor_host_never_stops():
     """Before the first turn anchors the host, the guard must not fire on anything."""
     assert detect_login_wall("https://accounts.google.com/signin", "") is None
+
+
+def test_pl8list_verify_is_its_sign_in_step():
+    """pl8list sends a signed-out download to /verify, an email-code login. Missing it read
+    as a stuck gate instead of "sign in yourself, then re-run"."""
+    assert detect_login_wall("https://pl8list.com/verify", "pl8list.com") is not None
+
+
+def test_verify_elsewhere_is_not_a_sign_in():
+    """/verify is an ordinary step name, so only pl8list's counts."""
+    assert detect_login_wall("https://droploud.com/verify", "droploud.com") is None

@@ -29,6 +29,22 @@ from soundcloud_dl.config import (
 
 logger = logging.getLogger("soundcloud_dl.playwright_browser")
 
+#: How a dead browser announces itself. Playwright raises TargetClosedError for this but
+#: does not export the class from playwright.async_api, so the message is the only public
+#: signal — same bind as _CDP_CONTEXT_ERROR.
+_BROWSER_GONE_MARKERS = (
+    "target page, context or browser has been closed",
+    "browser has been closed",
+    "target closed",
+    "connection closed",
+)
+
+
+def is_browser_gone(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return any(marker in text for marker in _BROWSER_GONE_MARKERS)
+
+
 _CDP_CONTEXT_ERROR = "Browser context management is not supported"
 
 #: URLs a tab shows when it is holding nothing. Anything else on screen at the end of a run
