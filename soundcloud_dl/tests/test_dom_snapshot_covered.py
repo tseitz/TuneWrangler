@@ -103,3 +103,23 @@ async def test_a_control_inside_a_transparent_overlay_is_not_visible() -> None:
     visible = {el["id"]: el["visible"] for el in els if el["id"]}
     assert visible["in_faded"] is False
     assert visible["plain"] is True
+
+
+_FINE_PRINT = """
+<!doctype html><html><body><article>
+  <p>By accessing this you agree to our <a id="terms" href="/privacy#terms">Terms</a> &amp;
+  <a id="dmca" href="/dmca">DMCA</a> policy.</p>
+  <a id="follow" href="https://instagram.com/x">Follow</a>
+</article></body></html>
+"""
+
+
+@pytest.mark.asyncio
+async def test_fine_print_links_inside_the_gate_card_are_site_chrome() -> None:
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch()
+        page = await browser.new_page()
+        await page.set_content(_FINE_PRINT)
+        chrome = {el["id"]: el["chrome"] for el in await snapshot_elements(page) if el["id"]}
+        await browser.close()
+    assert chrome == {"terms": True, "dmca": True, "follow": False}

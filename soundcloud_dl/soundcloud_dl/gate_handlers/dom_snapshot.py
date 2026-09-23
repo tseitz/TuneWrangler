@@ -92,8 +92,12 @@ const CHROME_SEL = 'nav, [role="navigation"], [role="contentinfo"], [role="banne
 // rules. pl8list's dialog keeps its continue button in the dialog's <footer>.
 const SECTION_SEL = 'article, section, aside, main, dialog, [role="dialog"],'
   + ' [role="alertdialog"]';
+// Fine print sits inside the gate card. Gaterush's Terms link, clicked while a step
+// verified, left the page and threw away every step already done.
+const LEGAL_RE = /^(terms( of (service|use))?|privacy( policy)?|dmca|cookies?( policy)?|imprint)$/i;
 const isChrome = (el) => {
   if (el.closest(CHROME_SEL) !== null) return true;
+  if (el.tagName === 'A' && LEGAL_RE.test((el.innerText || '').trim())) return true;
   const band = el.closest('header, footer');
   return band !== null && band.closest(SECTION_SEL) === null;
 };
