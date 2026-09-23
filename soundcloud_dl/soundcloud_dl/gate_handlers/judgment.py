@@ -28,7 +28,11 @@ from soundcloud_dl.downloads import (
 )
 from soundcloud_dl.gate_handlers.base import GateHandler, StepResult, StuckGate
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered, detect_captcha
-from soundcloud_dl.gate_handlers.dom_snapshot import find_element_by_key, snapshot_elements
+from soundcloud_dl.gate_handlers.dom_snapshot import (
+    find_element_by_key,
+    page_busy,
+    snapshot_elements,
+)
 from soundcloud_dl.gate_handlers.gate_requirements import read_requirements
 from soundcloud_dl.gate_handlers.login_wall import (
     LoginWallEncountered,
@@ -83,6 +87,12 @@ _FAST_SETTLE_ATTEMPTS = 6
 
 # Only covers the client-side render of the gate widget, not a user action. 15s.
 _READY_POLL_ATTEMPTS = 30
+# A gate verifying a step says so ("UNLOCKING...", a spinner). A turn spent then clicks
+# whatever else is on the card — sublair's artist link, gaterush's Terms — which leaves the
+# gate and throws away every step done. Capped per run so a spinner that never stops cannot
+# stall one.
+_BUSY_WAIT_MS = 12_000
+_BUSY_BUDGET_MS = 60_000
 
 # The gate is only declared stuck after several turns that moved nothing. One unchanged
 # turn is normal — an OAuth popup can still be resolving in another window.
@@ -326,6 +336,7 @@ class JudgmentGateHandler(GateHandler):
         self._download_last_attempt_turn: dict[str, int] = {}
         self._warned_collisions: set[str] = set()
         self._warned_covered: set[str] = set()
+        self._busy_spent_ms = 0
         # Constructed lazily so importing this module never requires TYPESAFE_API_KEY.
         self._client: AsyncTypeSafeClient | None = None
 
@@ -1247,6 +1258,31 @@ class JudgmentGateHandler(GateHandler):
             return results
         raise StuckGate(self.gate_name, last_step_id=self._terminal_reason(fallback))
 
+    async def _wait_while_busy(self, page: Page) -> None:
+        waited = 0
+        busy = await self._busy(page)
+        while busy is not None and waited < _BUSY_WAIT_MS and self._busy_spent_ms < _BUSY_BUDGET_MS:
+            if waited == 0:
+                logger.info(
+                    "[%s] page is busy (%r); waiting before the next turn", self.gate_name, busy
+                )
+            await page.wait_for_timeout(_SETTLE_POLL_MS)
+            waited += _SETTLE_POLL_MS
+            self._busy_spent_ms += _SETTLE_POLL_MS
+            busy = await self._busy(page)
+        if waited and busy is not None:
+            logger.info(
+                "[%s] still busy after %dms (%r); taking the turn", self.gate_name, waited, busy
+            )
+
+    async def _busy(self, page: Page) -> str | None:
+        try:
+            return await page_busy(page)
+        except PlaywrightError:
+            # A navigation mid-check. The next snapshot sees the new page.
+            logger.debug("[%s] busy check failed", self.gate_name, exc_info=True)
+            return None
+
     async def _begin_turn(self, page: Page, i: int) -> dict[str, dict[str, Any]]:
         await self._repair_carousel(page)
         await self._note_requirements(page, i)
@@ -1342,6 +1378,7 @@ class JudgmentGateHandler(GateHandler):
             if await self._collect_download(results, i):
                 return results
             await self._turn_guards(page, dead_keys, last_key)
+            await self._wait_while_busy(page)
             snapshot = await self._begin_turn(page, i)
             snapshot = await self._wait_for_the_gate_to_render(page, snapshot, i)
 

@@ -206,3 +206,29 @@ async def find_element_by_key(page: Page, key: str) -> Any | None:  # noqa: ANN4
     """Re-locate the element a snapshot key pointed at, or None."""
     handle = await page.evaluate_handle(FIND_BY_KEY_JS, key)
     return handle.as_element()
+
+
+# What the gate is visibly still working on, or null. Short text only: a paragraph that
+# happens to end in "..." is copy, not a status.
+BUSY_JS = _js("""
+() => {
+  __HELPERS__
+  const STATUS = /\\b\\w+ing\\s*(\\.{3}|…)$/i;
+  const SPIN = '[aria-busy="true"], [role="progressbar"], .animate-spin, [class*="spinner"]';
+  for (const el of document.querySelectorAll(SPIN)) {
+    if (isVisible(el) && onScreen(el)) return 'spinner';
+  }
+  for (const el of document.querySelectorAll('button, p, span, div, h1, h2, h3, h4, h5, h6')) {
+    if (el.children.length > 2) continue;
+    const text = (el.innerText || '').trim();
+    if (text.length > 0 && text.length <= 40 && STATUS.test(text)
+        && isVisible(el) && onScreen(el)) return text;
+  }
+  return null;
+}
+""")
+
+
+async def page_busy(page: Page) -> str | None:
+    """What the page shows it is still working on ("UNLOCKING...", a spinner), or None."""
+    return await page.evaluate(BUSY_JS)

@@ -123,3 +123,31 @@ async def test_fine_print_links_inside_the_gate_card_are_site_chrome() -> None:
         chrome = {el["id"]: el["chrome"] for el in await snapshot_elements(page) if el["id"]}
         await browser.close()
     assert chrome == {"terms": True, "dmca": True, "follow": False}
+
+
+async def _busy_on(html: str) -> str | None:
+    from soundcloud_dl.gate_handlers.dom_snapshot import page_busy  # noqa: PLC0415
+
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch()
+        page = await browser.new_page()
+        await page.set_content(f"<!doctype html><html><body>{html}</body></html>")
+        busy = await page_busy(page)
+        await browser.close()
+    return busy
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("html", "expected"),
+    [
+        ("<button>UNLOCKING...</button>", "UNLOCKING..."),
+        ("<p>Verifying…</p>", "Verifying…"),
+        ('<button><svg class="animate-spin" width="10" height="10"></svg></button>', "spinner"),
+        ("<button>Connect &amp; unlock</button>", None),
+        ("<p>By downloading this track you agree to join the email list and more...</p>", None),
+        ('<div style="display:none"><div class="spinner">x</div></div>', None),
+    ],
+)
+async def test_page_busy(html, expected) -> None:
+    assert await _busy_on(html) == expected

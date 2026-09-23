@@ -1367,3 +1367,62 @@ async def test_a_clickable_download_is_tried_before_any_field_is_filled(monkeypa
 
     handler._click_and_capture_download.assert_awaited()
     field.type.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_a_busy_page_is_waited_out_before_the_turn(monkeypatch):
+    """Sublair shows UNLOCKING... after Connect; a turn taken then clicked the artist link
+    and left the gate."""
+    states = iter(["UNLOCKING...", "UNLOCKING...", None])
+
+    async def busy(_page):
+        return next(states)
+
+    monkeypatch.setattr("soundcloud_dl.gate_handlers.judgment.page_busy", busy)
+    page = MagicMock()
+    page.wait_for_timeout = AsyncMock()
+    handler = make_handler(config={"gate": "sublair", "steps": []})
+
+    await handler._wait_while_busy(page)
+
+    assert page.wait_for_timeout.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_a_spinner_that_never_stops_cannot_stall_the_run(monkeypatch):
+    async def busy(_page):
+        return "spinner"
+
+    monkeypatch.setattr("soundcloud_dl.gate_handlers.judgment.page_busy", busy)
+    page = MagicMock()
+    page.wait_for_timeout = AsyncMock()
+    handler = make_handler(config={"gate": "g", "steps": []})
+
+    for _ in range(20):
+        await handler._wait_while_busy(page)
+
+    assert handler._busy_spent_ms <= 60_000
+    assert page.wait_for_timeout.await_count == 60_000 // 500
+
+
+@pytest.mark.asyncio
+async def test_the_turn_loop_waits_out_a_busy_page_before_snapshotting():
+    handler = make_handler(config={"gate": "sublair", "steps": []})
+    order: list[str] = []
+
+    async def wait(_page):
+        order.append("busy")
+
+    async def begin(_page, _i):
+        order.append("snapshot")
+        raise RuntimeError("stop")
+
+    handler._anchor_run = AsyncMock()
+    handler._watch_downloads = MagicMock()
+    handler._collect_download = AsyncMock(return_value=False)
+    handler._turn_guards = AsyncMock()
+    handler._wait_while_busy = wait
+    handler._begin_turn = begin
+    with pytest.raises(RuntimeError, match="stop"):
+        await handler._run_steps(MagicMock(), {})
+    assert order == ["busy", "snapshot"]
