@@ -77,9 +77,16 @@ const toggleOf = (el) => (
 );
 // Site furniture, never the gate. Recorded rather than dropped so a gate that does put a
 // control in its own header is still reachable through judgment.py's fallback.
-const CHROME_SEL = 'nav, header, footer, [role="navigation"], [role="contentinfo"],'
-  + ' [role="banner"]';
-const isChrome = (el) => el.closest(CHROME_SEL) !== null;
+const CHROME_SEL = 'nav, [role="navigation"], [role="contentinfo"], [role="banner"]';
+// A header or footer is site furniture only at page level, as in HTML's own landmark
+// rules. pl8list's dialog keeps its continue button in the dialog's <footer>.
+const SECTION_SEL = 'article, section, aside, main, dialog, [role="dialog"],'
+  + ' [role="alertdialog"]';
+const isChrome = (el) => {
+  if (el.closest(CHROME_SEL) !== null) return true;
+  const band = el.closest('header, footer');
+  return band !== null && band.closest(SECTION_SEL) === null;
+};
 // A gate is a small card; the page around it can run for thousands of pixels. Droploud's
 // FAQ accordions are interactive, far below the fold, and every expand counts as the page
 // changing — enough to keep the stuck-detector quiet while a run burns all its turns.

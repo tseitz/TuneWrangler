@@ -134,6 +134,9 @@ _DEFAULT_GOAL = (
     "with checked=False, often a <label> whose text begins 'I agree' — keeps that page's "
     "continue button disabled until it is ticked, so tick every unchecked one before pressing "
     "continue. Never pick a checkbox that is already checked=True; clicking it unticks it. "
+    "Some gates list what a button will do for you — 'click continue to: follow, like, "
+    "repost…'. There the listed actions are that button's job, not yours: fill the form's "
+    "fields and press the button, rather than opening the links it names. "
     "Never pick anything that signs in, signs up, logs in, or creates an account: those lead "
     "off the gate and away from the download. If a Next button has already been clicked and "
     "the page did not "
@@ -1328,7 +1331,12 @@ class JudgmentGateHandler(GateHandler):
             # Before the model is asked anything: a field we hold a value for is not a
             # decision, and leaving it empty disables the button the model then has to
             # choose between.
-            if await self._autofill_turn(page, snapshot, autofilled, results, i):
+            # Not while a download is there to click: pl8list's page carries its own comment
+            # box beside the button, and the field that matters is in the dialog it opens.
+            reachable_download = unlock_reached(snapshot) and _visible_download_key(snapshot)
+            if not reachable_download and await self._autofill_turn(
+                page, snapshot, autofilled, results, i
+            ):
                 idle_turns = 0
                 continue
 

@@ -53,3 +53,31 @@ async def test_a_label_over_its_own_input_is_not_covered() -> None:
 @pytest.mark.asyncio
 async def test_an_overlay_that_clicks_pass_through_does_not_cover() -> None:
     assert (await _covered_by_id())["through"] is False
+
+
+_LANDMARKS = """
+<!doctype html><html><body>
+  <header><a id="site_nav" href="/">home</a></header>
+  <article><footer><button id="card_download">download</button></footer></article>
+  <dialog open><form><footer><button id="dialog_continue">continue</button></footer></form></dialog>
+  <footer><a id="site_terms" href="/terms">terms</a></footer>
+</body></html>
+"""
+
+
+@pytest.mark.asyncio
+async def test_only_a_page_level_header_or_footer_is_site_chrome() -> None:
+    """pl8list puts its dialog's continue button in the dialog's own <footer>. Treating
+    that as site furniture withheld the one control that finishes the gate."""
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch()
+        page = await browser.new_page()
+        await page.set_content(_LANDMARKS)
+        chrome = {el["id"]: el["chrome"] for el in await snapshot_elements(page) if el["id"]}
+        await browser.close()
+    assert chrome == {
+        "site_nav": True,
+        "card_download": False,
+        "dialog_continue": False,
+        "site_terms": True,
+    }

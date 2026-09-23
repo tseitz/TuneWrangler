@@ -1347,3 +1347,23 @@ async def test_a_hash_change_is_not_the_download_click_navigating(tmp_path):
 
     await handler._click_and_capture_download(page, "button@dl")
     el.get_attribute.assert_awaited_once_with("href")
+
+
+@pytest.mark.asyncio
+async def test_a_clickable_download_is_tried_before_any_field_is_filled(monkeypatch, tmp_path):
+    """pl8list's page has its own comment box next to its download button. Filling first
+    typed the comment into the page instead of the dialog the download opens."""
+    handler = make_handler(
+        download_dir=tmp_path,
+        template_vars={"email": "a@b.c", "name": "T", "comment": "fire"},
+    )
+    page_comment = element(key="el_body", tag="textarea", placeholder="add a comment...")
+    field = make_element()
+    page = make_page([[page_comment, READY_DOWNLOAD_LINK]], found_element=field)
+    handler._click_and_capture_download = AsyncMock(return_value=True)
+    stub_choice(monkeypatch, ["el_btn"] * 20)
+
+    await handler._run_steps(page, {})
+
+    handler._click_and_capture_download.assert_awaited()
+    field.type.assert_not_awaited()
