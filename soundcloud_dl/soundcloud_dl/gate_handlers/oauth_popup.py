@@ -148,6 +148,12 @@ async def handle_oauth_popup(
     try:
         # Use "load" — SoundCloud's auth page is a React SPA; Spotify's is similar.
         await popup.wait_for_load_state("load", timeout=15_000)
+        # Gaterush opens the window blank, saves the comment, then points it at SoundCloud.
+        # Judged at the blank page, it was closed as unrecognised before the consent loaded.
+        if popup.url in ("", "about:blank"):
+            with contextlib.suppress(Exception):
+                await popup.wait_for_url(lambda u: u not in ("", "about:blank"), timeout=15_000)
+                await popup.wait_for_load_state("load", timeout=15_000)
         url = popup.url
         host = host_of(url)
         is_sc = host_is(host, "soundcloud.com")

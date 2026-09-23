@@ -335,3 +335,20 @@ async def test_an_in_tab_consent_is_left_alone_without_the_opt_in():
     with pytest.raises(LoginWallEncountered, match="press Allow"):
         await handler._raise_on_login_wall(page)
     allow.click.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_a_popup_that_opens_blank_is_judged_where_it_lands():
+    """Gaterush opens the window blank and points it at SoundCloud a moment later. Judged
+    at about:blank it was closed as unrecognised, and the consent never appeared."""
+    popup = _allowable_consent_popup()
+    popup.url = "about:blank"
+
+    async def lands(_predicate, timeout):  # noqa: ARG001
+        popup.url = "https://secure.soundcloud.com/authorize?client_id=x"
+
+    popup.wait_for_url = AsyncMock(side_effect=lands)
+
+    await handle_oauth_popup(popup, "gaterush", approve=True)
+
+    popup.allow.click.assert_awaited_once()

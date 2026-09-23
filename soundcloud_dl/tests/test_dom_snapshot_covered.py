@@ -151,3 +151,10 @@ async def _busy_on(html: str) -> str | None:
 )
 async def test_page_busy(html, expected) -> None:
     assert await _busy_on(html) == expected
+
+
+@pytest.mark.asyncio
+async def test_a_step_progress_bar_is_not_busy() -> None:
+    """Gaterush's step dots are role=progressbar and never go away."""
+    html = '<div role="progressbar" aria-valuenow="1" style="width:100px;height:8px"></div>'
+    assert await _busy_on(html) is None

@@ -214,7 +214,8 @@ BUSY_JS = _js("""
 () => {
   __HELPERS__
   const STATUS = /\\b\\w+ing\\s*(\\.{3}|…)$/i;
-  const SPIN = '[aria-busy="true"], [role="progressbar"], .animate-spin, [class*="spinner"]';
+  // Not role="progressbar": gaterush's step indicator is one, and is always on screen.
+  const SPIN = '[aria-busy="true"], .animate-spin, [class*="spinner"]';
   for (const el of document.querySelectorAll(SPIN)) {
     if (isVisible(el) && onScreen(el)) return 'spinner';
   }
