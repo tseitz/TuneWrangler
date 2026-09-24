@@ -8,6 +8,8 @@ Modes:
   --apply <manifest>     read the given manifest and move only entries whose
                          decision is "apply". Edit the manifest first to override.
   --move                 legacy: process and immediately move all files (no manifest).
+  --prune [--keep N]     list backup runs beyond the newest N (default 5) in the backup
+                         folder; add --yes to delete them.
 
 Incoming (generally): album - artist - title
 Outgoing:             artist - album - title
@@ -35,6 +37,7 @@ import {
   readManifest,
   writeManifest,
 } from "../core/manifest.ts";
+import { pruneBackups, runStamp, startBackupRun } from "../core/utils/backups.ts";
 import { applyJudgement, assertJudgeAvailable, getJudgeThreshold, judgeEntries } from "../core/judge.ts";
 
 const startDir = getFolder("downloaded");
@@ -48,9 +51,9 @@ const MANIFEST_DIR = "./logs/tunewrangler/manifests";
 const DUPLICATE_REASON = "duplicate of an existing track in the DJ collection";
 
 const args = parseArgs(Deno.args, {
-  string: ["apply", "manifest"],
-  boolean: ["move", "no-clear", "judge"],
-  default: { "no-clear": false, judge: false },
+  string: ["apply", "manifest", "keep"],
+  boolean: ["move", "no-clear", "judge", "prune", "yes"],
+  default: { "no-clear": false, judge: false, keep: "5" },
 });
 
 // Fail before any IO: parsing 283 files only to discover TYPESAFE_API_KEY is missing
@@ -59,7 +62,9 @@ if (args.judge) {
   await assertJudgeAvailable();
 }
 
-if (args.apply) {
+if (args.prune) {
+  await runPrune(Number(args.keep), args.yes);
+} else if (args.apply) {
   await runApply(args.apply);
 } else if (args.move) {
   await runLegacyMove(!args["no-clear"]);
@@ -150,9 +155,10 @@ async function runApply(manifestPath: string): Promise<void> {
   const destDir = trailingSlash(manifest.move_dir);
 
   const cache = await cacheMusic(cacheDir);
-  await fs.emptyDir(backupDir);
+  const runBackupDir = await startBackupRun(backupDir, "rename-music");
 
   const moveOps: Promise<void>[] = [];
+  const opSources: string[] = [];
   let applied = 0;
   let skipped = 0;
 
@@ -186,15 +192,43 @@ async function runApply(manifestPath: string): Promise<void> {
     cache.add(song);
 
     moveOps.push(
-      backupFile(sourceDir, backupDir, entry.src).then(() =>
+      backupFile(sourceDir, runBackupDir, entry.src).then(() =>
         renameAndMove(destDir, song, undefined, true)
       )
     );
+    opSources.push(entry.src);
     applied++;
   }
 
-  await Promise.all(moveOps);
-  console.log(`\nApplied: ${applied}, skipped (review/skip/duplicate): ${skipped}`);
+  const failed = await settleMoves(moveOps, opSources);
+  console.log(`\nApplied: ${applied - failed}, failed: ${failed}, skipped (review/skip/duplicate): ${skipped}`);
+  console.log(`Originals backed up to: ${runBackupDir}`);
+}
+
+/**
+ * Waits for every move, not just until the first failure: Promise.all would reject while the
+ * rest kept converting in the background, and the summary would never print.
+ */
+async function settleMoves(ops: Promise<void>[], sources: string[]): Promise<number> {
+  const results = await Promise.allSettled(ops);
+  const failures = results.flatMap((r, i) => r.status === "rejected" ? [{ src: sources[i], reason: r.reason }] : []);
+  if (failures.length > 0) {
+    console.error(`\n${failures.length} file(s) failed — each original is still in the source folder:`);
+    for (const f of failures) console.error(`  ${f.src}: ${f.reason instanceof Error ? f.reason.message : f.reason}`);
+    Deno.exitCode = 1;
+  }
+  return failures.length;
+}
+
+async function runPrune(keep: number, apply: boolean): Promise<void> {
+  const stale = await pruneBackups(backupDir, keep, { apply });
+  if (stale.length === 0) {
+    console.log(`Nothing to prune: ${backupDir} holds ${keep} or fewer backup runs.`);
+    return;
+  }
+  console.log(`${apply ? "Deleted" : "Would delete"} ${stale.length} backup run(s), keeping the newest ${keep}:`);
+  for (const name of stale) console.log(`  ${name}`);
+  if (!apply) console.log("\nRe-run with --yes to delete them.");
 }
 
 function trailingSlash(p: string): string {
@@ -207,9 +241,10 @@ function trailingSlash(p: string): string {
  */
 async function runLegacyMove(clear: boolean): Promise<void> {
   const cache = await cacheMusic(cacheDir);
-  if (clear) await fs.emptyDir(backupDir);
+  const runBackupDir = await startBackupRun(backupDir, "rename-music");
 
   const moveOps: Promise<void>[] = [];
+  const opSources: string[] = [];
   let count = 0;
 
   for await (const currEntry of Deno.readDir(startDir)) {
@@ -226,15 +261,17 @@ async function runLegacyMove(clear: boolean): Promise<void> {
 
     logWithBreak(song.finalFilename);
     moveOps.push(
-      backupFile(startDir, backupDir, entry.src).then(() =>
+      backupFile(startDir, runBackupDir, entry.src).then(() =>
         renameAndMove(moveDir, song, undefined, clear)
       )
     );
+    opSources.push(entry.src);
     count++;
   }
 
-  await Promise.all(moveOps);
-  console.log(`\nTotal moved: ${count}`);
+  const failed = await settleMoves(moveOps, opSources);
+  console.log(`\nTotal moved: ${count - failed}, failed: ${failed}`);
+  console.log(`Originals backed up to: ${runBackupDir}`);
 }
 
 interface BuildResult {
@@ -327,6 +364,5 @@ function printSummary(entries: ManifestEntry[], manifestPath: string): void {
 }
 
 function defaultManifestPath(): string {
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
-  return `${MANIFEST_DIR}/rename-manifest-${stamp}.json`;
+  return `${MANIFEST_DIR}/rename-manifest-${runStamp()}.json`;
 }

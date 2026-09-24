@@ -4,7 +4,7 @@ Renames downloaded music to the format that I like. Also converts to flac if wav
 Incoming (generally): album - artist - title
 Outgoing:             artist - album - title
 */
-import * as fs from "@std/fs";
+import { startBackupRun } from "../core/utils/backups.ts";
 
 import { backupFile, convertLocalToAiff, getFolder, logWithBreak } from "../core/utils/common.ts";
 import { LocalSong } from "../core/models/Song.ts";
@@ -17,10 +17,8 @@ let clear = true;
 
 const startDir = getFolder("djMusic");
 const moveDir = getFolder("djMusic");
-const backupDir = getFolder("backup");
 
 // pass arg "--move" to write tags and move file
-// --no-clear does not clear out the backup directory
 Deno.args.forEach((value) => {
   if (value === "--move") {
     debug = false;
@@ -31,7 +29,7 @@ Deno.args.forEach((value) => {
 });
 
 // empty out the backup directory if necessary
-if (clear) await fs.emptyDir(backupDir);
+const runBackupDir = await startBackupRun(getFolder("backup"), "convert-flacs");
 
 // run the program
 await main();
@@ -54,7 +52,7 @@ async function main() {
 
   // Phase 2: Parallel backup
   await Promise.all(
-    flacFiles.map(({ name }) => backupFile(startDir, backupDir, name))
+    flacFiles.map(({ name }) => backupFile(startDir, runBackupDir, name))
   );
 
   // Phase 3: Parallel conversion with concurrency limit

@@ -1,7 +1,7 @@
 /*
 Renames downloaded music from Beatport to format I like
 */
-import * as fs from "@std/fs";
+import { startBackupRun } from "../core/utils/backups.ts";
 import nodeId3 from "node-id3";
 
 import {
@@ -32,10 +32,9 @@ Deno.args.forEach((value) => {
 const startDir = getFolder("downloaded");
 const cacheDir = getFolder("djMusic");
 const moveDir = getFolder("rename");
-const backupDir = getFolder("backup");
 
 // empty out the backup directory
-if (clear) await fs.emptyDir(backupDir);
+const runBackupDir = await startBackupRun(getFolder("backup"), "rename-beatport");
 
 const musicCache = await cacheMusic(cacheDir);
 
@@ -48,7 +47,7 @@ async function main() {
       console.log("Processing: ", currEntry.name);
 
       for await (const beatportItem of Deno.readDir(`${startDir}/${currEntry.name}`)) {
-        await backupFile(`${startDir}/${currEntry.name}/`, backupDir, beatportItem.name);
+        await backupFile(`${startDir}/${currEntry.name}/`, runBackupDir, beatportItem.name);
 
         let song = new Song(beatportItem.name, `${startDir}${currEntry.name}/`);
 

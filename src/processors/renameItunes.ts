@@ -2,7 +2,7 @@
 Renames downloaded music from iTunes to format I like.
 Parallelizes ffprobe metadata extraction for much faster processing.
 */
-import * as fs from "@std/fs";
+import { startBackupRun } from "../core/utils/backups.ts";
 import { walk, type WalkEntry } from "@std/fs";
 
 import {
@@ -37,10 +37,9 @@ Deno.args.forEach((value) => {
 const startDir = getFolder("itunes");
 const cacheDir = getFolder("djMusic");
 const moveDir = getFolder("rename");
-const backupDir = getFolder("backup");
 
 // empty out the backup directory
-if (clear) await fs.emptyDir(backupDir);
+const runBackupDir = await startBackupRun(getFolder("backup"), "rename-itunes");
 
 const musicCache = await cacheMusic(cacheDir);
 
@@ -131,7 +130,7 @@ async function main() {
   if (toMove.length > 0) {
     await Promise.all(
       toMove.map(async ({ song, entryName }) => {
-        await backupFile(song.directory, backupDir, entryName);
+        await backupFile(song.directory, runBackupDir, entryName);
         await renameAndMove(moveDir, song, undefined, clear);
       })
     );

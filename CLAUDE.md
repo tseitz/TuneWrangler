@@ -17,6 +17,7 @@ TuneWrangler is a music file management tool with two components:
 deno task rM                       # rename music: dry-run, writes manifest
 deno task rM --apply <manifest>    # apply approved entries from a manifest
 deno task rM --move                # legacy: parse + move all in one shot
+deno task rM --prune [--keep N]    # list backup runs beyond the newest N (5); --yes deletes
 deno task promote <manifest>       # copy manifest into tests/corpus/ as regression coverage
 deno task test                     # run all tests (unit + corpus regression)
 deno task validate                 # validate config paths exist
@@ -53,6 +54,7 @@ The `rename-music` flow is **dry-run first, apply second** — never `--move` un
                                         Each entry has confidence (high/medium/low) + decision (apply/review/skip)
 2. User opens manifest, edits "decision" or "proposed" fields for low-confidence entries
 3. deno task rM --apply <manifest>    → moves only entries with decision: "apply"
+                                        originals are copied to <backup>/<timestamp>_rename-music/ first
 4. deno task promote <manifest>       → locks the batch into tests/corpus/ as regression tests
 ```
 

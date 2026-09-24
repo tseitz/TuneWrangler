@@ -1,7 +1,7 @@
 /*
 Tags local songs. Converts to flac if necessary
 */
-import * as fs from "@std/fs";
+import { startBackupRun } from "../core/utils/backups.ts";
 
 import {
   backupFile,
@@ -21,10 +21,8 @@ let clear = true;
 const startDir = getFolder("downloaded");
 const cacheDir = getFolder("djMusic");
 const moveDir = getFolder("rename");
-const backupDir = getFolder("backup");
 
 // pass arg "--move" to write tags and move file
-// --no-clear does not clear out the backup directory
 Deno.args.forEach((value) => {
   if (value === "--move") {
     debug = false;
@@ -41,7 +39,7 @@ Deno.args.forEach((value) => {
 const musicCache = await cacheMusic(cacheDir);
 
 // empty out the backup directory if necessary
-if (clear) await fs.emptyDir(backupDir);
+const runBackupDir = await startBackupRun(getFolder("backup"), "rename-bandcamp");
 
 // run the program
 await main();
@@ -52,7 +50,7 @@ async function main() {
     if (currEntry.isDirectory && currEntry.name === "bandcamp") {
       for await (const bandcampItem of Deno.readDir(`${startDir}/${currEntry.name}`)) {
         if (bandcampItem.isFile && !bandcampItem.isDirectory && !bandcampItem.name.includes(".zip")) {
-          await backupFile(`${startDir}${currEntry.name}/`, backupDir, bandcampItem.name);
+          await backupFile(`${startDir}${currEntry.name}/`, runBackupDir, bandcampItem.name);
 
           let song = new LocalSong(bandcampItem.name, `${startDir}${currEntry.name}/`);
 
