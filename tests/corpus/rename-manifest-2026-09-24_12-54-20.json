@@ -1,0 +1,3228 @@
+{
+  "version": 1,
+  "generated_at": "2026-09-24T12:54:20.258Z",
+  "source_dir": "/Volumes/gdrive-ssd/My Drive/TransferMusic/Downloaded/soundcloud/",
+  "move_dir": "/Volumes/gdrive-ssd/My Drive/TransferMusic/Renamed/",
+  "cache_dir": "/Volumes/gdrive-ssd/My Drive/DJ/Dane Dubz DJ Music/Collection/",
+  "entries": [
+    {
+      "src": "Dimly - Cliche.wav",
+      "proposed": "Dimly - Cliche.wav",
+      "parser_output": "Dimly - Cliche.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.78,
+          "title_is_a_title": 0.87,
+          "fields_not_swapped": 0.85
+        },
+        "judged_proposed": "Dimly - Cliche.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.568Z"
+      }
+    },
+    {
+      "src": "Joey Valence & Brae, Ayesha Erotica - The Baddest (Badder) (Phrva Flip).wav",
+      "proposed": "Phrva - Joey Valence x Brae x Ayesha Erotica - The Baddest.wav",
+      "parser_output": "Phrva - Joey Valence x Brae x Ayesha Erotica - The Baddest.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.59,
+          "title_is_a_title": 0.89,
+          "fields_not_swapped": 0.74
+        },
+        "judged_proposed": "Phrva - Joey Valence x Brae x Ayesha Erotica - The Baddest.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.651Z"
+      }
+    },
+    {
+      "src": "ETS - Pressure.wav",
+      "proposed": "ETS - Pressure.wav",
+      "parser_output": "ETS - Pressure.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.83,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.8
+        },
+        "judged_proposed": "ETS - Pressure.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.579Z"
+      }
+    },
+    {
+      "src": "Internet Friends (Saint Jabir Remix).mp3",
+      "proposed": "Saint Jabir - Internet Friends.mp3",
+      "parser_output": "Saint Jabir - Internet Friends.mp3",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.63,
+          "title_is_a_title": 0.9,
+          "fields_not_swapped": 0.76
+        },
+        "judged_proposed": "Saint Jabir - Internet Friends.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.565Z"
+      }
+    },
+    {
+      "src": "Smack My B__ Up - (Lowshade Flip).wav",
+      "proposed": "Lowshade - Smack My B__ Up.wav",
+      "parser_output": "Lowshade - Smack My B__ Up.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "jev: nothing_lost=0.46 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.46,
+          "title_is_a_title": 0.73,
+          "fields_not_swapped": 0.79
+        },
+        "judged_proposed": "Lowshade - Smack My B__ Up.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.565Z"
+      }
+    },
+    {
+      "src": "You and Me (2JUICY Flip) mstr.wav",
+      "proposed": "2JUICY - You and Me.wav",
+      "parser_output": "2JUICY - You and Me.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "jev: nothing_lost=0.49 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.49,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.81
+        },
+        "judged_proposed": "2JUICY - You and Me.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.609Z"
+      }
+    },
+    {
+      "src": "FOSSILS - FTP.wav",
+      "proposed": "FOSSILS - FTP.wav",
+      "parser_output": "FOSSILS - FTP.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.78,
+          "title_is_a_title": 0.78,
+          "fields_not_swapped": 0.79
+        },
+        "judged_proposed": "FOSSILS - FTP.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.581Z"
+      }
+    },
+    {
+      "src": "DEVOWR. - afters ahh tune.wav",
+      "proposed": "DEVOWR. - afters ahh tune.wav",
+      "parser_output": "DEVOWR. - afters ahh tune.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.69,
+          "title_is_a_title": 0.77,
+          "fields_not_swapped": 0.87
+        },
+        "judged_proposed": "DEVOWR. - afters ahh tune.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.567Z"
+      }
+    },
+    {
+      "src": "Noctiil - Noctiil & Jawnsin - BODY.wav",
+      "proposed": "Noctiil x Jawnsin - BODY.wav",
+      "parser_output": "Noctiil x Jawnsin - Noctiil - BODY.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "POP THA TRUNK - TRUNK BABY.wav",
+      "proposed": "POP THA TRUNK - TRUNK BABY.wav",
+      "parser_output": "POP THA TRUNK - TRUNK BABY.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.86,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.82
+        },
+        "judged_proposed": "POP THA TRUNK - TRUNK BABY.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.685Z"
+      }
+    },
+    {
+      "src": "Izzy Vadim - LYES & IZZY VADIM - PRESSURE x ACTIN UP (STONED LEVEL EDIT).wav",
+      "proposed": "STONED LEVEL - LYES x IZZY VADIM - PRESSURE x ACTIN UP.wav",
+      "parser_output": "STONED LEVEL - LYES x IZZY VADIM - PRESSURE x ACTIN UP.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: nothing_lost=0.48 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.48,
+          "title_is_a_title": 0.8,
+          "fields_not_swapped": 0.74
+        },
+        "judged_proposed": "STONED LEVEL - LYES x IZZY VADIM - PRESSURE x ACTIN UP.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.675Z"
+      }
+    },
+    {
+      "src": "C-Motion - Shiny.wav",
+      "proposed": "C-Motion - Shiny.wav",
+      "parser_output": "C-Motion - Shiny.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.76,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.86
+        },
+        "judged_proposed": "C-Motion - Shiny.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.685Z"
+      }
+    },
+    {
+      "src": "JG DUBZ - TURN UP.wav",
+      "proposed": "JG DUBZ - TURN UP.wav",
+      "parser_output": "JG DUBZ - TURN UP.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.8,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.85
+        },
+        "judged_proposed": "JG DUBZ - TURN UP.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.671Z"
+      }
+    },
+    {
+      "src": "beastboi. - LYNY x COZY KEV - TRIUMPH (beastboi. bootleg).wav",
+      "proposed": "beastboi. - LYNY x COZY KEV - TRIUMPH.wav",
+      "parser_output": "beastboi. - LYNY x COZY KEV - TRIUMPH.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.71,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.81
+        },
+        "judged_proposed": "beastboi. - LYNY x COZY KEV - TRIUMPH.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.722Z"
+      }
+    },
+    {
+      "src": "ALIAS - I CRY, JUST A LITTLE (ALIAS UKG FLIP).wav",
+      "proposed": "ALIAS - I CRY, JUST A LITTLE.wav",
+      "parser_output": "ALIAS UKG - ALIAS - I CRY, JUST A LITTLE.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Blosso - Tim Deluxe - It Just Won't Do (Blosso Edition).wav",
+      "proposed": "Blosso - Tim Deluxe - It Just Won't Do.wav",
+      "parser_output": "Tim Deluxe - Blosso - It Just Won't Do.wav",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: nothing_lost=0.37 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.37,
+          "title_is_a_title": 0.95,
+          "fields_not_swapped": 0.53
+        },
+        "judged_proposed": "Tim Deluxe - Blosso - It Just Won't Do.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.702Z"
+      }
+    },
+    {
+      "src": "beastboi. - FRED AGAIN, PLAQUEBOYMAXX & SKEPTA - VICTORY LAP (beastboi's ghetto remix).wav",
+      "proposed": "beastboi. - FRED AGAIN x PLAQUEBOYMAXX x SKEPTA - VICTORY LAP.wav",
+      "parser_output": "beastboi's ghetto - FRED AGAIN x PLAQUEBOYMAXX x SKEPTA - VICTORY LAP.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.51,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.58
+        },
+        "judged_proposed": "beastboi's ghetto - FRED AGAIN x PLAQUEBOYMAXX x SKEPTA - VICTORY LAP.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.721Z"
+      }
+    },
+    {
+      "src": "Big Nut Chuck - Think U The Shit (Fart) [Big Nut Chuck Remix] - Ice Spice.wav",
+      "proposed": "Big Nut Chuck - Ice Spice - Think U The Shit (Fart).wav",
+      "parser_output": "Big Nut Chuck - Big Nut Chuck - Think U The Shit.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "BILLYTHEKID - Skrillex & ISOxo - Smoke (BILLYTHEKID BOOTLEG).wav",
+      "proposed": "BILLYTHEKID - Skrillex x ISOxo - Smoke.wav",
+      "parser_output": "BILLYTHEKID - Skrillex x ISOxo - Smoke.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.62,
+          "title_is_a_title": 0.95,
+          "fields_not_swapped": 0.64
+        },
+        "judged_proposed": "BILLYTHEKID - Skrillex x ISOxo - Smoke.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.756Z"
+      }
+    },
+    {
+      "src": "Blosso - The Chemical Brothers - Galvanize (Blosso Edition).wav",
+      "proposed": "Blosso - The Chemical Brothers - Galvanize.wav",
+      "parser_output": "The Chemical Brothers - Blosso - Galvanize.wav",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: nothing_lost=0.30 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.3,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.63
+        },
+        "judged_proposed": "The Chemical Brothers - Blosso - Galvanize.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.769Z"
+      }
+    },
+    {
+      "src": "Dan Heale - Paul Johnson - Get Get Down (Dan Heale Edit).wav",
+      "proposed": "Dan Heale - Paul Johnson - Get Get Down.wav",
+      "parser_output": "Dan Heale - Paul Johnson - Get Get Down.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.18 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.6,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.18
+        },
+        "judged_proposed": "Dan Heale - Paul Johnson - Get Get Down.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.846Z"
+      }
+    },
+    {
+      "src": "elden - LIVEWIRE.wav",
+      "proposed": "elden - LIVEWIRE.wav",
+      "parser_output": "elden - LIVEWIRE.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.84,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.85
+        },
+        "judged_proposed": "elden - LIVEWIRE.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.807Z"
+      }
+    },
+    {
+      "src": "G-Space - G-Space x Kae - TBKI  TYBG.wav",
+      "proposed": "G-Space x Kae - TBKI TYBG.wav",
+      "parser_output": "G-Space x Kae - G-Space - TBKI TYBG.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "HAMMAH - Kanye West - Mercy (HAMMAH & JBG Flip).mp3",
+      "proposed": "HAMMAH x JBG - Kanye West - Mercy.mp3",
+      "parser_output": "HAMMAH x JBG - Kanye West - Mercy.mp3",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.37 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.53,
+          "title_is_a_title": 0.95,
+          "fields_not_swapped": 0.37
+        },
+        "judged_proposed": "HAMMAH x JBG - Kanye West - Mercy.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.796Z"
+      }
+    },
+    {
+      "src": "JAYNIE - KETTAMA & INTERPLANETARY CRIMINAL - YOSEMITE (JAYNIE EDIT).wav",
+      "proposed": "JAYNIE - KETTAMA x INTERPLANETARY CRIMINAL - YOSEMITE.wav",
+      "parser_output": "JAYNIE - KETTAMA x INTERPLANETARY CRIMINAL - YOSEMITE.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.77,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.89
+        },
+        "judged_proposed": "JAYNIE - KETTAMA x INTERPLANETARY CRIMINAL - YOSEMITE.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.846Z"
+      }
+    },
+    {
+      "src": "JAYNIE - ME & U.wav",
+      "proposed": "JAYNIE - ME & U.wav",
+      "parser_output": "JAYNIE - ME & U.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.6,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.85
+        },
+        "judged_proposed": "JAYNIE - ME & U.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.829Z"
+      }
+    },
+    {
+      "src": "Kvolx - iLoveMakonnen - Tuesday (Kvolx Flip).wav",
+      "proposed": "Kvolx - iLoveMakonnen - Tuesday.wav",
+      "parser_output": "Kvolx - iLoveMakonnen - Tuesday.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.47 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.62,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.47
+        },
+        "judged_proposed": "Kvolx - iLoveMakonnen - Tuesday.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.824Z"
+      }
+    },
+    {
+      "src": "Lazy K - BEATKNOCKIN.wav",
+      "proposed": "Lazy K - BEATKNOCKIN.wav",
+      "parser_output": "Lazy K - BEATKNOCKIN.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.75,
+          "title_is_a_title": 0.83,
+          "fields_not_swapped": 0.83
+        },
+        "judged_proposed": "Lazy K - BEATKNOCKIN.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.875Z"
+      }
+    },
+    {
+      "src": "MORTY - Korn - Freak On a Leash (Morty UKG Bootleg).wav",
+      "proposed": "MORTY - Korn - Freak On a Leash.wav",
+      "parser_output": "Morty UKG - Korn - Freak On a Leash.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.62,
+          "title_is_a_title": 0.87,
+          "fields_not_swapped": 0.62
+        },
+        "judged_proposed": "Morty UKG - Korn - Freak On a Leash.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.872Z"
+      }
+    },
+    {
+      "src": "RDGO - Crave You (Extended Mix).mp3",
+      "proposed": "RDGO - Crave You (Extended Mix).mp3",
+      "parser_output": "RDGO - Crave You (Extended Mix).mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.57,
+          "title_is_a_title": 0.87,
+          "fields_not_swapped": 0.84
+        },
+        "judged_proposed": "RDGO - Crave You (Extended Mix).mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.909Z"
+      }
+    },
+    {
+      "src": "rippy - PIRATE MATERIAL.wav",
+      "proposed": "rippy - PIRATE MATERIAL.wav",
+      "parser_output": "rippy - PIRATE MATERIAL.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.69,
+          "title_is_a_title": 0.84,
+          "fields_not_swapped": 0.86
+        },
+        "judged_proposed": "rippy - PIRATE MATERIAL.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.909Z"
+      }
+    },
+    {
+      "src": "STPTBOOTS - Rayment - Wicked & Dark.wav",
+      "proposed": "Rayment - STPTBOOTS - Wicked & Dark.wav",
+      "parser_output": "Rayment - STPTBOOTS - Wicked & Dark.wav",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.69,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.76
+        },
+        "judged_proposed": "Rayment - STPTBOOTS - Wicked & Dark.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.979Z"
+      }
+    },
+    {
+      "src": "Sustance - Iiidiot.mp3",
+      "proposed": "Sustance - Iiidiot.mp3",
+      "parser_output": "Sustance - Iiidiot.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.86,
+          "title_is_a_title": 0.83,
+          "fields_not_swapped": 0.82
+        },
+        "judged_proposed": "Sustance - Iiidiot.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.940Z"
+      }
+    },
+    {
+      "src": "TRAIZOR - BLOODSHIFT.mp3",
+      "proposed": "TRAIZOR - BLOODSHIFT.mp3",
+      "parser_output": "TRAIZOR - BLOODSHIFT.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.85,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.78
+        },
+        "judged_proposed": "TRAIZOR - BLOODSHIFT.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.950Z"
+      }
+    },
+    {
+      "src": "YAKO - THE MENACE.mp3",
+      "proposed": "YAKO - THE MENACE.mp3",
+      "parser_output": "YAKO - THE MENACE.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.84,
+          "title_is_a_title": 0.9,
+          "fields_not_swapped": 0.78
+        },
+        "judged_proposed": "YAKO - THE MENACE.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.955Z"
+      }
+    },
+    {
+      "src": "Darren After - Seven Nation Army (Darren After Edit).wav",
+      "proposed": "Darren After - Seven Nation Army.wav",
+      "parser_output": "Darren After - Seven Nation Army.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed",
+        "jev: nothing_lost=0.33 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.33,
+          "title_is_a_title": 0.85,
+          "fields_not_swapped": 0.78
+        },
+        "judged_proposed": "Darren After - Seven Nation Army.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.973Z"
+      }
+    },
+    {
+      "src": "Lysrgix - JOYRYDE - I'M GONE (Lysrgix x Noctiil Flip).wav",
+      "proposed": "Lysrgix x Noctiil - JOYRYDE - I'M GONE.wav",
+      "parser_output": "Lysrgix x Noctiil - JOYRYDE - I'M GONE.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.6,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.62
+        },
+        "judged_proposed": "Lysrgix x Noctiil - JOYRYDE - I'M GONE.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:20.981Z"
+      }
+    },
+    {
+      "src": "Section! - DWD.wav",
+      "proposed": "Section! - DWD.wav",
+      "parser_output": "Section! - DWD.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.71,
+          "title_is_a_title": 0.79,
+          "fields_not_swapped": 0.83
+        },
+        "judged_proposed": "Section! - DWD.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.043Z"
+      }
+    },
+    {
+      "src": "harrisun ☀️ - BACK IT UP.mp3",
+      "proposed": "harrisun - BACK IT UP.mp3",
+      "parser_output": "harrisun - BACK IT UP.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.56,
+          "title_is_a_title": 0.95,
+          "fields_not_swapped": 0.8
+        },
+        "judged_proposed": "harrisun - BACK IT UP.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.026Z"
+      }
+    },
+    {
+      "src": "Section! - LUNAR.wav",
+      "proposed": "Section! - LUNAR.wav",
+      "parser_output": "Section! - LUNAR.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.74,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.78
+        },
+        "judged_proposed": "Section! - LUNAR.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.067Z"
+      }
+    },
+    {
+      "src": "Noer the Boy - Bladee Flip.wav",
+      "proposed": "Noer the Boy - Bladee Flip.wav",
+      "parser_output": "Noer the Boy - Bladee Flip.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed",
+        "jev: nothing_lost=0.46 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.46,
+          "title_is_a_title": 0.77,
+          "fields_not_swapped": 0.73
+        },
+        "judged_proposed": "Noer the Boy - Bladee Flip.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.084Z"
+      }
+    },
+    {
+      "src": "Phrva - Kid Sister X Rusko - Pro Nails (Phrva Flip).wav",
+      "proposed": "Phrva - Kid Sister x Rusko - Pro Nails.wav",
+      "parser_output": "Phrva - Kid Sister x Rusko - Pro Nails.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.64,
+          "title_is_a_title": 0.9,
+          "fields_not_swapped": 0.75
+        },
+        "judged_proposed": "Phrva - Kid Sister x Rusko - Pro Nails.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.077Z"
+      }
+    },
+    {
+      "src": "AMNES - MORA.mp3",
+      "proposed": "AMNES - MORA.mp3",
+      "parser_output": "AMNES - MORA.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.86,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.84
+        },
+        "judged_proposed": "AMNES - MORA.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.087Z"
+      }
+    },
+    {
+      "src": "hobi - notoriety.wav",
+      "proposed": "hobi - notoriety.wav",
+      "parser_output": "hobi - notoriety.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.86,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.77
+        },
+        "judged_proposed": "hobi - notoriety.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.093Z"
+      }
+    },
+    {
+      "src": "BLVCKHOUND - BLVCKHOUND X ZAARG - SUGAR CUBES.wav",
+      "proposed": "BLVCKHOUND x ZAARG - SUGAR CUBES.wav",
+      "parser_output": "BLVCKHOUND x ZAARG - BLVCKHOUND - SUGAR CUBES.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Us Under - Please Me.aif",
+      "proposed": "Us Under - Please Me.aif",
+      "parser_output": "Us Under - Please Me.aif",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.68,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.8
+        },
+        "judged_proposed": "Us Under - Please Me.aif",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.116Z"
+      }
+    },
+    {
+      "src": "KRACAA - $uicideBoy$ - Leviticus (KRACAA FLIP).mp3",
+      "proposed": "KRACAA - $uicideBoy$ - Leviticus.mp3",
+      "parser_output": "KRACAA - $uicideBoy$ - Leviticus.mp3",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.33 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.67,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.33
+        },
+        "judged_proposed": "KRACAA - $uicideBoy$ - Leviticus.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.153Z"
+      }
+    },
+    {
+      "src": "PIERCE - LADY GAGA - JUST DANCE (PIERCE & VIRX REMIX).wav",
+      "proposed": "PIERCE x VIRX - LADY GAGA - JUST DANCE.wav",
+      "parser_output": "PIERCE x VIRX - LADY GAGA - JUST DANCE.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.48 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.53,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.48
+        },
+        "judged_proposed": "PIERCE x VIRX - LADY GAGA - JUST DANCE.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.189Z"
+      }
+    },
+    {
+      "src": "ECKOD - MOHAWK.wav",
+      "proposed": "ECKOD - MOHAWK.wav",
+      "parser_output": "ECKOD - MOHAWK.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.83,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.82
+        },
+        "judged_proposed": "ECKOD - MOHAWK.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.189Z"
+      }
+    },
+    {
+      "src": "Modley - YQUESUENA w Gavss.wav",
+      "proposed": "Modley x Gavss - YQUESUENA.wav",
+      "parser_output": "Modley x Gavss - YQUESUENA.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.67,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.83
+        },
+        "judged_proposed": "Modley x Gavss - YQUESUENA.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.182Z"
+      }
+    },
+    {
+      "src": "FORMAL - FLUX PAVILION - I CANT STOP (FORMAL REFLIP).mp3",
+      "proposed": "FORMAL - FLUX PAVILION - I CANT STOP.mp3",
+      "parser_output": "FLUX PAVILION - FORMAL - I CANT STOP.mp3",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: nothing_lost=0.37 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.37,
+          "title_is_a_title": 0.88,
+          "fields_not_swapped": 0.76
+        },
+        "judged_proposed": "FLUX PAVILION - FORMAL - I CANT STOP.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.200Z"
+      }
+    },
+    {
+      "src": "FORMAL - LADY GAGA - JUST DANCE (FORMAL REMIX).mp3",
+      "proposed": "FORMAL - LADY GAGA - JUST DANCE.mp3",
+      "parser_output": "FORMAL - LADY GAGA - JUST DANCE.mp3",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.33 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.54,
+          "title_is_a_title": 0.88,
+          "fields_not_swapped": 0.33
+        },
+        "judged_proposed": "FORMAL - LADY GAGA - JUST DANCE.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.243Z"
+      }
+    },
+    {
+      "src": "FORMAL - JUSTIN TIMBERLAKE - SEXYBACK (FORMAL & ASTRID REMIX).mp3",
+      "proposed": "FORMAL x ASTRID - JUSTIN TIMBERLAKE - SEXYBACK.mp3",
+      "parser_output": "FORMAL x ASTRID - JUSTIN TIMBERLAKE - SEXYBACK.mp3",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.43 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.51,
+          "title_is_a_title": 0.89,
+          "fields_not_swapped": 0.43
+        },
+        "judged_proposed": "FORMAL x ASTRID - JUSTIN TIMBERLAKE - SEXYBACK.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.203Z"
+      }
+    },
+    {
+      "src": "B-HIND - Ravin' Crew.wav",
+      "proposed": "B-HIND - Ravin' Crew.wav",
+      "parser_output": "B-HIND - Ravin' Crew.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.8,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.83
+        },
+        "judged_proposed": "B-HIND - Ravin' Crew.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.229Z"
+      }
+    },
+    {
+      "src": "Boat Club Records - MAZOS - Drivin' Me Crazy.wav",
+      "proposed": "MAZOS - Boat Club Records - Drivin' Me Crazy.wav",
+      "parser_output": "MAZOS - Boat Club Records - Drivin' Me Crazy.wav",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.47 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.77,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.47
+        },
+        "judged_proposed": "MAZOS - Boat Club Records - Drivin' Me Crazy.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.248Z"
+      }
+    },
+    {
+      "src": "Zim - No Relaxin'.wav",
+      "proposed": "Zim - No Relaxin'.wav",
+      "parser_output": "Zim - No Relaxin'.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.75,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.84
+        },
+        "judged_proposed": "Zim - No Relaxin'.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.309Z"
+      }
+    },
+    {
+      "src": "DA DEMOLITION SQUAD - Vyzer - Always Urs.wav",
+      "proposed": "Vyzer - DA DEMOLITION SQUAD - Always Urs.wav",
+      "parser_output": "Vyzer - DA DEMOLITION SQUAD - Always Urs.wav",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.68,
+          "title_is_a_title": 0.88,
+          "fields_not_swapped": 0.91
+        },
+        "judged_proposed": "Vyzer - DA DEMOLITION SQUAD - Always Urs.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.296Z"
+      }
+    },
+    {
+      "src": "FOSSILS - AVALON - SUICIDEBOYS (FOSSILS X CHIRENJI REMIX).wav",
+      "proposed": "FOSSILS x CHIRENJI - SUICIDEBOYS - AVALON.wav",
+      "parser_output": "FOSSILS x CHIRENJI - AVALON - SUICIDEBOYS.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: nothing_lost=0.40 below threshold 0.5",
+        "jev: title_is_a_title=0.09 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.4,
+          "title_is_a_title": 0.09,
+          "fields_not_swapped": 0.65
+        },
+        "judged_proposed": "FOSSILS x CHIRENJI - AVALON - SUICIDEBOYS.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.338Z"
+      }
+    },
+    {
+      "src": "cozy kev - A$AP ROCKY - LONG LIVE A$AP (COZY KEV REMIX).wav",
+      "proposed": "COZY KEV - A$AP ROCKY - LONG LIVE A$AP.wav",
+      "parser_output": "COZY KEV - A$AP ROCKY - LONG LIVE A$AP.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.49 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.57,
+          "title_is_a_title": 0.6,
+          "fields_not_swapped": 0.49
+        },
+        "judged_proposed": "COZY KEV - A$AP ROCKY - LONG LIVE A$AP.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.311Z"
+      }
+    },
+    {
+      "src": "Terminal 6 - My Neck My Back (Terminal 6 Flip).wav",
+      "proposed": "Terminal 6 - My Neck My Back.wav",
+      "parser_output": "Terminal 6 - My Neck My Back.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed",
+        "jev: nothing_lost=0.32 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.32,
+          "title_is_a_title": 0.85,
+          "fields_not_swapped": 0.77
+        },
+        "judged_proposed": "Terminal 6 - My Neck My Back.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.329Z"
+      }
+    },
+    {
+      "src": "FLY - MONSOON.wav",
+      "proposed": "FLY - MONSOON.wav",
+      "parser_output": "FLY - MONSOON.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.79,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.81
+        },
+        "judged_proposed": "FLY - MONSOON.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.333Z"
+      }
+    },
+    {
+      "src": "niko - LSD.mp3",
+      "proposed": "niko - LSD.mp3",
+      "parser_output": "niko - LSD.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.81,
+          "title_is_a_title": 0.87,
+          "fields_not_swapped": 0.81
+        },
+        "judged_proposed": "niko - LSD.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.348Z"
+      }
+    },
+    {
+      "src": "omen - Bukkha ft. Killa P - Badda Den Dem (omen bootleg).aif",
+      "proposed": "omen - Bukkha x Killa P - Badda Den Dem.aif",
+      "parser_output": "omen - Bukkha x Killa P - Badda Den Dem.aif",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.64,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.8
+        },
+        "judged_proposed": "omen - Bukkha x Killa P - Badda Den Dem.aif",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.383Z"
+      }
+    },
+    {
+      "src": "cozy kev - JOHN SUMMIT FT ABSOLUTELY - DONT BELIEVE IT (COZY KEV REMIX).wav",
+      "proposed": "COZY KEV - JOHN SUMMIT x ABSOLUTELY - DONT BELIEVE IT.wav",
+      "parser_output": "COZY KEV - JOHN SUMMIT x ABSOLUTELY - DONT BELIEVE IT.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.59,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.85
+        },
+        "judged_proposed": "COZY KEV - JOHN SUMMIT x ABSOLUTELY - DONT BELIEVE IT.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.455Z"
+      }
+    },
+    {
+      "src": "Robin Nap - The Old School Vibe (Original Mix).wav",
+      "proposed": "Robin Nap - The Old School Vibe.wav",
+      "parser_output": "Robin Nap - The Old School Vibe.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.58,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.86
+        },
+        "judged_proposed": "Robin Nap - The Old School Vibe.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.422Z"
+      }
+    },
+    {
+      "src": "G-Space - Jkyl & Hyde - Sensory Session (G-Space x greyfate x Mystyk Forest Remix).wav",
+      "proposed": "G-Space x greyfate x Mystyk Forest - Jkyl x Hyde - Sensory Session.wav",
+      "parser_output": "G-Space x greyfate x Mystyk Forest - Jkyl x Hyde - Sensory Session.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.53,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.82
+        },
+        "judged_proposed": "G-Space x greyfate x Mystyk Forest - Jkyl x Hyde - Sensory Session.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.410Z"
+      }
+    },
+    {
+      "src": "L8NITE - WAGWAN.mp3",
+      "proposed": "L8NITE - WAGWAN.mp3",
+      "parser_output": "L8NITE - WAGWAN.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.83,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.84
+        },
+        "judged_proposed": "L8NITE - WAGWAN.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.459Z"
+      }
+    },
+    {
+      "src": "MORTY - Deftones - My Own Summer (Shove it) (MORTY BOOTLEG).wav",
+      "proposed": "MORTY - Deftones - My Own Summer (Shove it).wav",
+      "parser_output": "MORTY - Deftones - My Own Summer.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.36 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.67,
+          "title_is_a_title": 0.89,
+          "fields_not_swapped": 0.36
+        },
+        "judged_proposed": "MORTY - Deftones - My Own Summer.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.475Z"
+      }
+    },
+    {
+      "src": "Pretty Sweet - Chris Lorenzo - in dis bih (Pretty Sweet Flip).wav",
+      "proposed": "Pretty Sweet - Chris Lorenzo - in dis bih.wav",
+      "parser_output": "Pretty Sweet - Chris Lorenzo - in dis bih.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.33 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.72,
+          "title_is_a_title": 0.9,
+          "fields_not_swapped": 0.33
+        },
+        "judged_proposed": "Pretty Sweet - Chris Lorenzo - in dis bih.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.456Z"
+      }
+    },
+    {
+      "src": "Qualia - Headway (Lowcation Remix).wav",
+      "proposed": "Lowcation - Qualia - Headway.wav",
+      "parser_output": "Lowcation - Qualia - Headway.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "jev: fields_not_swapped=0.49 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.69,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.49
+        },
+        "judged_proposed": "Lowcation - Qualia - Headway.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.478Z"
+      }
+    },
+    {
+      "src": "Qualia - Voyage (Kodiak Kid Remix).wav",
+      "proposed": "Kodiak Kid - Qualia - Voyage.wav",
+      "parser_output": "Kodiak Kid - Qualia - Voyage.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.79,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.58
+        },
+        "judged_proposed": "Kodiak Kid - Qualia - Voyage.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.515Z"
+      }
+    },
+    {
+      "src": "ZUKE - San Andreas Dub.wav",
+      "proposed": "ZUKE - San Andreas Dub.wav",
+      "parser_output": "ZUKE - San Andreas Dub.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed",
+        "jev: nothing_lost=0.27 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.27,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.83
+        },
+        "judged_proposed": "ZUKE - San Andreas Dub.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.528Z"
+      }
+    },
+    {
+      "src": "sfam - cunning mc - slazenger (sfam remix).wav",
+      "proposed": "sfam - cunning mc - slazenger.wav",
+      "parser_output": "sfam - cunning mc - slazenger.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.67,
+          "title_is_a_title": 0.81,
+          "fields_not_swapped": 0.91
+        },
+        "judged_proposed": "sfam - cunning mc - slazenger.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.546Z"
+      }
+    },
+    {
+      "src": "UrBoiN8 - MPH - Raw (UrBoiN8 Bootleg).mp3",
+      "proposed": "UrBoiN8 - MPH - Raw.mp3",
+      "parser_output": "UrBoiN8 - MPH - Raw.mp3",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.74,
+          "title_is_a_title": 0.84,
+          "fields_not_swapped": 0.94
+        },
+        "judged_proposed": "UrBoiN8 - MPH - Raw.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.563Z"
+      }
+    },
+    {
+      "src": "Kvolx - San Pacho - Bootay (Kvolx Flip).wav",
+      "proposed": "Kvolx - San Pacho - Bootay.wav",
+      "parser_output": "Kvolx - San Pacho - Bootay.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.74,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.85
+        },
+        "judged_proposed": "Kvolx - San Pacho - Bootay.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.599Z"
+      }
+    },
+    {
+      "src": "PIERCE - THE PRODIGY - SMACK MY BITCH UP (STAR SEED & PIERCE REMIX).wav",
+      "proposed": "STAR SEED x PIERCE - THE PRODIGY - SMACK MY BITCH UP.wav",
+      "parser_output": "STAR SEED x PIERCE - THE PRODIGY - SMACK MY BITCH UP.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.52,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.85
+        },
+        "judged_proposed": "STAR SEED x PIERCE - THE PRODIGY - SMACK MY BITCH UP.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.598Z"
+      }
+    },
+    {
+      "src": "Virx - Subtronics x Inéz - Eyes Cut Deeper (Virx Remix).wav",
+      "proposed": "Virx - Subtronics x Inez - Eyes Cut Deeper.wav",
+      "parser_output": "Virx - Subtronics x Inez - Eyes Cut Deeper.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.5,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.82
+        },
+        "judged_proposed": "Virx - Subtronics x Inez - Eyes Cut Deeper.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.580Z"
+      }
+    },
+    {
+      "src": "SPASMA - CORDYCEPS.wav",
+      "proposed": "SPASMA - CORDYCEPS.wav",
+      "parser_output": "SPASMA - CORDYCEPS.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.9,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.79
+        },
+        "judged_proposed": "SPASMA - CORDYCEPS.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.592Z"
+      }
+    },
+    {
+      "src": "YAANO - NOTION x Willow Kayne - WAITING (YAANO Edit).wav",
+      "proposed": "YAANO - NOTION x Willow Kayne - WAITING.wav",
+      "parser_output": "YAANO - NOTION x Willow Kayne - WAITING.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.69,
+          "title_is_a_title": 0.9,
+          "fields_not_swapped": 0.84
+        },
+        "judged_proposed": "YAANO - NOTION x Willow Kayne - WAITING.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.630Z"
+      }
+    },
+    {
+      "src": "Zei - party & bullshit.wav",
+      "proposed": "Zei - party & bullshit.wav",
+      "parser_output": "Zei - party & bullshit.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.69,
+          "title_is_a_title": 0.84,
+          "fields_not_swapped": 0.83
+        },
+        "judged_proposed": "Zei - party & bullshit.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.639Z"
+      }
+    },
+    {
+      "src": "FINNUH - ACTIN UP.wav",
+      "proposed": "FINNUH - ACTIN UP.wav",
+      "parser_output": "FINNUH - ACTIN UP.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.74,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.83
+        },
+        "judged_proposed": "FINNUH - ACTIN UP.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.645Z"
+      }
+    },
+    {
+      "src": "DAZEYLANES - Flight Facilities - CRAVE YOU (DAZEY UKG BOOTLEG).wav",
+      "proposed": "DAZEYLANES - Flight Facilities - CRAVE YOU.wav",
+      "parser_output": "DAZEY UKG - Flight Facilities - CRAVE YOU.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.44 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.62,
+          "title_is_a_title": 0.89,
+          "fields_not_swapped": 0.44
+        },
+        "judged_proposed": "DAZEY UKG - Flight Facilities - CRAVE YOU.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.722Z"
+      }
+    },
+    {
+      "src": "spicy bois - that's sum.wav",
+      "proposed": "spicy bois - that's sum.wav",
+      "parser_output": "spicy bois - that's sum.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.7,
+          "title_is_a_title": 0.84,
+          "fields_not_swapped": 0.84
+        },
+        "judged_proposed": "spicy bois - that's sum.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.677Z"
+      }
+    },
+    {
+      "src": "Before Bed Records - Jake Rollinson - The Basement Tool.wav",
+      "proposed": "Jake Rollinson - Before Bed Records - The Basement Tool.wav",
+      "parser_output": "Jake Rollinson - Before Bed Records - The Basement Tool.wav",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.77,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.51
+        },
+        "judged_proposed": "Jake Rollinson - Before Bed Records - The Basement Tool.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.709Z"
+      }
+    },
+    {
+      "src": "INAKTIV - MUD (FINAL).wav",
+      "proposed": "INAKTIV - MUD.wav",
+      "parser_output": "INAKTIV - MUD.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.53,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.79
+        },
+        "judged_proposed": "INAKTIV - MUD.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.698Z"
+      }
+    },
+    {
+      "src": "Disaffected - Sampha - Blood On Me (Disaffected Bootleg).mp3",
+      "proposed": "Disaffected - Sampha - Blood On Me.mp3",
+      "parser_output": "Disaffected - Sampha - Blood On Me.mp3",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.22 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.64,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.22
+        },
+        "judged_proposed": "Disaffected - Sampha - Blood On Me.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.711Z"
+      }
+    },
+    {
+      "src": "Drown - Wink & Borne (Midnight Club Flip).wav",
+      "proposed": "Midnight Club - Drown - Wink & Borne.wav",
+      "parser_output": "Midnight Club - Drown - Wink & Borne.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "jev: nothing_lost=0.39 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.39,
+          "title_is_a_title": 0.87,
+          "fields_not_swapped": 0.62
+        },
+        "judged_proposed": "Midnight Club - Drown - Wink & Borne.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.772Z"
+      }
+    },
+    {
+      "src": "Wxnted - Can't Forget About Dub.mp3",
+      "proposed": "Wxnted - Can't Forget About Dub.mp3",
+      "parser_output": "Wxnted - Can't Forget About Dub.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.55,
+          "title_is_a_title": 0.9,
+          "fields_not_swapped": 0.81
+        },
+        "judged_proposed": "Wxnted - Can't Forget About Dub.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.777Z"
+      }
+    },
+    {
+      "src": "odd language - Flume - Helix (odd language remix).wav",
+      "proposed": "odd language - Flume - Helix.wav",
+      "parser_output": "odd language - Flume - Helix.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.62,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.7
+        },
+        "judged_proposed": "odd language - Flume - Helix.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.782Z"
+      }
+    },
+    {
+      "src": "SKEEMUH - Zeds Dead - Out Of Time (SKEEMUH Flip).wav",
+      "proposed": "SKEEMUH - Zeds Dead - Out Of Time.wav",
+      "parser_output": "SKEEMUH - Zeds Dead - Out Of Time.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.67,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.78
+        },
+        "judged_proposed": "SKEEMUH - Zeds Dead - Out Of Time.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.807Z"
+      }
+    },
+    {
+      "src": "Virx - Disco Lines -  TECHNO + TEQUILA (Virx Remix).wav",
+      "proposed": "Virx - Disco Lines - TECHNO + TEQUILA.wav",
+      "parser_output": "Virx - Disco Lines - TECHNO + TEQUILA.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.62,
+          "title_is_a_title": 0.84,
+          "fields_not_swapped": 0.94
+        },
+        "judged_proposed": "Virx - Disco Lines - TECHNO + TEQUILA.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.828Z"
+      }
+    },
+    {
+      "src": "Sidd - Special Request.wav",
+      "proposed": "Sidd - Special Request.wav",
+      "parser_output": "Sidd - Special Request.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.83,
+          "title_is_a_title": 0.9,
+          "fields_not_swapped": 0.86
+        },
+        "judged_proposed": "Sidd - Special Request.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.826Z"
+      }
+    },
+    {
+      "src": "kollaba - DAKA.wav",
+      "proposed": "kollaba - DAKA.wav",
+      "parser_output": "kollaba - DAKA.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.79,
+          "title_is_a_title": 0.9,
+          "fields_not_swapped": 0.82
+        },
+        "judged_proposed": "kollaba - DAKA.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.826Z"
+      }
+    },
+    {
+      "src": "Sinatra - Shake.wav",
+      "proposed": "Sinatra - Shake.wav",
+      "parser_output": "Sinatra - Shake.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.8,
+          "title_is_a_title": 0.88,
+          "fields_not_swapped": 0.81
+        },
+        "judged_proposed": "Sinatra - Shake.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.883Z"
+      }
+    },
+    {
+      "src": "ZUZE - THIS IS LOVE.wav",
+      "proposed": "ZUZE - THIS IS LOVE.wav",
+      "parser_output": "ZUZE - THIS IS LOVE.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.85,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.87
+        },
+        "judged_proposed": "ZUZE - THIS IS LOVE.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.898Z"
+      }
+    },
+    {
+      "src": "Dr. Ushūu - MPH & Nathan Nicholson - Long Goodbye (Ushuuedit).mp3",
+      "proposed": "Dr. Ushuu - MPH x Nathan Nicholson - Long Goodbye.mp3",
+      "parser_output": "MPH x Nathan Nicholson - Dr. Ushūu - Long Goodbye.mp3",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.51,
+          "title_is_a_title": 0.95,
+          "fields_not_swapped": 0.57
+        },
+        "judged_proposed": "MPH x Nathan Nicholson - Dr. Ushūu - Long Goodbye.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.931Z"
+      }
+    },
+    {
+      "src": "LOWER [SKANK GANG] - LOWER & JADHA - ON MY LEVEL.wav",
+      "proposed": "LOWER x JADHA - ON MY LEVEL.wav",
+      "parser_output": "LOWER x JADHA - LOWER - ON MY LEVEL.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Lykwid - Dude, not those subs!.wav",
+      "proposed": "Lykwid - Dude, not those subs!.wav",
+      "parser_output": "Lykwid - Dude, not those subs!.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.77,
+          "title_is_a_title": 0.77,
+          "fields_not_swapped": 0.86
+        },
+        "judged_proposed": "Lykwid - Dude, not those subs!.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.938Z"
+      }
+    },
+    {
+      "src": "Kleptoe - MPH, y3kfae - Flex It (Kleptoe Remix).wav",
+      "proposed": "Kleptoe - MPH x y3kfae - Flex It.wav",
+      "parser_output": "Kleptoe - MPH x y3kfae - Flex It.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.6,
+          "title_is_a_title": 0.88,
+          "fields_not_swapped": 0.79
+        },
+        "judged_proposed": "Kleptoe - MPH x y3kfae - Flex It.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.948Z"
+      }
+    },
+    {
+      "src": "strange language - Gucci Mane - Pillz (STRANGE LANGUAGE 5K FLIP).wav",
+      "proposed": "strange language - Gucci Mane - Pillz.wav",
+      "parser_output": "STRANGE LANGUAGE 5K - Gucci Mane - Pillz.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.35 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.54,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.35
+        },
+        "judged_proposed": "STRANGE LANGUAGE 5K - Gucci Mane - Pillz.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.935Z"
+      }
+    },
+    {
+      "src": "Virx - Beyonce - Diva (Virx Remix).wav",
+      "proposed": "Virx - Beyonce - Diva.wav",
+      "parser_output": "Virx - Beyonce - Diva.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.16 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.53,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.16
+        },
+        "judged_proposed": "Virx - Beyonce - Diva.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.972Z"
+      }
+    },
+    {
+      "src": "JMOSS - BRAZY!.wav",
+      "proposed": "JMOSS - BRAZY!.wav",
+      "parser_output": "JMOSS - BRAZY!.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.85,
+          "title_is_a_title": 0.89,
+          "fields_not_swapped": 0.84
+        },
+        "judged_proposed": "JMOSS - BRAZY!.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:21.960Z"
+      }
+    },
+    {
+      "src": "MiNiM - GO LOW.mp3",
+      "proposed": "MiNiM - GO LOW.mp3",
+      "parser_output": "MiNiM - GO LOW.mp3",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.79,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.8
+        },
+        "judged_proposed": "MiNiM - GO LOW.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.076Z"
+      }
+    },
+    {
+      "src": "Forbidden Frequencies - Serpnt - Brand New.wav",
+      "proposed": "Serpnt - Forbidden Frequencies - Brand New.wav",
+      "parser_output": "Serpnt - Forbidden Frequencies - Brand New.wav",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.75,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.89
+        },
+        "judged_proposed": "Serpnt - Forbidden Frequencies - Brand New.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.001Z"
+      }
+    },
+    {
+      "src": "Dirt Monkey - Out in The Street Dub.wav",
+      "proposed": "Dirt Monkey - Out in The Street Dub.wav",
+      "parser_output": "Dirt Monkey - Out in The Street Dub.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed",
+        "jev: nothing_lost=0.27 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.27,
+          "title_is_a_title": 0.89,
+          "fields_not_swapped": 0.85
+        },
+        "judged_proposed": "Dirt Monkey - Out in The Street Dub.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.059Z"
+      }
+    },
+    {
+      "src": "FURTHA - Key Glock - Big 5 (FURTHA x SOUNDZZZ FLIP).wav",
+      "proposed": "FURTHA x SOUNDZZZ - Key Glock - Big 5.wav",
+      "parser_output": "FURTHA x SOUNDZZZ - Key Glock - Big 5.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.44 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.65,
+          "title_is_a_title": 0.9,
+          "fields_not_swapped": 0.44
+        },
+        "judged_proposed": "FURTHA x SOUNDZZZ - Key Glock - Big 5.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.051Z"
+      }
+    },
+    {
+      "src": "Crastinate - NOTHING.wav",
+      "proposed": "Crastinate - NOTHING.wav",
+      "parser_output": "Crastinate - NOTHING.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.78,
+          "title_is_a_title": 0.89,
+          "fields_not_swapped": 0.76
+        },
+        "judged_proposed": "Crastinate - NOTHING.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.067Z"
+      }
+    },
+    {
+      "src": "duffeey - undrgnd.wav",
+      "proposed": "duffeey - undrgnd.wav",
+      "parser_output": "duffeey - undrgnd.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.78,
+          "title_is_a_title": 0.9,
+          "fields_not_swapped": 0.82
+        },
+        "judged_proposed": "duffeey - undrgnd.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.064Z"
+      }
+    },
+    {
+      "src": "Shakes - confusion.aiff",
+      "proposed": "Shakes - confusion.aiff",
+      "parser_output": "Shakes - confusion.aiff",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.83,
+          "title_is_a_title": 0.88,
+          "fields_not_swapped": 0.85
+        },
+        "judged_proposed": "Shakes - confusion.aiff",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.062Z"
+      }
+    },
+    {
+      "src": "SYNK - aiser & KYNEKTA - BIOMASS (SYNKED UP).wav",
+      "proposed": "SYNK - aiser x KYNEKTA - BIOMASS.wav",
+      "parser_output": "aiser x KYNEKTA - SYNK - BIOMASS.wav",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: nothing_lost=0.42 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.42,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.88
+        },
+        "judged_proposed": "aiser x KYNEKTA - SYNK - BIOMASS.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.092Z"
+      }
+    },
+    {
+      "src": "2TALL - Geeked Up.wav",
+      "proposed": "2TALL - Geeked Up.wav",
+      "parser_output": "2TALL - Geeked Up.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.77,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.83
+        },
+        "judged_proposed": "2TALL - Geeked Up.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.129Z"
+      }
+    },
+    {
+      "src": "SMAL B - FOGER.wav",
+      "proposed": "SMAL B - FOGER.wav",
+      "parser_output": "SMAL B - FOGER.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.74,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.87
+        },
+        "judged_proposed": "SMAL B - FOGER.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.183Z"
+      }
+    },
+    {
+      "src": "40KALL - FENNEK (VIP).wav",
+      "proposed": "40KALL - FENNEK (VIP).wav",
+      "parser_output": "40KALL - FENNEK (VIP).wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.7,
+          "title_is_a_title": 0.86,
+          "fields_not_swapped": 0.86
+        },
+        "judged_proposed": "40KALL - FENNEK (VIP).wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.184Z"
+      }
+    },
+    {
+      "src": "BIYO - TRIBAL RIDDIM.wav",
+      "proposed": "BIYO - TRIBAL RIDDIM.wav",
+      "parser_output": "BIYO - TRIBAL RIDDIM.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.82,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.74
+        },
+        "judged_proposed": "BIYO - TRIBAL RIDDIM.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.173Z"
+      }
+    },
+    {
+      "src": "‎BODYSNATCHERZ - KNOW'M SAYIN.wav",
+      "proposed": "BODYSNATCHERZ - KNOW'M SAYIN.wav",
+      "parser_output": "BODYSNATCHERZ - KNOW'M SAYIN.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.78,
+          "title_is_a_title": 0.88,
+          "fields_not_swapped": 0.75
+        },
+        "judged_proposed": "BODYSNATCHERZ - KNOW'M SAYIN.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.194Z"
+      }
+    },
+    {
+      "src": "Bounce (Britto Remix).wav",
+      "proposed": "Britto - Bounce.wav",
+      "parser_output": "Britto - Bounce.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.65,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.78
+        },
+        "judged_proposed": "Britto - Bounce.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.214Z"
+      }
+    },
+    {
+      "src": "CCIV - CCIV x Portals - Discombobulated.wav",
+      "proposed": "CCIV x Portals - Discombobulated.wav",
+      "parser_output": "CCIV x Portals - CCIV - Discombobulated.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Claymore - Lost in Blackwood.wav",
+      "proposed": "Claymore - Lost in Blackwood.wav",
+      "parser_output": "Claymore - Lost in Blackwood.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.84,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.85
+        },
+        "judged_proposed": "Claymore - Lost in Blackwood.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.175Z"
+      }
+    },
+    {
+      "src": "CRYSOMEMORE - KISS ME AGAIN.wav",
+      "proposed": "CRYSOMEMORE - KISS ME AGAIN.wav",
+      "parser_output": "CRYSOMEMORE - KISS ME AGAIN.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.8,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.82
+        },
+        "judged_proposed": "CRYSOMEMORE - KISS ME AGAIN.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.209Z"
+      }
+    },
+    {
+      "src": "CRYSOMEMORE - SIMON SAYS (CRYSOMEMORE REMIX).wav",
+      "proposed": "CRYSOMEMORE - SIMON SAYS.wav",
+      "parser_output": "CRYSOMEMORE - SIMON SAYS.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed",
+        "jev: nothing_lost=0.21 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.21,
+          "title_is_a_title": 0.86,
+          "fields_not_swapped": 0.74
+        },
+        "judged_proposed": "CRYSOMEMORE - SIMON SAYS.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.258Z"
+      }
+    },
+    {
+      "src": "DA DEMOLITION SQUAD - Duality - Policeman And Soldier [Fez The Kid Remix].wav",
+      "proposed": "Fez The Kid - Duality - Policeman And Soldier.wav",
+      "parser_output": "Fez The Kid - Duality - Policeman And Soldier.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.5,
+          "title_is_a_title": 0.9,
+          "fields_not_swapped": 0.69
+        },
+        "judged_proposed": "Fez The Kid - Duality - Policeman And Soldier.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.313Z"
+      }
+    },
+    {
+      "src": "dad hat - twerk (extended mix).wav",
+      "proposed": "dad hat - twerk (extended mix).wav",
+      "parser_output": "dad hat - twerk (extended mix).wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.61,
+          "title_is_a_title": 0.8,
+          "fields_not_swapped": 0.8
+        },
+        "judged_proposed": "dad hat - twerk (extended mix).wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.338Z"
+      }
+    },
+    {
+      "src": "DEVOWR. - still.wav",
+      "proposed": "DEVOWR. - still.wav",
+      "parser_output": "DEVOWR. - still.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.74,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.82
+        },
+        "judged_proposed": "DEVOWR. - still.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.309Z"
+      }
+    },
+    {
+      "src": "DLO - CHOSEN.wav",
+      "proposed": "DLO - CHOSEN.wav",
+      "parser_output": "DLO - CHOSEN.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.77,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.84
+        },
+        "judged_proposed": "DLO - CHOSEN.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.289Z"
+      }
+    },
+    {
+      "src": "Dmtree - On My Mind.aiff",
+      "proposed": "Dmtree - On My Mind.aiff",
+      "parser_output": "Dmtree - On My Mind.aiff",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.77,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.85
+        },
+        "judged_proposed": "Dmtree - On My Mind.aiff",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.291Z"
+      }
+    },
+    {
+      "src": "earth Hz - DEVOWR. - SIDE EFFECTS.wav",
+      "proposed": "DEVOWR. - earth Hz - SIDE EFFECTS.wav",
+      "parser_output": "DEVOWR. - earth Hz - SIDE EFFECTS.wav",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.84,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.7
+        },
+        "judged_proposed": "DEVOWR. - earth Hz - SIDE EFFECTS.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.313Z"
+      }
+    },
+    {
+      "src": "FEEL SUITE - POWER.wav",
+      "proposed": "FEEL SUITE - POWER.wav",
+      "parser_output": "FEEL SUITE - POWER.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.74,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.83
+        },
+        "judged_proposed": "FEEL SUITE - POWER.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.329Z"
+      }
+    },
+    {
+      "src": "Fineshrine (2JUICY Flip).wav",
+      "proposed": "2JUICY - Fineshrine.wav",
+      "parser_output": "2JUICY - Fineshrine.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.69,
+          "title_is_a_title": 0.9,
+          "fields_not_swapped": 0.77
+        },
+        "judged_proposed": "2JUICY - Fineshrine.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.365Z"
+      }
+    },
+    {
+      "src": "Fossils - FOSSILS - PULL UP.wav",
+      "proposed": "FOSSILS - PULL UP.wav",
+      "parser_output": "FOSSILS - Fossils - PULL UP.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Gunpoint - Taiki Nulight - Style (Gunpoint Reload).wav",
+      "proposed": "Gunpoint - Taiki Nulight - Style.wav",
+      "parser_output": "Taiki Nulight - Gunpoint - Style.wav",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: nothing_lost=0.48 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.48,
+          "title_is_a_title": 0.85,
+          "fields_not_swapped": 0.87
+        },
+        "judged_proposed": "Taiki Nulight - Gunpoint - Style.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.448Z"
+      }
+    },
+    {
+      "src": "kollaba - CRASTINATE x KOLLABA - MAYBEBETTER.wav",
+      "proposed": "CRASTINATE x KOLLABA - MAYBEBETTER.wav",
+      "parser_output": "CRASTINATE x KOLLABA - kollaba - MAYBEBETTER.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "Kwizma - Emalkay - When I Look At You (Kwizma Bootleg).wav",
+      "proposed": "Kwizma - Emalkay - When I Look At You.wav",
+      "parser_output": "Kwizma - Emalkay - When I Look At You.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.82,
+          "title_is_a_title": 0.9,
+          "fields_not_swapped": 0.72
+        },
+        "judged_proposed": "Kwizma - Emalkay - When I Look At You.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.424Z"
+      }
+    },
+    {
+      "src": "Lowshade - Spliffers.wav",
+      "proposed": "Lowshade - Spliffers.wav",
+      "parser_output": "Lowshade - Spliffers.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.75,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.86
+        },
+        "judged_proposed": "Lowshade - Spliffers.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.428Z"
+      }
+    },
+    {
+      "src": "LUCUNA - INJUSTICE.wav",
+      "proposed": "LUCUNA - INJUSTICE.wav",
+      "parser_output": "LUCUNA - INJUSTICE.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.83,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.86
+        },
+        "judged_proposed": "LUCUNA - INJUSTICE.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.421Z"
+      }
+    },
+    {
+      "src": "MAYETRIX - Kesha - TiK ToK (MAYETRIX Remix).wav",
+      "proposed": "MAYETRIX - Kesha - TiK ToK.wav",
+      "parser_output": "MAYETRIX - Kesha - TiK ToK.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.43 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.6,
+          "title_is_a_title": 0.88,
+          "fields_not_swapped": 0.43
+        },
+        "judged_proposed": "MAYETRIX - Kesha - TiK ToK.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.439Z"
+      }
+    },
+    {
+      "src": "mindsplitter - The One That Whispers.wav",
+      "proposed": "mindsplitter - The One That Whispers.wav",
+      "parser_output": "mindsplitter - The One That Whispers.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.75,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.82
+        },
+        "judged_proposed": "mindsplitter - The One That Whispers.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.443Z"
+      }
+    },
+    {
+      "src": "MOUSAI - BALL SO HARD (Mousai & UrBoiN8).wav",
+      "proposed": "MOUSAI x UrBoiN8 - BALL SO HARD.wav",
+      "parser_output": "MOUSAI - BALL SO HARD.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed",
+        "jev: nothing_lost=0.27 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.27,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.85
+        },
+        "judged_proposed": "MOUSAI - BALL SO HARD.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.459Z"
+      }
+    },
+    {
+      "src": "Mystic Grizzly - Drop Top.wav",
+      "proposed": "Mystic Grizzly - Drop Top.wav",
+      "parser_output": "Mystic Grizzly - Drop Top.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.8,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.82
+        },
+        "judged_proposed": "Mystic Grizzly - Drop Top.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.505Z"
+      }
+    },
+    {
+      "src": "NEO_G - SIGNAL_01.wav",
+      "proposed": "NEO_G - SIGNAL_01.wav",
+      "parser_output": "NEO_G - SIGNAL_01.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.83,
+          "title_is_a_title": 0.76,
+          "fields_not_swapped": 0.8
+        },
+        "judged_proposed": "NEO_G - SIGNAL_01.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.566Z"
+      }
+    },
+    {
+      "src": "No Hype Music - ALEA - Like This  (VelcroShirt Remix).wav",
+      "proposed": "VelcroShirt - ALEA - Like This.wav",
+      "parser_output": "VelcroShirt - ALEA - Like This.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.46 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.54,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.46
+        },
+        "judged_proposed": "VelcroShirt - ALEA - Like This.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.538Z"
+      }
+    },
+    {
+      "src": "No Hype Music - ALEA - Like This (DEVOWR. Remix).wav",
+      "proposed": "DEVOWR. - ALEA - Like This.wav",
+      "parser_output": "DEVOWR. - ALEA - Like This.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: nothing_lost=0.48 below threshold 0.5",
+        "jev: fields_not_swapped=0.44 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.48,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.44
+        },
+        "judged_proposed": "DEVOWR. - ALEA - Like This.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.560Z"
+      }
+    },
+    {
+      "src": "Noctiil - DJ Snake - Propaganda (Noctiil & bd hbt Flip).wav",
+      "proposed": "Noctiil x bd hbt - DJ Snake - Propaganda.wav",
+      "parser_output": "Noctiil x bd hbt - DJ Snake - Propaganda.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: nothing_lost=0.48 below threshold 0.5",
+        "jev: fields_not_swapped=0.38 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.48,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.38
+        },
+        "judged_proposed": "Noctiil x bd hbt - DJ Snake - Propaganda.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.558Z"
+      }
+    },
+    {
+      "src": "OkayJake - SVDDEN DEATH - Shallow Land Burial (OkayJake Flip).wav",
+      "proposed": "OkayJake - SVDDEN DEATH - Shallow Land Burial.wav",
+      "parser_output": "OkayJake - SVDDEN DEATH - Shallow Land Burial.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.7,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.87
+        },
+        "judged_proposed": "OkayJake - SVDDEN DEATH - Shallow Land Burial.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.594Z"
+      }
+    },
+    {
+      "src": "Only Bangs - Blaze - Lovlee Dae (sevenseven Edit).wav",
+      "proposed": "sevenseven - Blaze - Lovlee Dae.wav",
+      "parser_output": "sevenseven - Blaze - Lovlee Dae.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: nothing_lost=0.45 below threshold 0.5",
+        "jev: fields_not_swapped=0.43 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.45,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.43
+        },
+        "judged_proposed": "sevenseven - Blaze - Lovlee Dae.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.576Z"
+      }
+    },
+    {
+      "src": "pearsy. - BLP Kosher - Jack and Jill (pearsy. flip).wav",
+      "proposed": "pearsy. - BLP Kosher - Jack and Jill.wav",
+      "parser_output": "pearsy. - BLP Kosher - Jack and Jill.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.71,
+          "title_is_a_title": 0.9,
+          "fields_not_swapped": 0.93
+        },
+        "judged_proposed": "pearsy. - BLP Kosher - Jack and Jill.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.608Z"
+      }
+    },
+    {
+      "src": "pearsy. - Kodak Black x 1900Rugrat - Nunchucks (pearsy. flip).wav",
+      "proposed": "pearsy. - Kodak Black x 1900Rugrat - Nunchucks.wav",
+      "parser_output": "pearsy. - Kodak Black x 1900Rugrat - Nunchucks.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.66,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.86
+        },
+        "judged_proposed": "pearsy. - Kodak Black x 1900Rugrat - Nunchucks.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.614Z"
+      }
+    },
+    {
+      "src": "PIERCE - BELTRAN - SMACK YO (PIERCE REMIX).wav",
+      "proposed": "PIERCE - BELTRAN - SMACK YO.wav",
+      "parser_output": "PIERCE - BELTRAN - SMACK YO.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.68,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.52
+        },
+        "judged_proposed": "PIERCE - BELTRAN - SMACK YO.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.662Z"
+      }
+    },
+    {
+      "src": "RumTheVoyager - Fool's Cup.wav",
+      "proposed": "RumTheVoyager - Fool's Cup.wav",
+      "parser_output": "RumTheVoyager - Fool's Cup.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.85,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.81
+        },
+        "judged_proposed": "RumTheVoyager - Fool's Cup.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.662Z"
+      }
+    },
+    {
+      "src": "SECR3T - Will Smith - Gettin Jiggy Wit It (SECR3T Remix).wav",
+      "proposed": "SECR3T - Will Smith - Gettin Jiggy Wit It.wav",
+      "parser_output": "SECR3T - Will Smith - Gettin Jiggy Wit It.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: nothing_lost=0.48 below threshold 0.5",
+        "jev: fields_not_swapped=0.38 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.48,
+          "title_is_a_title": 0.83,
+          "fields_not_swapped": 0.38
+        },
+        "judged_proposed": "SECR3T - Will Smith - Gettin Jiggy Wit It.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.708Z"
+      }
+    },
+    {
+      "src": "SENRI -  PROFESSOR, COME OUT!.wav",
+      "proposed": "SENRI - PROFESSOR, COME OUT!.wav",
+      "parser_output": "SENRI - PROFESSOR, COME OUT!.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.78,
+          "title_is_a_title": 0.88,
+          "fields_not_swapped": 0.83
+        },
+        "judged_proposed": "SENRI - PROFESSOR, COME OUT!.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.667Z"
+      }
+    },
+    {
+      "src": "spicy bois - Big Blade!.wav",
+      "proposed": "spicy bois - Big Blade!.wav",
+      "parser_output": "spicy bois - Big Blade!.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.82,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.83
+        },
+        "judged_proposed": "spicy bois - Big Blade!.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.698Z"
+      }
+    },
+    {
+      "src": "statiq. - statiq. niko - guns of fury.wav",
+      "proposed": "statiq. x niko - guns of fury.wav",
+      "parser_output": "statiq. niko - statiq. - guns of fury.wav",
+      "confidence": "low",
+      "reasons": [
+        "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
+      ],
+      "decision": "apply"
+    },
+    {
+      "src": "SubCarbon Records - IDHS x XI - Stealth.wav",
+      "proposed": "IDHS x XI - SubCarbon Records - Stealth.wav",
+      "parser_output": "IDHS x XI - SubCarbon Records - Stealth.wav",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.82,
+          "title_is_a_title": 0.96,
+          "fields_not_swapped": 0.51
+        },
+        "judged_proposed": "IDHS x XI - SubCarbon Records - Stealth.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.701Z"
+      }
+    },
+    {
+      "src": "SubCarbon Records - MYRIAS x FEEL SUITE - STEP BACK.wav",
+      "proposed": "MYRIAS x FEEL SUITE - SubCarbon Records - STEP BACK.wav",
+      "parser_output": "MYRIAS x FEEL SUITE - SubCarbon Records - STEP BACK.wav",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure",
+        "jev: fields_not_swapped=0.45 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.69,
+          "title_is_a_title": 0.95,
+          "fields_not_swapped": 0.45
+        },
+        "judged_proposed": "MYRIAS x FEEL SUITE - SubCarbon Records - STEP BACK.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.725Z"
+      }
+    },
+    {
+      "src": "SUS COLLECTIVE - runnit x gurf - test run.wav",
+      "proposed": "runnit x gurf - SUS COLLECTIVE - test run.wav",
+      "parser_output": "runnit x gurf - SUS COLLECTIVE - test run.wav",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.68,
+          "title_is_a_title": 0.84,
+          "fields_not_swapped": 0.51
+        },
+        "judged_proposed": "runnit x gurf - SUS COLLECTIVE - test run.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.727Z"
+      }
+    },
+    {
+      "src": "THE BUZZ - JG DUBZ - KILL BABYLON [THE BUZZ SPESH].wav",
+      "proposed": "THE BUZZ - JG DUBZ - KILL BABYLON.wav",
+      "parser_output": "JG DUBZ - THE BUZZ - KILL BABYLON.wav",
+      "confidence": "medium",
+      "reasons": [
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.56,
+          "title_is_a_title": 0.93,
+          "fields_not_swapped": 0.91
+        },
+        "judged_proposed": "JG DUBZ - THE BUZZ - KILL BABYLON.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.762Z"
+      }
+    },
+    {
+      "src": "XAEBOR - LOST & 50 CARROT - LEANIN (XAEBOR REMIX).mp3",
+      "proposed": "XAEBOR - LOST x 50 CARROT - LEANIN.mp3",
+      "parser_output": "XAEBOR - LOST x 50 CARROT - LEANIN.mp3",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.68,
+          "title_is_a_title": 0.94,
+          "fields_not_swapped": 0.87
+        },
+        "judged_proposed": "XAEBOR - LOST x 50 CARROT - LEANIN.mp3",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.779Z"
+      }
+    },
+    {
+      "src": "Yoto Swords - LOOK DUB.wav",
+      "proposed": "Yoto Swords - LOOK DUB.wav",
+      "parser_output": "Yoto Swords - LOOK DUB.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed",
+        "jev: nothing_lost=0.37 below threshold 0.5"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.37,
+          "title_is_a_title": 0.91,
+          "fields_not_swapped": 0.87
+        },
+        "judged_proposed": "Yoto Swords - LOOK DUB.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.796Z"
+      }
+    },
+    {
+      "src": "YUNIT. - THREAT.wav",
+      "proposed": "YUNIT. - THREAT.wav",
+      "parser_output": "YUNIT. - THREAT.wav",
+      "confidence": "high",
+      "reasons": [
+        "clean parse, no transformations needed"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.76,
+          "title_is_a_title": 0.92,
+          "fields_not_swapped": 0.86
+        },
+        "judged_proposed": "YUNIT. - THREAT.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.807Z"
+      }
+    },
+    {
+      "src": "zero point - CØNTRA x Saturna - What I Can Do (zero point flip).wav",
+      "proposed": "zero point - CONTRA x Saturna - What I Can Do.wav",
+      "parser_output": "zero point - CONTRA x Saturna - What I Can Do.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.69,
+          "title_is_a_title": 0.89,
+          "fields_not_swapped": 0.86
+        },
+        "judged_proposed": "zero point - CONTRA x Saturna - What I Can Do.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.820Z"
+      }
+    },
+    {
+      "src": "zero point - Fred again.., Sammi Virji, Winny - Winny (zero point flip).wav",
+      "proposed": "zero point - Fred again.. x Sammi Virji x Winny - Winny.wav",
+      "parser_output": "zero point - Fred again.. x Sammi Virji x Winny - Winny.wav",
+      "confidence": "medium",
+      "reasons": [
+        "remix/edit/flip detected — parse depends on regex matching",
+        "source has 2 dash separators — assumed album-artist-title structure"
+      ],
+      "decision": "apply",
+      "judgement": {
+        "nouls": {
+          "nothing_lost": 0.51,
+          "title_is_a_title": 0.89,
+          "fields_not_swapped": 0.53
+        },
+        "judged_proposed": "zero point - Fred again.. x Sammi Virji x Winny - Winny.wav",
+        "model": "jev-1.13.0",
+        "judged_at": "2026-09-24T12:54:22.848Z"
+      }
+    }
+  ]
+}
