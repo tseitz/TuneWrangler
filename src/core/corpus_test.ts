@@ -14,9 +14,7 @@
  * Grow the corpus by running `deno task promote <manifest>` after each apply.
  */
 import { assertEquals } from "jsr:@std/assert@^1";
-import { DownloadedSong } from "./models/Song.ts";
-import { parseDownloadedSong } from "./parser.ts";
-import { setFinalDownloadedSongName } from "./utils/common.ts";
+import { parseFilename } from "./corpus.ts";
 import { ManifestEntry, readManifest } from "./manifest.ts";
 
 const CORPUS_DIR = "./tests/corpus";
@@ -51,13 +49,6 @@ async function loadCorpusEntries(): Promise<{ entries: ManifestEntry[]; stats: C
   return { entries, stats: { regressionTotal, improvementTotal, corpusFiles } };
 }
 
-function parseFilename(src: string, dir = "/tmp/corpus/"): string {
-  const song = new DownloadedSong(src, dir);
-  if (song.dashCount > 0) parseDownloadedSong(song);
-  setFinalDownloadedSongName(song);
-  return song.finalFilename;
-}
-
 // Load corpus once synchronously at module level so Deno can discover all tests
 const { entries, stats } = await loadCorpusEntries();
 
@@ -67,7 +58,12 @@ if (stats.corpusFiles === 0) {
   });
 } else {
   // Summary test — always runs, shows corpus health at a glance
-  Deno.test(`corpus: ${stats.corpusFiles} batches | ${stats.regressionTotal} regression | ${stats.improvementTotal} improvement targets`, () => {
+  // Targets are counted from the stored parser_output, so a parser fix only shows up here.
+  const nowMatching = entries.filter((e) => e.proposed !== e.parser_output && parseFilename(e.src) === e.proposed);
+  const fixedNote = nowMatching.length > 0
+    ? ` (${nowMatching.length} now match — run \`deno task promote --refresh\` to lock them in)`
+    : "";
+  Deno.test(`corpus: ${stats.corpusFiles} batches | ${stats.regressionTotal} regression | ${stats.improvementTotal} improvement targets${fixedNote}`, () => {
     if (stats.improvementTotal > 0) {
       console.log(`\n  ${stats.improvementTotal} entries where parser output was corrected:`);
       for (const e of entries.filter((e) => e.proposed !== e.parser_output)) {

@@ -29,7 +29,7 @@
     {
       "src": "CONSTANTIN - PUTA DRIFT (Constantin Edit).mp3",
       "proposed": "CONSTANTIN - PUTA DRIFT.mp3",
-      "parser_output": "Constantin - CONSTANTIN - PUTA DRIFT.mp3",
+      "parser_output": "CONSTANTIN - PUTA DRIFT.mp3",
       "confidence": "low",
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
@@ -194,7 +194,7 @@
     {
       "src": "BALLADS - Good Flirts (Ballads Edit).mp3",
       "proposed": "BALLADS - Good Flirts.mp3",
-      "parser_output": "Ballads - BALLADS - Good Flirts.mp3",
+      "parser_output": "BALLADS - Good Flirts.mp3",
       "confidence": "low",
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
@@ -277,7 +277,7 @@
     {
       "src": "SAINT MILLER - Winny [saint miller flip].wav",
       "proposed": "SAINT MILLER - Winny.wav",
-      "parser_output": "saint miller - SAINT MILLER - Winny.wav",
+      "parser_output": "SAINT MILLER - Winny.wav",
       "confidence": "low",
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
@@ -362,7 +362,7 @@
     {
       "src": "ONE HELL OF A LIFE - (FOSSILS X AZASSIN REMIX).wav",
       "proposed": "FOSSILS x AZASSIN - ONE HELL OF A LIFE.wav",
-      "parser_output": "FOSSILS x AZASSIN - ONE HELL OF A LIFE -.wav - E HELL OF A LIFE -.wav",
+      "parser_output": "FOSSILS x AZASSIN - ONE HELL OF A LIFE.wav",
       "confidence": "low",
       "reasons": [
         "finalFilename appears mangled (duplicate extension or extra characters past the first extension)"

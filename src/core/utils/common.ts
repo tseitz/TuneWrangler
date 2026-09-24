@@ -260,7 +260,9 @@ export function setFinalDownloadedSongName(song: DownloadedSong): DownloadedSong
       ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`
       : `${song.artist} - ${song.title}${song.extension}`;
   } else {
-    song.finalFilename = `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
+    song.finalFilename = song.album
+      ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`
+      : `${song.artist} - ${song.title}${song.extension}`;
   }
   return song;
 }

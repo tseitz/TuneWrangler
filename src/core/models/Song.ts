@@ -1,5 +1,6 @@
 import * as path from "@std/path";
 import { normalizeUnicode, normalizeFilename } from "../utils/unicode.ts";
+import { NAMES_WITH_AMPERSAND } from "../../config/artistNames.ts";
 
 export class Song {
   artist = "";
@@ -204,6 +205,7 @@ export class Song {
   removeAnd(...types: Array<"artist" | "album">): Song {
     types.forEach((type) => {
       const origLabel = this[type];
+      const kept = this.holdAmpersandNames(type);
 
       this[type] = this[type].replace(/ & /g, " x ");
       this[type] = this[type].replace(/ %26 /g, " x ");
@@ -211,6 +213,7 @@ export class Song {
       this[type] = this[type].replace(/ X /gi, " x ");
       this[type] = this[type].replace(/ and /gi, " x ");
       this[type] = this[type].replace(/ \+ /gi, " x ");
+      this[type] = this[type].replace(/\u0000(\d+)\u0000/g, (_, i) => kept[Number(i)]);
 
       if (origLabel !== this[type]) {
         this.changed = true;
@@ -218,6 +221,18 @@ export class Song {
     });
 
     return this;
+  }
+
+  /** Swaps each listed `&` name for a placeholder so removeAnd leaves it whole. */
+  private holdAmpersandNames(type: "artist" | "album"): string[] {
+    const kept: string[] = [];
+    for (const name of NAMES_WITH_AMPERSAND) {
+      const at = this[type].toLowerCase().indexOf(name.toLowerCase());
+      if (at < 0) continue;
+      kept.push(this[type].slice(at, at + name.length));
+      this[type] = `${this[type].slice(0, at)}\u0000${kept.length - 1}\u0000${this[type].slice(at + name.length)}`;
+    }
+    return kept;
   }
 
   checkWith(): Song {

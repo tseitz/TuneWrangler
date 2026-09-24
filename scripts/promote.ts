@@ -12,12 +12,43 @@
  * Run this after `deno task rM --apply <manifest>` so the batch you just
  * approved (including any corrections you made) becomes permanent regression
  * coverage for future parser changes.
+ *
+ *   deno task promote --refresh
+ *     After a parser fix: every corpus entry the parser now names exactly as you corrected it
+ *     has its parser_output updated, turning it from an improvement target into a regression
+ *     test. Re-promoting a manifest cannot do this — its parser_output is frozen at dry-run time.
  */
-import { readManifest } from "../src/core/manifest.ts";
+import { readManifest, writeManifest } from "../src/core/manifest.ts";
+import { parseFilename } from "../src/core/corpus.ts";
 import { ensureDir } from "@std/fs";
 import { basename } from "@std/path";
 
 const CORPUS_DIR = "./tests/corpus";
+
+if (Deno.args[0] === "--refresh") {
+  await refreshCorpus();
+  Deno.exit(0);
+}
+
+async function refreshCorpus(): Promise<void> {
+  let locked = 0;
+  for await (const file of Deno.readDir(CORPUS_DIR)) {
+    if (!file.isFile || !file.name.endsWith(".json")) continue;
+    const path = `${CORPUS_DIR}/${file.name}`;
+    const manifest = await readManifest(path);
+    let changed = 0;
+    for (const e of manifest.entries) {
+      if (e.decision !== "apply" || e.proposed === e.parser_output) continue;
+      if (parseFilename(e.src) !== e.proposed) continue;
+      console.log(`  locked in: ${e.proposed}`);
+      e.parser_output = e.proposed;
+      changed++;
+    }
+    if (changed > 0) await writeManifest(path, manifest);
+    locked += changed;
+  }
+  console.log(`\n✓ ${locked} improvement target(s) now match the parser and are regression tests.`);
+}
 
 const sourcePath = Deno.args[0];
 if (!sourcePath) {

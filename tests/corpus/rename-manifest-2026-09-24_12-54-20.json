@@ -27,8 +27,8 @@
     },
     {
       "src": "Joey Valence & Brae, Ayesha Erotica - The Baddest (Badder) (Phrva Flip).wav",
-      "proposed": "Phrva - Joey Valence x Brae x Ayesha Erotica - The Baddest.wav",
-      "parser_output": "Phrva - Joey Valence x Brae x Ayesha Erotica - The Baddest.wav",
+      "proposed": "Phrva - Joey Valence & Brae x Ayesha Erotica - The Baddest.wav",
+      "parser_output": "Phrva - Joey Valence & Brae x Ayesha Erotica - The Baddest.wav",
       "confidence": "medium",
       "reasons": [
         "remix/edit/flip detected — parse depends on regex matching"
@@ -170,7 +170,7 @@
     {
       "src": "Noctiil - Noctiil & Jawnsin - BODY.wav",
       "proposed": "Noctiil x Jawnsin - BODY.wav",
-      "parser_output": "Noctiil x Jawnsin - Noctiil - BODY.wav",
+      "parser_output": "Noctiil x Jawnsin - BODY.wav",
       "confidence": "low",
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
@@ -283,7 +283,7 @@
     {
       "src": "ALIAS - I CRY, JUST A LITTLE (ALIAS UKG FLIP).wav",
       "proposed": "ALIAS - I CRY, JUST A LITTLE.wav",
-      "parser_output": "ALIAS UKG - ALIAS - I CRY, JUST A LITTLE.wav",
+      "parser_output": "ALIAS - I CRY, JUST A LITTLE.wav",
       "confidence": "low",
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
@@ -293,7 +293,7 @@
     {
       "src": "Blosso - Tim Deluxe - It Just Won't Do (Blosso Edition).wav",
       "proposed": "Blosso - Tim Deluxe - It Just Won't Do.wav",
-      "parser_output": "Tim Deluxe - Blosso - It Just Won't Do.wav",
+      "parser_output": "Blosso - Tim Deluxe - It Just Won't Do.wav",
       "confidence": "medium",
       "reasons": [
         "source has 2 dash separators — assumed album-artist-title structure",
@@ -314,7 +314,7 @@
     {
       "src": "beastboi. - FRED AGAIN, PLAQUEBOYMAXX & SKEPTA - VICTORY LAP (beastboi's ghetto remix).wav",
       "proposed": "beastboi. - FRED AGAIN x PLAQUEBOYMAXX x SKEPTA - VICTORY LAP.wav",
-      "parser_output": "beastboi's ghetto - FRED AGAIN x PLAQUEBOYMAXX x SKEPTA - VICTORY LAP.wav",
+      "parser_output": "beastboi. - FRED AGAIN x PLAQUEBOYMAXX x SKEPTA - VICTORY LAP.wav",
       "confidence": "medium",
       "reasons": [
         "remix/edit/flip detected — parse depends on regex matching",
@@ -366,7 +366,7 @@
     {
       "src": "Blosso - The Chemical Brothers - Galvanize (Blosso Edition).wav",
       "proposed": "Blosso - The Chemical Brothers - Galvanize.wav",
-      "parser_output": "The Chemical Brothers - Blosso - Galvanize.wav",
+      "parser_output": "Blosso - The Chemical Brothers - Galvanize.wav",
       "confidence": "medium",
       "reasons": [
         "source has 2 dash separators — assumed album-artist-title structure",
@@ -429,7 +429,7 @@
     {
       "src": "G-Space - G-Space x Kae - TBKI  TYBG.wav",
       "proposed": "G-Space x Kae - TBKI TYBG.wav",
-      "parser_output": "G-Space x Kae - G-Space - TBKI TYBG.wav",
+      "parser_output": "G-Space x Kae - TBKI TYBG.wav",
       "confidence": "low",
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
@@ -544,7 +544,7 @@
     {
       "src": "MORTY - Korn - Freak On a Leash (Morty UKG Bootleg).wav",
       "proposed": "MORTY - Korn - Freak On a Leash.wav",
-      "parser_output": "Morty UKG - Korn - Freak On a Leash.wav",
+      "parser_output": "MORTY - Korn - Freak On a Leash.wav",
       "confidence": "medium",
       "reasons": [
         "remix/edit/flip detected — parse depends on regex matching",
@@ -869,7 +869,7 @@
     {
       "src": "BLVCKHOUND - BLVCKHOUND X ZAARG - SUGAR CUBES.wav",
       "proposed": "BLVCKHOUND x ZAARG - SUGAR CUBES.wav",
-      "parser_output": "BLVCKHOUND x ZAARG - BLVCKHOUND - SUGAR CUBES.wav",
+      "parser_output": "BLVCKHOUND x ZAARG - SUGAR CUBES.wav",
       "confidence": "low",
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
@@ -983,7 +983,7 @@
     {
       "src": "FORMAL - FLUX PAVILION - I CANT STOP (FORMAL REFLIP).mp3",
       "proposed": "FORMAL - FLUX PAVILION - I CANT STOP.mp3",
-      "parser_output": "FLUX PAVILION - FORMAL - I CANT STOP.mp3",
+      "parser_output": "FORMAL - FLUX PAVILION - I CANT STOP.mp3",
       "confidence": "medium",
       "reasons": [
         "source has 2 dash separators — assumed album-artist-title structure",
@@ -1630,7 +1630,7 @@
     {
       "src": "DAZEYLANES - Flight Facilities - CRAVE YOU (DAZEY UKG BOOTLEG).wav",
       "proposed": "DAZEYLANES - Flight Facilities - CRAVE YOU.wav",
-      "parser_output": "DAZEY UKG - Flight Facilities - CRAVE YOU.wav",
+      "parser_output": "DAZEYLANES - Flight Facilities - CRAVE YOU.wav",
       "confidence": "medium",
       "reasons": [
         "remix/edit/flip detected — parse depends on regex matching",
@@ -1938,7 +1938,7 @@
     {
       "src": "LOWER [SKANK GANG] - LOWER & JADHA - ON MY LEVEL.wav",
       "proposed": "LOWER x JADHA - ON MY LEVEL.wav",
-      "parser_output": "LOWER x JADHA - LOWER - ON MY LEVEL.wav",
+      "parser_output": "LOWER x JADHA - ON MY LEVEL.wav",
       "confidence": "low",
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
@@ -1989,7 +1989,7 @@
     {
       "src": "strange language - Gucci Mane - Pillz (STRANGE LANGUAGE 5K FLIP).wav",
       "proposed": "strange language - Gucci Mane - Pillz.wav",
-      "parser_output": "STRANGE LANGUAGE 5K - Gucci Mane - Pillz.wav",
+      "parser_output": "strange language - Gucci Mane - Pillz.wav",
       "confidence": "medium",
       "reasons": [
         "remix/edit/flip detected — parse depends on regex matching",
@@ -2196,7 +2196,7 @@
     {
       "src": "SYNK - aiser & KYNEKTA - BIOMASS (SYNKED UP).wav",
       "proposed": "SYNK - aiser x KYNEKTA - BIOMASS.wav",
-      "parser_output": "aiser x KYNEKTA - SYNK - BIOMASS.wav",
+      "parser_output": "SYNK - aiser x KYNEKTA - BIOMASS.wav",
       "confidence": "medium",
       "reasons": [
         "source has 2 dash separators — assumed album-artist-title structure",
@@ -2337,7 +2337,7 @@
     {
       "src": "CCIV - CCIV x Portals - Discombobulated.wav",
       "proposed": "CCIV x Portals - Discombobulated.wav",
-      "parser_output": "CCIV x Portals - CCIV - Discombobulated.wav",
+      "parser_output": "CCIV x Portals - Discombobulated.wav",
       "confidence": "low",
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
@@ -2569,7 +2569,7 @@
     {
       "src": "Fossils - FOSSILS - PULL UP.wav",
       "proposed": "FOSSILS - PULL UP.wav",
-      "parser_output": "FOSSILS - Fossils - PULL UP.wav",
+      "parser_output": "FOSSILS - PULL UP.wav",
       "confidence": "low",
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
@@ -2579,7 +2579,7 @@
     {
       "src": "Gunpoint - Taiki Nulight - Style (Gunpoint Reload).wav",
       "proposed": "Gunpoint - Taiki Nulight - Style.wav",
-      "parser_output": "Taiki Nulight - Gunpoint - Style.wav",
+      "parser_output": "Gunpoint - Taiki Nulight - Style.wav",
       "confidence": "medium",
       "reasons": [
         "source has 2 dash separators — assumed album-artist-title structure",
@@ -2600,7 +2600,7 @@
     {
       "src": "kollaba - CRASTINATE x KOLLABA - MAYBEBETTER.wav",
       "proposed": "CRASTINATE x KOLLABA - MAYBEBETTER.wav",
-      "parser_output": "CRASTINATE x KOLLABA - kollaba - MAYBEBETTER.wav",
+      "parser_output": "CRASTINATE x KOLLABA - MAYBEBETTER.wav",
       "confidence": "low",
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
@@ -3032,7 +3032,7 @@
     {
       "src": "statiq. - statiq. niko - guns of fury.wav",
       "proposed": "statiq. x niko - guns of fury.wav",
-      "parser_output": "statiq. niko - statiq. - guns of fury.wav",
+      "parser_output": "statiq. x niko - guns of fury.wav",
       "confidence": "low",
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
@@ -3103,7 +3103,7 @@
     {
       "src": "THE BUZZ - JG DUBZ - KILL BABYLON [THE BUZZ SPESH].wav",
       "proposed": "THE BUZZ - JG DUBZ - KILL BABYLON.wav",
-      "parser_output": "JG DUBZ - THE BUZZ - KILL BABYLON.wav",
+      "parser_output": "THE BUZZ - JG DUBZ - KILL BABYLON.wav",
       "confidence": "medium",
       "reasons": [
         "source has 2 dash separators — assumed album-artist-title structure"

@@ -20,6 +20,7 @@ deno task rM --move                # legacy: parse + move all in one shot
 deno task rM --prune [--keep N]    # list backup runs beyond the newest N (5); --yes deletes
 deno task retag [--dir D] [--overwrite[-cosmetic]] [--yes]  # tags from `artist - album - title` names; dry run by default
 deno task promote <manifest>       # copy manifest into tests/corpus/ as regression coverage
+deno task promote --refresh        # lock in improvement targets the parser now gets right
 deno task test                     # run all tests (unit + corpus regression)
 deno task validate                 # validate config paths exist
 deno task rBc / rI / rBp           # rename Bandcamp / iTunes / Beatport
@@ -79,7 +80,7 @@ removes the hardest cases, which are the ones most worth pinning. If you review 
 and decide it was actually fine, flip its `decision` back to `apply` before running `promote` so
 it isn't lost to the corpus.
 
-When changing `parser.ts`, run `deno task test` and inspect the corpus output for entries where `proposed !== parser_output` — those are open improvement targets. If your change closes one (parser now matches the user's override), re-promote the affected manifest so the entry converts from "improvement target" to "regression test" and stays locked in.
+When changing `parser.ts`, run `deno task test` and inspect the corpus output for entries where `proposed !== parser_output` — those are open improvement targets. If your change closes one (parser now matches the user's override), the corpus summary says how many now match; run `deno task promote --refresh` to convert them from "improvement target" to "regression test" so they stay locked in. Re-promoting a manifest does not do this — its `parser_output` is frozen at dry-run time.
 
 ## Architecture
 
