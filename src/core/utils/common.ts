@@ -6,6 +6,7 @@ import { logError } from "./errors.ts";
 import nodeId3 from "node-id3";
 import { join } from "@std/path";
 import { Semaphore } from "../models/Semaphore.ts";
+import { id3Flags } from "../tagging.ts";
 
 const MAX_CONCURRENT_OPERATIONS = 10;
 const semaphore = new Semaphore(MAX_CONCURRENT_OPERATIONS);
@@ -152,6 +153,7 @@ async function convertToAiff(song: Song, outputFile: string, _artworkFile?: stri
         `album=${song.album}`,
         "-metadata",
         `album_artist=${song.artist}`,
+        ...id3Flags(".aiff"),
         "-f",
         "aiff",
         "-y",

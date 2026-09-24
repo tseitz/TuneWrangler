@@ -18,6 +18,7 @@ deno task rM                       # rename music: dry-run, writes manifest
 deno task rM --apply <manifest>    # apply approved entries from a manifest
 deno task rM --move                # legacy: parse + move all in one shot
 deno task rM --prune [--keep N]    # list backup runs beyond the newest N (5); --yes deletes
+deno task retag [--dir D] [--overwrite] [--yes]  # tags from `artist - album - title` names; dry run by default
 deno task promote <manifest>       # copy manifest into tests/corpus/ as regression coverage
 deno task test                     # run all tests (unit + corpus regression)
 deno task validate                 # validate config paths exist

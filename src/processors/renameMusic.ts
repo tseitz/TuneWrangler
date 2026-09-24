@@ -30,6 +30,7 @@ import {
 } from "../core/utils/common.ts";
 import { DownloadedSong } from "../core/models/Song.ts";
 import { parseDownloadedSong } from "../core/parser.ts";
+import { tagsFromFilename } from "../core/tagging.ts";
 import { scoreConfidence } from "../core/confidence.ts";
 import {
   Manifest,
@@ -182,6 +183,9 @@ async function runApply(manifestPath: string): Promise<void> {
     // the parser produces, trust the manifest (the user may have edited it).
     if (entry.proposed && entry.proposed !== song.finalFilename) {
       song.finalFilename = entry.proposed;
+      // The tags are written from these fields, so without this an override renames the
+      // file while its tags keep the parse the user rejected.
+      Object.assign(song, tagsFromFilename(entry.proposed));
     }
 
     if (checkIfDuplicate(song, cache)) {
