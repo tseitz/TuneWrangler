@@ -2,10 +2,10 @@
 
 Every rerun of a gate that posts its own comment (hypeddit, pl8list, droploud) submits its
 comment box again, and a rerun of _comment_once can miss an existing one that the public
-API has not caught up on yet — see .claude/plans/one-comment-per-track.md for the full
-evidence. This cleans that up after a gate attempt, using only the browser's session: a
-gate can post through the page alone, before --sc-auth has ever been run, so this must not
-need a stored user token.
+API has not caught up on yet — a sweep of the live account found 27 of 475 processed
+tracks carrying 2-3 duplicate copies from exactly this. This cleans that up after a gate
+attempt, using only the browser's session: a gate can post through the page alone, before
+--sc-auth has ever been run, so this must not need a stored user token.
 """
 
 from __future__ import annotations
