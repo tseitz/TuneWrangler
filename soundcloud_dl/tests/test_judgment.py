@@ -1426,3 +1426,33 @@ async def test_the_turn_loop_waits_out_a_busy_page_before_snapshotting():
     with pytest.raises(RuntimeError, match="stop"):
         await handler._run_steps(MagicMock(), {})
     assert order == ["busy", "snapshot"]
+
+
+@pytest.mark.asyncio
+async def test_a_smartlink_page_is_left_for_its_download_gate():
+    """Hypeddit smartlinks open the real gate in a new tab; the run stayed on the list."""
+    handler = make_handler(config={"gate": "hypeddit", "steps": []})
+    handler._wait_for_gate_ready = AsyncMock()
+    page = MagicMock()
+    page.url = "https://hypeddit.com/zeropoint/winnyflip"
+    page.evaluate = AsyncMock(side_effect=["https://hypeddit.com/zeropoint/winny-flip", 0])
+    page.goto = AsyncMock()
+
+    await handler._anchor_run(page)
+
+    page.goto.assert_awaited_once()
+    assert page.goto.await_args.args[0] == "https://hypeddit.com/zeropoint/winny-flip"
+
+
+@pytest.mark.asyncio
+async def test_a_page_that_is_not_a_smartlink_stays_put():
+    handler = make_handler(config={"gate": "hypeddit", "steps": []})
+    handler._wait_for_gate_ready = AsyncMock()
+    page = MagicMock()
+    page.url = "https://hypeddit.com/zeropoint/winny-flip"
+    page.evaluate = AsyncMock(side_effect=[None, 0])
+    page.goto = AsyncMock()
+
+    await handler._anchor_run(page)
+
+    page.goto.assert_not_awaited()

@@ -61,6 +61,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("soundcloud_dl.gate_handlers.judgment")
 
+_SMARTLINK_DOWNLOAD_JS = """
+() => {
+  const a = [...document.querySelectorAll('a.smartlink-click-button')]
+    .find((el) => /download/i.test(el.innerText || '') && el.href.startsWith('http'));
+  return a ? a.href : null;
+}
+"""
+
 _ASKED_AGAIN = (
     "approved this gate's SoundCloud grant once and it asked again — approving on every "
     "turn loops without unlocking, so finish this one on the open tab"
@@ -1166,6 +1174,7 @@ class JudgmentGateHandler(GateHandler):
     async def _anchor_run(self, page: Page) -> None:
         """Learn where the gate actually settled, before the first turn looks at it."""
         await self._wait_for_gate_ready(page)
+        await self._leave_link_page(page)
         self._gate_host = normalize_host(page.url)
         # Where it settled, not where it was aimed: droploud's /gate/<id> redirects to
         # /track/<id> before the first turn, and anchoring on the pre-redirect URL would
@@ -1174,6 +1183,24 @@ class JudgmentGateHandler(GateHandler):
         with contextlib.suppress(Exception):
             self._gate_scroll_y = await page.evaluate("() => window.scrollY")
         logger.info("[%s] gate anchored to %s", self.gate_name, self._gate_url)
+
+    async def _leave_link_page(self, page: Page) -> None:
+        """Go to the gate a smartlink page points at, in this tab.
+
+        Hypeddit smartlinks list the release's services, with "Free Download" linking to
+        the real gate in a new tab. Clicked, the new tab opened and this page never changed,
+        so the run gave up after three turns of no progress.
+        """
+        try:
+            target = await page.evaluate(_SMARTLINK_DOWNLOAD_JS)
+        except PlaywrightError:
+            logger.debug("[%s] smartlink check failed", self.gate_name, exc_info=True)
+            return
+        if not isinstance(target, str) or target.split("#")[0] == page.url.split("#")[0]:
+            return
+        logger.info("[%s] smartlink page; going to its download gate %s", self.gate_name, target)
+        await page.goto(target, wait_until="domcontentloaded", timeout=30_000)
+        await self._wait_for_gate_ready(page)
 
     async def _autofill_turn(
         self,
