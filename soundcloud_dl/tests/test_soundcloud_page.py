@@ -51,3 +51,42 @@ def test_decode_gate_sc_case_insensitive_domain_match() -> None:
     """Domain match is case-insensitive (per implementation: inner.lower())."""
     href = "https://gate.sc/?url=https://HYPEDDIT.COM/track&token=abc"
     assert _decode_gate_sc(href) == "https://HYPEDDIT.COM/track"
+
+
+def test_decode_gate_sc_accepts_the_newer_gate_hosts() -> None:
+    """SIMON SAYS's v2 FREE DOWNLOAD card wraps a pl8list gate; it was dropped as unknown."""
+    inner = "https://pl8list.com/crysomemore/mythm-simon-says-crysomemore-remix-v4"
+    assert _decode_gate_sc(f"https://gate.sc?url={inner}&token=a") == inner
+
+
+def test_decode_gate_sc_matches_the_host_not_a_substring() -> None:
+    href = "https://gate.sc/?url=https%3A%2F%2Finstagram.com%2Fx%3Fref%3Dhypeddit.com&token=a"
+    assert _decode_gate_sc(href) is None
+
+
+def test_a_real_gate_wins_over_an_earlier_bandcamp_link() -> None:
+    """Every description link is gate.sc-wrapped. An artist's Bandcamp link first in the
+    page would otherwise get the track skipped as a store page."""
+    from soundcloud_dl.soundcloud_page import _pick_gate  # noqa: PLC0415
+
+    bandcamp = "https://gate.sc/?url=https%3A%2F%2Fartist.bandcamp.com%2Ftrack%2Fx&token=a"
+    gate = "https://gate.sc/?url=https%3A%2F%2Fpl8list.com%2Fa%2Fb&token=b"
+    assert _pick_gate([bandcamp, gate], set()) == (
+        "https://pl8list.com/a/b",
+        "https://artist.bandcamp.com/track/x",
+    )
+    assert _pick_gate([bandcamp], set()) == (None, "https://artist.bandcamp.com/track/x")
+
+
+@pytest.mark.parametrize(
+    ("href", "expected"),
+    [
+        ("https://gate.sc?url=https%3A%2F%2Flaylo.com%2Fx&token=a", "https://laylo.com/x"),
+        ("https://hypeddit.com/a/b", "https://hypeddit.com/a/b"),
+    ],
+)
+def test_unwrap_gate_sc(href: str, expected: str) -> None:
+    """A text-matched card link is unwrapped, so the skip list sees laylo, not gate.sc."""
+    from soundcloud_dl.soundcloud_page import _unwrap_gate_sc  # noqa: PLC0415
+
+    assert _unwrap_gate_sc(href) == expected

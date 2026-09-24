@@ -6,13 +6,16 @@ import asyncio
 import contextlib
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, urlparse
 
+from playwright.async_api import Error as PlaywrightError
+
 if TYPE_CHECKING:
-    from playwright.async_api import BrowserContext, Page
+    from playwright.async_api import BrowserContext, Frame, Page
 
 from soundcloud_dl.config import get_debug_dir
+from soundcloud_dl.gate_handlers import skip_reason
 from soundcloud_dl.playwright_browser import new_page, random_delay
 
 logger = logging.getLogger("soundcloud_dl.soundcloud_page")
@@ -30,12 +33,60 @@ _GATE_DOMAINS = frozenset(
         # redirects to gate.influenceplanner.com, so both spellings have to be recognised.
         "ipln.io",
         "influenceplanner.com",
-        # Blacklisted domains — still extracted so the blacklist check in main.py
-        # can mark them 'unsupported' instead of falling through to 'manual_review'.
+        "pl8list.com",
+        "gaterush.me",
+        "sublair.com",
+        "valorizd.app",
+        "backstaged.io",
         "followeb.de",
+        # Skipped domains — still extracted so main.py records why a track is skipped
+        # instead of falling through to 'manual_review'. _poll_gate_sc_url prefers any
+        # other gate over these.
         "laylo.com",
+        "bandcamp.com",
     }
 )
+
+# SoundCloud's v2 track page draws its body in a same-origin iframe; the top document is
+# only the header and the mini player.
+_V2_FRAME = "iframe.webiIframeV2Layout"
+_LEGACY_CONTENT = ".soundActions, .userInfoBar"
+# A track page, not an artist page, and labels that do not flip once a track is reposted.
+_V2_READY_JS = (
+    "() => document.querySelector('h1') !== null && document.querySelector("
+    '\'button[aria-label="Share"], button[aria-label="Copy link"]\') !== null'
+)
+
+
+async def track_content_frame(page: Page) -> Frame | None:
+    """The frame holding the rendered track, or None while nothing has rendered."""
+    try:
+        if await page.query_selector(_LEGACY_CONTENT) is not None:
+            return page.main_frame
+        handle = await page.query_selector(_V2_FRAME)
+        frame = await handle.content_frame() if handle is not None else None
+        if frame is None or ("/n/" not in frame.url and "v2_layout" not in frame.url):
+            return None
+        return frame if await frame.evaluate(_V2_READY_JS) else None
+    except PlaywrightError:
+        # A navigation or reload mid-check.
+        logger.debug("track content check failed", exc_info=True)
+        return None
+
+
+def _host_is_gate(url: str) -> bool:
+    host = (urlparse(url).hostname or "").lower()
+    return any(host == d or host.endswith(f".{d}") for d in _GATE_DOMAINS)
+
+
+def _unwrap_gate_sc(href: str) -> str:
+    """The URL a gate.sc tracking link points at, or `href` unchanged."""
+    with contextlib.suppress(ValueError):
+        parsed = urlparse(href)
+        if (parsed.hostname or "").lower() == "gate.sc":
+            return parse_qs(parsed.query).get("url", [href])[0]
+    return href
+
 
 # Selectors checked in order. Gate-domain links are tried first since they're
 # unambiguous. Text-based selectors are broader and can match description links
@@ -83,8 +134,32 @@ def _decode_gate_sc(href: str) -> str | None:
     # urlparse + parse_qs are forgiving but malformed input can still raise.
     with contextlib.suppress(Exception):
         inner = parse_qs(urlparse(href).query).get("url", [""])[0]
-        if inner and any(d in inner.lower() for d in _GATE_DOMAINS):
+        # The host, not a substring: an Instagram link carrying ?ref=hypeddit.com is not a gate.
+        if inner and _host_is_gate(inner):
             return inner
+    return None
+
+
+def _pick_gate(hrefs: list[str], last_seen: set[str]) -> tuple[str | None, str | None]:
+    """(first real gate, first skip-listed gate) among these gate.sc links."""
+    skipped: str | None = None
+    for href in hrefs:
+        inner = _decode_gate_sc(href)
+        if inner and skip_reason(inner) is None:
+            return inner, skipped
+        if inner:
+            skipped = skipped or inner
+        elif href not in last_seen:
+            logger.debug("gate.sc link (non-gate): %s", href[:120])
+            last_seen.add(href)
+    return None, skipped
+
+
+async def _first_match(scopes: list[Frame], selector: str) -> Any | None:  # noqa: ANN401
+    for scope in scopes:
+        el = await scope.query_selector(selector)
+        if el is not None:
+            return el
     return None
 
 
@@ -110,6 +185,9 @@ async def _poll_gate_sc_url(page: Page, timeout_ms: int = 25_000) -> str | None:
     deadline = start + timeout_ms / 1000
     last_seen: set[str] = set()
     scroll_count = 0
+    # SoundCloud wraps every description link in gate.sc, so an artist's own Bandcamp link
+    # can come before the real gate. Held back until the window ends with nothing better.
+    skipped: str | None = None
     # Scroll thresholds: 8s and 16s after poll start.
     scroll_thresholds = [8.0, 16.0]
     while asyncio.get_event_loop().time() < deadline:
@@ -126,13 +204,10 @@ async def _poll_gate_sc_url(page: Page, timeout_ms: int = 25_000) -> str | None:
             hrefs.extend(js_hrefs)
         except Exception:  # noqa: BLE001, S110
             pass
-        for href in hrefs:
-            inner = _decode_gate_sc(href)
-            if inner:
-                return inner
-            if href not in last_seen:
-                logger.debug("gate.sc link (non-gate): %s", href[:120])
-                last_seen.add(href)
+        gate, skip = _pick_gate(hrefs, last_seen)
+        if gate is not None:
+            return gate
+        skipped = skipped or skip
         elapsed = asyncio.get_event_loop().time() - start
         if scroll_count < len(scroll_thresholds) and elapsed >= scroll_thresholds[scroll_count]:
             try:  # noqa: SIM105
@@ -141,14 +216,14 @@ async def _poll_gate_sc_url(page: Page, timeout_ms: int = 25_000) -> str | None:
                 pass
             scroll_count += 1
         await asyncio.sleep(0.5)
-    return None
+    return skipped
 
 
 class SoundCloudPageError(RuntimeError):
     """Raised when we can't find or trigger the free download on a SoundCloud page."""
 
 
-async def get_gate_url(context: BrowserContext, track_url: str) -> str:  # noqa: C901, PLR0915
+async def get_gate_url(context: BrowserContext, track_url: str) -> str:  # noqa: C901, PLR0912, PLR0915
     """
     Navigate to a SoundCloud track, click the free download button, and return
     the URL of the gate page that opens in the new tab.
@@ -176,6 +251,10 @@ async def get_gate_url(context: BrowserContext, track_url: str) -> str:  # noqa:
         # Find the free download element
         el = None
         matched_selector = None
+        content = await track_content_frame(page)
+        scopes = [page.main_frame]
+        if content is not None and content is not page.main_frame:
+            scopes.insert(0, content)
         for selector in _SELECTORS:
             if "gate.sc" in selector:
                 # Multiple gate.sc links can appear (download button + social follow links).
@@ -187,7 +266,7 @@ async def get_gate_url(context: BrowserContext, track_url: str) -> str:  # noqa:
                     logger.info("Gate URL decoded from gate.sc proxy: %s", inner)
                     return inner
                 continue
-            el = await page.query_selector(selector)
+            el = await _first_match(scopes, selector)
             if el:
                 matched_selector = selector
                 logger.info("Found free download element with selector: %s", selector)
@@ -205,8 +284,7 @@ async def get_gate_url(context: BrowserContext, track_url: str) -> str:  # noqa:
             # "Nothing found" and "nothing rendered" are not the same answer, and the
             # caller retires the track on the first. If the engagement bar is missing the
             # page never drew its content, so no conclusion about the track is available.
-            rendered = await page.query_selector(".soundActions, .userInfoBar")
-            if rendered is None:
+            if await track_content_frame(page) is None:
                 msg = (
                     f"SoundCloud served no track content for {track_url} — the page body "
                     f"never rendered, so whether it has a download is unknown"
@@ -228,7 +306,8 @@ async def get_gate_url(context: BrowserContext, track_url: str) -> str:  # noqa:
         # If the anchor has a direct href to an external gate, use it without clicking.
         # dispatch_event("click") is a synthetic (non-trusted) event so browsers block
         # window.open() popups triggered by it. Reading href avoids the race entirely.
-        href = await el.get_attribute("href") or ""
+        # Unwrapped so main.py's skip list sees the real host, not gate.sc.
+        href = _unwrap_gate_sc(await el.get_attribute("href") or "")
         is_external = href.startswith("http") and "soundcloud.com" not in href
         if is_external:
             logger.info("Gate URL from href: %s", href)
@@ -307,7 +386,7 @@ async def try_native_sc_download(
                 # all, which is the page not being a track page (or not having loaded).
                 logger.info(
                     "No native download on %s — neither a download button nor a '...' "
-                    "menu is present",
+                    "menu is present (not looked for inside SoundCloud's v2 layout frame)",
                     track_url,
                 )
                 return False

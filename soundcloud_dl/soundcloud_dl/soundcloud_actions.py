@@ -105,6 +105,18 @@ async def block_ads(page: Page) -> None:
     )
 
 
+_CONTENT_POLL_MS = 500
+_CONTENT_TIMEOUT_MS = 20_000
+
+
+async def _poll(check: Callable[[], Awaitable[object]], page: Page) -> bool:
+    for _ in range(_CONTENT_TIMEOUT_MS // _CONTENT_POLL_MS):
+        if await check() is not None:
+            return True
+        await page.wait_for_timeout(_CONTENT_POLL_MS)
+    return False
+
+
 async def _wait_for_actions(page: Page) -> None:
     """Wait for SoundCloud's engagement controls, not a fixed sleep.
 
@@ -120,27 +132,28 @@ async def _wait_for_actions(page: Page) -> None:
         logger.warning("bring_to_front failed: %s", e)
 
     # Waiting on .sc-button-like alone returns in 4s because the mini player at the bottom
-    # of every page has one. These two are the page's own content.
+    # of every page has one. track_content_frame looks for the page's own content, in the
+    # top document on the legacy layout and in the layout iframe on v2.
+    from soundcloud_dl.soundcloud_page import track_content_frame  # noqa: PLC0415
+
     for attempt in (1, 2):
-        try:
-            await page.wait_for_selector(
-                ".soundActions, .userInfoBar", state="attached", timeout=20_000
-            )
+        if await _poll(lambda: track_content_frame(page), page):
             break
-        except Exception:  # noqa: BLE001
-            state = await page.evaluate(
-                "() => [document.visibilityState, document.readyState,"
-                " document.querySelectorAll('.sound').length, document.body.children.length,"
-                " location.href]"
-            )
-            logger.warning(
-                "attempt %d: no content. visibility=%s ready=%s .sound=%d bodyKids=%d url=%s",
-                attempt,
-                *state,
-            )
-            if attempt == 1:
-                logger.info("reloading once")
-                await page.reload(wait_until="domcontentloaded", timeout=30_000)
+        state = await page.evaluate(
+            "() => [document.visibilityState, document.readyState,"
+            " document.querySelectorAll('.sound').length,"
+            " document.querySelectorAll('iframe.webiIframeV2Layout').length,"
+            " document.body.children.length, location.href]"
+        )
+        logger.warning(
+            "attempt %d: no content. visibility=%s ready=%s .sound=%d v2frame=%d bodyKids=%d "
+            "url=%s",
+            attempt,
+            *state,
+        )
+        if attempt == 1:
+            logger.info("reloading once")
+            await page.reload(wait_until="domcontentloaded", timeout=30_000)
     if PAGE_LOAD_WAIT_SECONDS > 0:
         await page.wait_for_timeout(PAGE_LOAD_WAIT_SECONDS * 1000)
 

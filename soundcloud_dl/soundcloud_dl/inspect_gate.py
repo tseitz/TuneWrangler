@@ -18,12 +18,14 @@ import select
 import sys
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
+from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import Page
 
 from soundcloud_dl.config import DOWNLOAD_DIR, get_debug_dir, get_log_dir
 from soundcloud_dl.downloads import save_download
-from soundcloud_dl.gate_handlers.dom_snapshot import snapshot_elements
+from soundcloud_dl.gate_handlers.dom_snapshot import SNAPSHOT_JS, snapshot_elements
 from soundcloud_dl.playwright_browser import attached_browser
 
 logger = logging.getLogger("soundcloud_dl.inspect_gate")
@@ -67,11 +69,33 @@ _REMOVE_DONE_BUTTON_JS = f"() => document.getElementById('{_DONE_BUTTON_ID}')?.r
 
 
 async def _snapshot(page: Page) -> dict[str, dict[str, Any]]:
-    """Record the state of every interactive element, keyed so it survives a re-render."""
+    """Record the state of every interactive element, keyed so it survives a re-render.
+
+    Same-site frames too: SoundCloud's v2 track page draws its whole body in one, and a
+    top-document-only snapshot reported "Nothing changed" whatever was clicked.
+    """
     snapshot: dict[str, dict[str, Any]] = {}
     for el in await snapshot_elements(page):
         snapshot.setdefault(el["key"], el)
+    for frame in page.frames[1:]:
+        if not _same_site(frame.url, page.url):
+            continue
+        try:
+            els = await frame.evaluate(SNAPSHOT_JS)
+        except PlaywrightError:
+            logger.debug("could not snapshot frame %s", frame.url, exc_info=True)
+            continue
+        # Host and path, not the query: the frame's query carries per-load ids.
+        where = urlparse(frame.url)
+        for el in els:
+            snapshot.setdefault(f"{where.hostname}{where.path}/{el['key']}", el)
     return snapshot
+
+
+def _same_site(url: str, other: str) -> bool:
+    """Ad and captcha frames are someone else's page and would only add noise."""
+    a, b = urlparse(url).hostname or "", urlparse(other).hostname or ""
+    return bool(a) and a.split(".")[-2:] == b.split(".")[-2:]
 
 
 async def _settled_snapshot(page: Page, label: str) -> dict[str, dict[str, Any]]:
