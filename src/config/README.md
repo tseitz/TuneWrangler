@@ -1,7 +1,8 @@
 # Configuration
 
-Path management for the main tool. Each path is hardcoded to a platform-specific
-default in [`paths.ts`](paths.ts) and can be overridden via environment variable.
+Path management for the main tool. Every path comes from its environment variable, set in the
+repo-root `.env` (template: `.env.example`). There are no built-in defaults: a missing variable
+throws a `ConfigurationError` naming it, so a command only needs the paths it uses.
 
 ## Usage
 
@@ -15,7 +16,7 @@ const { valid, errors } = await validatePaths(config);
 
 ## Paths
 
-| Key | Env override | Purpose |
+| Key | Env variable | Purpose |
 |---|---|---|
 | `music` | `TUNEWRANGLER_MUSIC_PATH` | Main music library |
 | `downloads` | `TUNEWRANGLER_DOWNLOADS_PATH` | OS Downloads folder |
@@ -30,5 +31,5 @@ const { valid, errors } = await validatePaths(config);
 | `backup` | `TUNEWRANGLER_BACKUP_PATH` | Source-file backup destination |
 | `transfer` | `TUNEWRANGLER_TRANSFER_PATH` | Transfer/staging folder |
 
-Run `deno task validate` to detect platform, list configured paths, and check
-that each one exists.
+Run `deno task validate` to list the configured paths, flag unset variables, and check that
+each set path exists.

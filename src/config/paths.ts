@@ -35,93 +35,60 @@ export function detectPlatform(): PlatformConfig {
   };
 }
 
-/**
- * Gets the default paths based on the current platform
- */
-export function getDefaultPaths(): PathConfig {
-  const platform = detectPlatform();
+import { ConfigurationError } from "../core/utils/errors.ts";
 
-  if (platform.isMac) {
-    const gdrive = "/Users/tseitz/Library/CloudStorage/GoogleDrive-tdseitz10@gmail.com/My Drive";
-    const transferMusic = `${gdrive}/TransferMusic`;
-    const userDir = "/Users/tseitz";
-    return {
-      music: `${userDir}/Music/`,
-      downloads: `${userDir}/Downloads/`,
-      bandcamp: `${transferMusic}/Downloaded/bandcamp/`,
-      youtube: `${transferMusic}/Youtube/`,
-      downloaded: `${transferMusic}/Downloaded/`,
-      itunes: `${transferMusic}/Downloaded/itunes/Music`,
-      djMusic: `${gdrive}/DJ/Dane Dubz DJ Music/Collection/`,
-      djPlaylists: `${gdrive}/DJ/Dane Dubz DJ Music/Playlist Backups/`,
-      djPlaylistImport: `${gdrive}/DJ/Dane Dubz DJ Music/Playlist Backups/Import/`,
-      rename: `${transferMusic}/Renamed/`,
-      backup: `${transferMusic}/bak/`,
-      transfer: transferMusic,
-    };
-  } else if (platform.isWindows) {
-    return {
-      music: "G:\\Dropbox\\Music\\",
-      downloads: "C:\\Users\\tdsei\\Downloads\\",
-      bandcamp: "G:\\Dropbox\\TransferMusic\\bandcamp\\",
-      youtube: "G:\\Dropbox\\TransferMusic\\Youtube\\",
-      downloaded: "G:\\Dropbox\\TransferMusic\\Downloaded\\",
-      itunes: "G:\\Dropbox\\TransferMusic\\Downloaded\\itunes\\Music",
-      djMusic: "G:\\Dropbox\\DJ\\Dane Dubz DJ Music\\Collection\\",
-      djPlaylists: "G:\\Dropbox\\DJ\\Dane Dubz DJ Music\\Playlist Backups\\",
-      djPlaylistImport: "G:\\Dropbox\\DJ\\Dane Dubz DJ Music\\Playlist Backups\\Import\\",
-      rename: "G:\\Dropbox\\TransferMusic\\Renamed\\",
-      backup: "G:\\Dropbox\\TransferMusic\\bak\\",
-      transfer: "G:\\Dropbox\\TransferMusic\\",
-    };
-  } else {
-    // Linux
-    return {
-      music: "/media/tseitz/Storage SSD/Dropbox/Music/",
-      downloads: "/home/tseitz/Downloads/",
-      bandcamp: "/home/tseitz/Dropbox/TransferMusic/bandcamp/",
-      youtube: "/home/tseitz/Dropbox/TransferMusic/Youtube/",
-      downloaded: "/home/tseitz/Dropbox/TransferMusic/Downloaded/",
-      itunes: "/home/tseitz/Dropbox/TransferMusic/Downloaded/itunes/Music",
-      djMusic: "/home/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Collection/",
-      djPlaylists: "/home/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Playlist Backups/",
-      djPlaylistImport: "/home/tseitz/Dropbox/DJ/Dane Dubz DJ Music/Playlist Backups/Import/",
-      rename: "/home/tseitz/Dropbox/TransferMusic/Renamed/",
-      backup: "/home/tseitz/Dropbox/TransferMusic/bak/",
-      transfer: "/home/tseitz/Dropbox/TransferMusic/",
-    };
+export const PATH_ENV_VARS: Readonly<Record<keyof PathConfig, string>> = {
+  music: "TUNEWRANGLER_MUSIC_PATH",
+  downloads: "TUNEWRANGLER_DOWNLOADS_PATH",
+  bandcamp: "TUNEWRANGLER_BANDCAMP_PATH",
+  youtube: "TUNEWRANGLER_YOUTUBE_PATH",
+  downloaded: "TUNEWRANGLER_DOWNLOADED_PATH",
+  itunes: "TUNEWRANGLER_ITUNES_PATH",
+  djMusic: "TUNEWRANGLER_DJMUSIC_PATH",
+  djPlaylists: "TUNEWRANGLER_DJPLAYLISTS_PATH",
+  djPlaylistImport: "TUNEWRANGLER_DJPLAYLISTIMPORT_PATH",
+  rename: "TUNEWRANGLER_RENAME_PATH",
+  backup: "TUNEWRANGLER_BACKUP_PATH",
+  transfer: "TUNEWRANGLER_TRANSFER_PATH",
+};
+
+/**
+ * A folder from its environment variable. No built-in default: a hardcoded path went stale
+ * when the drive moved, and a missing variable is safer as an error than as a guess.
+ */
+export function getPath(key: keyof PathConfig): string {
+  const name = PATH_ENV_VARS[key];
+  const value = Deno.env.get(name)?.trim();
+  if (!value) {
+    throw new ConfigurationError(`${name} is not set — add it to .env (see .env.example)`, key);
   }
+  // Callers build paths as `${dir}${name}`.
+  return value.endsWith("/") || value.endsWith("\\") ? value : `${value}/`;
 }
 
-/**
- * Loads configuration from environment variables, falling back to defaults
- */
-export function loadConfig(): PathConfig {
-  const defaults = getDefaultPaths();
-
-  return {
-    music: Deno.env.get("TUNEWRANGLER_MUSIC_PATH") || defaults.music,
-    downloads: Deno.env.get("TUNEWRANGLER_DOWNLOADS_PATH") || defaults.downloads,
-    bandcamp: Deno.env.get("TUNEWRANGLER_BANDCAMP_PATH") || defaults.bandcamp,
-    youtube: Deno.env.get("TUNEWRANGLER_YOUTUBE_PATH") || defaults.youtube,
-    downloaded: Deno.env.get("TUNEWRANGLER_DOWNLOADED_PATH") || defaults.downloaded,
-    itunes: Deno.env.get("TUNEWRANGLER_ITUNES_PATH") || defaults.itunes,
-    djMusic: Deno.env.get("TUNEWRANGLER_DJMUSIC_PATH") || defaults.djMusic,
-    djPlaylists: Deno.env.get("TUNEWRANGLER_DJPLAYLISTS_PATH") || defaults.djPlaylists,
-    djPlaylistImport: Deno.env.get("TUNEWRANGLER_DJPLAYLISTIMPORT_PATH") || defaults.djPlaylistImport,
-    rename: Deno.env.get("TUNEWRANGLER_RENAME_PATH") || defaults.rename,
-    backup: Deno.env.get("TUNEWRANGLER_BACKUP_PATH") || defaults.backup,
-    transfer: Deno.env.get("TUNEWRANGLER_TRANSFER_PATH") || defaults.transfer,
-  };
+/** Every path whose variable is set; the unset ones are left out. */
+export function loadConfig(): Partial<PathConfig> {
+  const config: Partial<Record<keyof PathConfig, string>> = {};
+  for (const key of Object.keys(PATH_ENV_VARS) as (keyof PathConfig)[]) {
+    if (Deno.env.get(PATH_ENV_VARS[key])?.trim()) config[key] = getPath(key);
+  }
+  return config;
 }
 
 /**
  * Validates that all configured paths exist
  */
-export async function validatePaths(config: PathConfig): Promise<{ valid: boolean; errors: string[] }> {
+export async function validatePaths(
+  config: Partial<PathConfig>,
+): Promise<{ valid: boolean; errors: string[] }> {
   const errors: string[] = [];
 
-  for (const [key, path] of Object.entries(config)) {
+  for (const key of Object.keys(PATH_ENV_VARS) as (keyof PathConfig)[]) {
+    const path = config[key];
+    if (path === undefined) {
+      errors.push(`${PATH_ENV_VARS[key]} is not set`);
+      continue;
+    }
     try {
       await Deno.stat(path);
     } catch {

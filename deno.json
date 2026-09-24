@@ -13,7 +13,7 @@
   "tasks": {
     "test": "deno test --allow-env --allow-read --allow-write src/ tests/",
     "promote": "deno run --allow-env --allow-read --allow-write scripts/promote.ts",
-    "validate": "deno run --allow-env --allow-read src/config/validate.ts",
+    "validate": "deno run --allow-env --allow-read --env-file src/config/validate.ts",
     "rM": "deno run -A --env-file src/processors/renameMusic.ts",
     "rBc": "deno run -A src/processors/renameBandcamp.ts",
     "rI": "deno run -A src/processors/renameItunes.ts",

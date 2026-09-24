@@ -90,7 +90,7 @@ When changing `parser.ts`, run `deno task test` and inspect the corpus output fo
 - **`src/core/manifest.ts`** — `Manifest`/`ManifestEntry` types + `readManifest`/`writeManifest`. `parser_output` is immutable; `proposed` is user-editable.
 - **`src/core/models/Song.ts`** — Song data model. Heavy mutation, regex-based methods (`checkRemix`, `checkFeat`, `checkWith`). Refactor target — see "Known tech debt" below.
 - **`src/core/utils/`** — `common.ts` (move/cache/dedup/`validateConfiguration`), `logger.ts` (file-rotating), `unicode.ts`, `errors.ts`, `retry.ts`, `validation.ts`, `getYoutubeAuth.ts`.
-- **`src/config/paths.ts`** — Platform-specific path defaults with `TUNEWRANGLER_*_PATH` env var overrides. `validate.ts` is the entry point for `deno task validate`.
+- **`src/config/paths.ts`** — Every path comes from its `TUNEWRANGLER_*_PATH` variable in `.env`; no built-in defaults, so an unset one fails naming itself. `validate.ts` is the entry point for `deno task validate`.
 - **`scripts/promote.ts`** — Copies an applied manifest into `tests/corpus/`.
 - **`tests/corpus/`** — Promoted manifests, loaded automatically by the corpus test.
 

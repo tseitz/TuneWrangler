@@ -31,8 +31,5 @@ if (validation.valid) {
   validation.errors.forEach((error) => console.log(`  - ${error}`));
 }
 
-console.log("\n💡 Environment Variables:");
-console.log("You can override any path using environment variables:");
-console.log("  TUNEWRANGLER_MUSIC_PATH=/custom/music/path");
-console.log("  TUNEWRANGLER_DOWNLOADS_PATH=/custom/downloads/path");
-console.log("  etc...");
+console.log("\n💡 Every path comes from a TUNEWRANGLER_*_PATH variable in .env (see .env.example).");
+console.log("   A command only needs the ones it uses.");

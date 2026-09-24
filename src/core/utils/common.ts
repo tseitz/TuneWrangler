@@ -1,7 +1,7 @@
 import { DownloadedSong, LocalSong, Song, Tags } from "../models/Song.ts";
 import { FolderLocation } from "../models/types.ts";
-import { loadConfig, validatePaths } from "../../config/index.ts";
-import { logError, ConfigurationError } from "./errors.ts";
+import { getPath, loadConfig, validatePaths } from "../../config/index.ts";
+import { logError } from "./errors.ts";
 // ffmpeg npm package no longer needed - using Deno.Command for all conversions
 import nodeId3 from "node-id3";
 import { join } from "@std/path";
@@ -11,20 +11,7 @@ const MAX_CONCURRENT_OPERATIONS = 10;
 const semaphore = new Semaphore(MAX_CONCURRENT_OPERATIONS);
 
 export function getFolder(type: FolderLocation): string {
-  try {
-    const config = loadConfig();
-
-    if (type in config) {
-      return config[type];
-    }
-
-    throw new ConfigurationError(`Unknown folder type: ${type}`, type);
-  } catch (error) {
-    if (error instanceof ConfigurationError) {
-      throw error;
-    }
-    throw new ConfigurationError(`Failed to load configuration for folder type: ${type}`, type);
-  }
+  return getPath(type);
 }
 
 export function logWithBreak(message: string): void {
@@ -45,7 +32,7 @@ export async function validateConfiguration(): Promise<boolean> {
     if (!validation.valid) {
       console.warn(" ⚠️  Configuration validation issues:");
       validation.errors.forEach((error) => console.warn(`  - ${error}`));
-      console.warn("\nPlease check your environment variables or update the default paths.");
+      console.warn("\nSet the missing TUNEWRANGLER_*_PATH variables in .env.");
     }
 
     console.log("✅ Configuration validation passed");
