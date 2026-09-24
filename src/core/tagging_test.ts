@@ -29,6 +29,10 @@ Deno.test("a two-part name has no album, and a title containing a dash stays who
   assertEquals(tagsFromFilename("A - B - Part 1 - Intro.mp3").title, "Part 1 - Intro");
 });
 
+Deno.test("an Unknown placeholder in the name is a blank field, not a value", () => {
+  assertEquals(tagsFromFilename("Krischvn - Unknown - Baked.mp3"), { artist: "Krischvn", album: "", title: "Baked" });
+});
+
 Deno.test("retag fills missing tags but keeps a set one unless told to overwrite", () => {
   const current = { artist: "", album: "", title: "Wrong Title" };
   const fill = planRetag("Rayment - STPTBOOTS - Wicked & Dark.aiff", current, false);

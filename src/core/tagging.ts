@@ -12,7 +12,8 @@ export interface TrackTags {
  */
 export function tagsFromFilename(filename: string): TrackTags {
   const base = filename.slice(0, filename.length - extname(filename).length).normalize("NFC");
-  const parts = base.split(" - ").map((p) => p.trim());
+  // "Unknown" is the placeholder the Rekordbox sync writes into a name for a blank field.
+  const parts = base.split(" - ").map((p) => p.trim()).map((p) => (/^unknown$/i.test(p) ? "" : p));
   if (parts.length === 1) return { artist: "", album: "", title: parts[0] };
   if (parts.length === 2) return { artist: parts[0], album: "", title: parts[1] };
   return { artist: parts[0], album: parts[1], title: parts.slice(2).join(" - ") };
