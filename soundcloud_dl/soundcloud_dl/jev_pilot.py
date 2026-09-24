@@ -29,6 +29,7 @@ from soundcloud_dl.gate_handlers.jev import gate_name_for
 from soundcloud_dl.gate_handlers.judgment import JudgmentGateHandler
 from soundcloud_dl.gate_handlers.login_wall import LoginWallEncountered
 from soundcloud_dl.main import _save_debug_artifacts
+from soundcloud_dl.playlist import blank_to_none
 from soundcloud_dl.playwright_browser import attached_browser
 from soundcloud_dl.run_artifacts import RunRecorder
 from soundcloud_dl.sc_actions_flow import (
@@ -37,6 +38,7 @@ from soundcloud_dl.sc_actions_flow import (
     requirement_follower,
 )
 from soundcloud_dl.soundcloud_page import get_gate_url
+from soundcloud_dl.track_index import record_track
 from soundcloud_dl.track_naming import judge_track_filename
 
 if TYPE_CHECKING:
@@ -77,9 +79,17 @@ async def _resolve_track_title(url: str) -> str | None:
 
         async with api_client() as client:
             track = await resolve(client, url)
-        title = await judge_track_filename(
-            track.get("title"), (track.get("user") or {}).get("username")
-        )
+        uploader = (track.get("user") or {}).get("username")
+        title = await judge_track_filename(track.get("title"), uploader)
+        if title:
+            record_track(
+                title,
+                url=url,
+                title=track.get("title"),
+                uploader=uploader,
+                metadata_artist=blank_to_none(track.get("metadata_artist")),
+                label_name=blank_to_none(track.get("label_name")),
+            )
     except Exception:  # noqa: BLE001
         # Auth, network and a resolve that answers something other than a track all end the
         # same way here: name the file what the gate called it and get on with the run.

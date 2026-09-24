@@ -73,6 +73,7 @@ from soundcloud_dl.sc_actions_flow import (
     requirement_follower,
 )
 from soundcloud_dl.soundcloud_page import SoundCloudPageError, get_gate_url, try_native_sc_download
+from soundcloud_dl.track_index import record_track
 from soundcloud_dl.track_naming import judge_track_filename
 
 logger = logging.getLogger("soundcloud_dl.main")
@@ -347,6 +348,15 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
     """Attempt the gate flow for one track; return outcome string."""
     track_label = track.title or track.url
     track_title = await judge_track_filename(track.title, track.artist)
+    if track_title:
+        record_track(
+            track_title,
+            url=track.url,
+            title=track.title,
+            uploader=track.artist,
+            metadata_artist=track.metadata_artist,
+            label_name=track.label_name,
+        )
 
     page = None
     recorder: RunRecorder | None = None

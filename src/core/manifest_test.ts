@@ -97,3 +97,22 @@ Deno.test("writeManifest creates pretty-printed JSON for human editing", async (
     assertEquals(text.includes("\n  "), true, "expected indented output");
   });
 });
+
+Deno.test("readManifest keeps a well-formed soundcloud field and rejects a malformed one", async () => {
+  const soundcloud = {
+    url: "https://soundcloud.com/mousai/ball-so-hard",
+    title: "BALL SO HARD (Mousai & UrBoiN8)",
+    uploader: "MOUSAI",
+    metadata_artist: "MOUSAI & Urboin8",
+    label_name: null,
+  };
+  await withTempFile(async (path) => {
+    const good = { ...sampleManifest, entries: [{ ...sampleManifest.entries[0], soundcloud }] };
+    await Deno.writeTextFile(path, JSON.stringify(good));
+    assertEquals((await readManifest(path)).entries[0].soundcloud, soundcloud);
+
+    const bad = { ...sampleManifest, entries: [{ ...sampleManifest.entries[0], soundcloud: { ...soundcloud, url: 1 } }] };
+    await Deno.writeTextFile(path, JSON.stringify(bad));
+    await assertRejects(() => readManifest(path), Error, "soundcloud");
+  });
+});

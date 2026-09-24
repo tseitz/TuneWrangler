@@ -32,6 +32,7 @@ import { DownloadedSong } from "../core/models/Song.ts";
 import { parseDownloadedSong } from "../core/parser.ts";
 import { tagsFromFilename } from "../core/tagging.ts";
 import { scoreConfidence } from "../core/confidence.ts";
+import { applySoundcloudCredits, factsFor, loadSoundcloudIndex } from "../core/soundcloudFacts.ts";
 import {
   Manifest,
   ManifestEntry,
@@ -83,13 +84,18 @@ function isJudgeCandidate(entry: ManifestEntry): boolean {
  */
 async function runDryRun(manifestOverride?: string): Promise<void> {
   const cache = await cacheMusic(cacheDir);
+  const soundcloud = await loadSoundcloudIndex();
   const built: BuildResult[] = [];
 
   for await (const currEntry of Deno.readDir(startDir)) {
     if (!isProcessable(currEntry)) continue;
     const result = buildEntry(currEntry.name, cache);
-    if (result) built.push(result);
+    if (!result) continue;
+    const facts = factsFor(soundcloud, result.entry.src);
+    built.push(facts ? { ...result, entry: applySoundcloudCredits(result.entry, facts) } : result);
   }
+  const matched = built.filter((b) => b.entry.soundcloud).length;
+  console.log(`\nsoundcloud facts: ${matched}/${built.length} entries matched (index has ${soundcloud.size})`);
 
   const manifestPath = manifestOverride ?? defaultManifestPath();
   const manifest: Manifest = {

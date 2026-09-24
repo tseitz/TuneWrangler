@@ -237,6 +237,13 @@
         "judged_proposed": "C-Motion - Shiny.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.685Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/c-motion/c-motion-shiny-free-dl-hh006",
+        "title": "Shiny (Free DL) [HH006]",
+        "uploader": "C-Motion",
+        "metadata_artist": "C-Motion",
+        "label_name": "HulaHoop"
       }
     },
     {
@@ -257,6 +264,13 @@
         "judged_proposed": "JG DUBZ - TURN UP.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.671Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/jgdubz/turnup",
+        "title": "JG DUBZ - TURN UP ( FREE )",
+        "uploader": "JG Dubz",
+        "metadata_artist": "JG Dubz",
+        "label_name": null
       }
     },
     {
@@ -278,6 +292,13 @@
         "judged_proposed": "beastboi. - LYNY x COZY KEV - TRIUMPH.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.722Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/beastboisucks/lyny-x-cozy-kev-triumph-1",
+        "title": "LYNY x COZY KEV - TRIUMPH (beastboi. bootleg) [FREE DL]",
+        "uploader": "beastboi.",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -288,7 +309,14 @@
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
       ],
-      "decision": "apply"
+      "decision": "apply",
+      "soundcloud": {
+        "url": "https://soundcloud.com/aliasnew/icryalil",
+        "title": "I CRY, JUST A LITTLE (ALIAS UKG FLIP) {FREE DOWNLOAD}",
+        "uploader": "ALIAS",
+        "metadata_artist": "ALIAS",
+        "label_name": null
+      }
     },
     {
       "src": "Blosso - Tim Deluxe - It Just Won't Do (Blosso Edition).wav",
@@ -309,6 +337,13 @@
         "judged_proposed": "Tim Deluxe - Blosso - It Just Won't Do.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.702Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/blossosound/tim-deluxe-it-just-wont-do",
+        "title": "Tim Deluxe - It Just Won't Do (Blosso Edition)",
+        "uploader": "Blosso",
+        "metadata_artist": "Blosso",
+        "label_name": null
       }
     },
     {
@@ -330,6 +365,13 @@
         "judged_proposed": "beastboi's ghetto - FRED AGAIN x PLAQUEBOYMAXX x SKEPTA - VICTORY LAP.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.721Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/beastboisucks/fred-again-victory-lap-beastbois-ghetto-remix-v2",
+        "title": "FRED AGAIN, PLAQUEBOYMAXX & SKEPTA - VICTORY LAP (beastboi's ghetto remix)",
+        "uploader": "beastboi.",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -340,7 +382,14 @@
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
       ],
-      "decision": "apply"
+      "decision": "apply",
+      "soundcloud": {
+        "url": "https://soundcloud.com/bignutchuckbeats/think-u-the-shit-fart-big-nut-chuck-remix-ice-spice",
+        "title": "Think U The Shit (Fart) [Big Nut Chuck Remix] - Ice Spice [FREE DOWNLOAD]",
+        "uploader": "Big Nut Chuck",
+        "metadata_artist": null,
+        "label_name": null
+      }
     },
     {
       "src": "BILLYTHEKID - Skrillex & ISOxo - Smoke (BILLYTHEKID BOOTLEG).wav",
@@ -361,6 +410,13 @@
         "judged_proposed": "BILLYTHEKID - Skrillex x ISOxo - Smoke.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.756Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/billythekiddub/skrillex-isoxo-smoke",
+        "title": "Skrillex & ISOxo - Smoke (BILLYTHEKID BOOTLEG)",
+        "uploader": "BILLYTHEKID",
+        "metadata_artist": "BILLYTHEKID",
+        "label_name": null
       }
     },
     {
@@ -382,6 +438,13 @@
         "judged_proposed": "The Chemical Brothers - Blosso - Galvanize.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.769Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/blossosound/the-chemical-brothers",
+        "title": "The Chemical Brothers - Galvanize (Blosso Edition)",
+        "uploader": "Blosso",
+        "metadata_artist": "Blosso",
+        "label_name": null
       }
     },
     {
@@ -404,6 +467,13 @@
         "judged_proposed": "Dan Heale - Paul Johnson - Get Get Down.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.846Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/danhealemusic/paul-johnson-get-get-down-dan-heale-remix",
+        "title": "Paul Johnson - Get Get Down (Dan Heale Edit)",
+        "uploader": "Dan Heale",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -424,6 +494,13 @@
         "judged_proposed": "elden - LIVEWIRE.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.807Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/eldensounds/livewire",
+        "title": "LIVEWIRE",
+        "uploader": "elden",
+        "metadata_artist": "elden",
+        "label_name": null
       }
     },
     {
@@ -434,7 +511,14 @@
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
       ],
-      "decision": "apply"
+      "decision": "apply",
+      "soundcloud": {
+        "url": "https://soundcloud.com/gspacemusic/g-space-x-kae-tbki-tybg",
+        "title": "G-Space x Kae - TBKI / TYBG ~~~ (FREE DL)",
+        "uploader": "G-Space",
+        "metadata_artist": "G-Space",
+        "label_name": null
+      }
     },
     {
       "src": "HAMMAH - Kanye West - Mercy (HAMMAH & JBG Flip).mp3",
@@ -456,6 +540,13 @@
         "judged_proposed": "HAMMAH x JBG - Kanye West - Mercy.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.796Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/hammahmusic/kanye-mercy-hammah-flip-v4",
+        "title": "Kanye West - Mercy (HAMMAH & JBG Flip)",
+        "uploader": "HAMMAH",
+        "metadata_artist": "HAMMAH, JBG",
+        "label_name": null
       }
     },
     {
@@ -477,6 +568,13 @@
         "judged_proposed": "JAYNIE - KETTAMA x INTERPLANETARY CRIMINAL - YOSEMITE.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.846Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/jaynieuk/jaynie-yosemite-edit",
+        "title": "KETTAMA & INTERPLANETARY CRIMINAL - YOSEMITE (JAYNIE EDIT) (FREE DL)",
+        "uploader": "JAYNIE",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -497,6 +595,13 @@
         "judged_proposed": "JAYNIE - ME & U.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.829Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/jaynieuk/jaynie-me-u",
+        "title": "JAYNIE - ME & U",
+        "uploader": "JAYNIE",
+        "metadata_artist": "Jaynie",
+        "label_name": null
       }
     },
     {
@@ -519,6 +624,13 @@
         "judged_proposed": "Kvolx - iLoveMakonnen - Tuesday.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.824Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/kvolxmusic/ilovemakonnen-tuesday-kvolx-1",
+        "title": "iLoveMakonnen - Tuesday (Kvolx Flip)",
+        "uploader": "Kvolx",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -539,6 +651,13 @@
         "judged_proposed": "Lazy K - BEATKNOCKIN.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.875Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/lazy-k/beatknockin",
+        "title": "BEATKNOCKIN",
+        "uploader": "Lazy K",
+        "metadata_artist": "Lazy K",
+        "label_name": null
       }
     },
     {
@@ -560,6 +679,13 @@
         "judged_proposed": "Morty UKG - Korn - Freak On a Leash.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.872Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/mortymortymorty/freak-on-a-leash-morty-ukg-bootleg-3",
+        "title": "Korn - Freak On a Leash (Morty UKG Bootleg)",
+        "uploader": "MORTY",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -580,6 +706,13 @@
         "judged_proposed": "RDGO - Crave You (Extended Mix).mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.909Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/rdgo_music/rdgo-crave-you-extended-mix",
+        "title": "RDGO - Crave You (Extended Mix)",
+        "uploader": "RDGO",
+        "metadata_artist": "RDGO",
+        "label_name": null
       }
     },
     {
@@ -600,6 +733,13 @@
         "judged_proposed": "rippy - PIRATE MATERIAL.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.909Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/rippyuk/rippy-pirate-material",
+        "title": "PIRATE MATERIAL (FREE DOWNLOAD)",
+        "uploader": "rippy",
+        "metadata_artist": "rippy",
+        "label_name": null
       }
     },
     {
@@ -620,6 +760,13 @@
         "judged_proposed": "Rayment - STPTBOOTS - Wicked & Dark.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.979Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/stptboots/stptboot089",
+        "title": "Rayment - Wicked & Dark (STPTBOOT089)",
+        "uploader": "𝗦𝗧𝗣𝗧𝗕𝗢𝗢𝗧𝗦###",
+        "metadata_artist": "Rayment",
+        "label_name": "Southpoint"
       }
     },
     {
@@ -640,6 +787,13 @@
         "judged_proposed": "Sustance - Iiidiot.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.940Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/sustancemusic/iiidiot",
+        "title": "Iiidiot - FREE DOWNLOAD (link in description)",
+        "uploader": "Sustance",
+        "metadata_artist": "Sustance",
+        "label_name": null
       }
     },
     {
@@ -660,6 +814,13 @@
         "judged_proposed": "TRAIZOR - BLOODSHIFT.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.950Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/traizor-oficial/traizor-bloodshift-free-dl",
+        "title": "TRAIZOR - BLOODSHIFT (FREE DL)",
+        "uploader": "Traizor",
+        "metadata_artist": "Traizor",
+        "label_name": null
       }
     },
     {
@@ -680,6 +841,13 @@
         "judged_proposed": "YAKO - THE MENACE.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.955Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/yakodub/yako-the-menace-freebie",
+        "title": "YAKO - THE MENACE (600 FREEBIE)",
+        "uploader": "YAKO",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -701,6 +869,13 @@
         "judged_proposed": "Darren After - Seven Nation Army.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.973Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/darrenaftermusic/seven-nation-army",
+        "title": "Seven Nation Army (Darren After Edit)",
+        "uploader": "Darren After",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -722,6 +897,13 @@
         "judged_proposed": "Lysrgix x Noctiil - JOYRYDE - I'M GONE.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:20.981Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/lysrgix/joyryde-im-gone-lysrgix-x-1",
+        "title": "JOYRYDE - I'M GONE (Lysrgix x Noctiil Flip)",
+        "uploader": "Lysrgix",
+        "metadata_artist": "Lysrgix",
+        "label_name": null
       }
     },
     {
@@ -742,6 +924,13 @@
         "judged_proposed": "Section! - DWD.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.043Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/4k_section/dwd-1",
+        "title": "DWD",
+        "uploader": "Section!",
+        "metadata_artist": "Section!",
+        "label_name": null
       }
     },
     {
@@ -762,6 +951,13 @@
         "judged_proposed": "harrisun - BACK IT UP.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.026Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/harrisunlikethesun/back-it-up",
+        "title": "BACK IT UP",
+        "uploader": "harrisun ☀️",
+        "metadata_artist": "harrisun ☀️",
+        "label_name": null
       }
     },
     {
@@ -782,6 +978,13 @@
         "judged_proposed": "Section! - LUNAR.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.067Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/4k_section/lunar-2",
+        "title": "LUNAR",
+        "uploader": "Section!",
+        "metadata_artist": "Section!",
+        "label_name": null
       }
     },
     {
@@ -803,6 +1006,13 @@
         "judged_proposed": "Noer the Boy - Bladee Flip.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.084Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/noertheboy/bladee-flip",
+        "title": "Bladee Flip",
+        "uploader": "Noer the Boy",
+        "metadata_artist": "Noer the Boy",
+        "label_name": null
       }
     },
     {
@@ -824,6 +1034,13 @@
         "judged_proposed": "Phrva - Kid Sister x Rusko - Pro Nails.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.077Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/phrva/pro-nails",
+        "title": "Kid Sister X Rusko - Pro Nails (Phrva Flip)",
+        "uploader": "Phrva",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -844,6 +1061,13 @@
         "judged_proposed": "AMNES - MORA.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.087Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/amnesmusic/id-free-dl",
+        "title": "MORA  (FREE DL)",
+        "uploader": "AMNES",
+        "metadata_artist": "AMNES x Jon Cass",
+        "label_name": null
       }
     },
     {
@@ -864,6 +1088,13 @@
         "judged_proposed": "hobi - notoriety.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.093Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/hobibeats/notoriety",
+        "title": "notoriety",
+        "uploader": "hobi",
+        "metadata_artist": "hobi",
+        "label_name": null
       }
     },
     {
@@ -874,7 +1105,14 @@
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
       ],
-      "decision": "apply"
+      "decision": "apply",
+      "soundcloud": {
+        "url": "https://soundcloud.com/blvckhound/blvckhound-x-zaarg-sugar-cubes",
+        "title": "BLVCKHOUND X ZAARG - SUGAR CUBES (FREE)",
+        "uploader": "BLVCKHOUND",
+        "metadata_artist": null,
+        "label_name": null
+      }
     },
     {
       "src": "Us Under - Please Me.aif",
@@ -894,6 +1132,13 @@
         "judged_proposed": "Us Under - Please Me.aif",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.116Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/usunder/please-me-1",
+        "title": "Please Me",
+        "uploader": "Us Under",
+        "metadata_artist": "Us Under",
+        "label_name": null
       }
     },
     {
@@ -916,6 +1161,13 @@
         "judged_proposed": "KRACAA - $uicideBoy$ - Leviticus.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.153Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/kracaa/suicideboy-levictus-kracaa-2",
+        "title": "$uicideBoy$ - Leviticus (KRACAA FLIP)",
+        "uploader": "KRACAA",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -938,6 +1190,13 @@
         "judged_proposed": "PIERCE x VIRX - LADY GAGA - JUST DANCE.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.189Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/piercesounds/lady-gaga-just-dance-pierce",
+        "title": "LADY GAGA - JUST DANCE (PIERCE & VIRX REMIX)",
+        "uploader": "PIERCE",
+        "metadata_artist": "PIERCE, VIRX",
+        "label_name": null
       }
     },
     {
@@ -958,6 +1217,13 @@
         "judged_proposed": "ECKOD - MOHAWK.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.189Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/eckod/eckod-mohawk-freeeeee",
+        "title": "ECKOD - MOHAWK (FREEEEEE)",
+        "uploader": "ECKOD",
+        "metadata_artist": "ECKOD",
+        "label_name": null
       }
     },
     {
@@ -978,6 +1244,13 @@
         "judged_proposed": "Modley x Gavss - YQUESUENA.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.182Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/modley/yquesuena-w-gavss",
+        "title": "YQUESUENA w/ Gavss",
+        "uploader": "Modley",
+        "metadata_artist": "Modley, Gavss",
+        "label_name": "140CLUB"
       }
     },
     {
@@ -999,6 +1272,13 @@
         "judged_proposed": "FLUX PAVILION - FORMAL - I CANT STOP.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.200Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/kyleformal/ics",
+        "title": "FLUX PAVILION - I CANT STOP (FORMAL REFLIP)",
+        "uploader": "FORMAL",
+        "metadata_artist": "FORMAL, Flux Pavilion",
+        "label_name": null
       }
     },
     {
@@ -1021,6 +1301,13 @@
         "judged_proposed": "FORMAL - LADY GAGA - JUST DANCE.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.243Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/kyleformal/justdancermx1",
+        "title": "LADY GAGA - JUST DANCE (FORMAL REMIX)",
+        "uploader": "FORMAL",
+        "metadata_artist": "FORMAL",
+        "label_name": null
       }
     },
     {
@@ -1043,6 +1330,13 @@
         "judged_proposed": "FORMAL x ASTRID - JUSTIN TIMBERLAKE - SEXYBACK.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.203Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/kyleformal/sexybackrmx",
+        "title": "JUSTIN TIMBERLAKE - SEXYBACK (FORMAL & ASTRID REMIX)",
+        "uploader": "FORMAL",
+        "metadata_artist": "FORMAL, Astrid",
+        "label_name": null
       }
     },
     {
@@ -1063,6 +1357,13 @@
         "judged_proposed": "B-HIND - Ravin' Crew.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.229Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/savannahhind/b-hind-ravin-crew",
+        "title": "Ravin' Crew (FREE DL)",
+        "uploader": "B-HIND",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -1084,6 +1385,13 @@
         "judged_proposed": "MAZOS - Boat Club Records - Drivin' Me Crazy.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.248Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/boatclubevents/mazos-drivin-me-crazy",
+        "title": "MAZOS - Drivin' Me Crazy",
+        "uploader": "Boat Club Records",
+        "metadata_artist": "Boat Club Records",
+        "label_name": null
       }
     },
     {
@@ -1104,6 +1412,13 @@
         "judged_proposed": "Zim - No Relaxin'.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.309Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/zim_music0/no-relaxin",
+        "title": "No Relaxin'",
+        "uploader": "Zim",
+        "metadata_artist": "Zim",
+        "label_name": null
       }
     },
     {
@@ -1124,6 +1439,13 @@
         "judged_proposed": "Vyzer - DA DEMOLITION SQUAD - Always Urs.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.296Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/dademolitionsquad/vyzer-always-urs",
+        "title": "Vyzer - Always Urs (FREE DOWNLOAD)",
+        "uploader": "DA DEMOLITION SQUAD",
+        "metadata_artist": "Vyzer",
+        "label_name": null
       }
     },
     {
@@ -1147,6 +1469,13 @@
         "judged_proposed": "FOSSILS x CHIRENJI - AVALON - SUICIDEBOYS.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.338Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/fossilsdub/avalon-suicideboys-fossils-x-2",
+        "title": "AVALON - SUICIDEBOYS (FOSSILS X CHIRENJI REMIX)",
+        "uploader": "FOSSILS",
+        "metadata_artist": "FOSSILS",
+        "label_name": null
       }
     },
     {
@@ -1169,6 +1498,13 @@
         "judged_proposed": "COZY KEV - A$AP ROCKY - LONG LIVE A$AP.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.311Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/cozykevvv/long-live-asap-rmx",
+        "title": "A$AP ROCKY - LONG LIVE A$AP (COZY KEV REMIX)",
+        "uploader": "cozy kev",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -1190,6 +1526,13 @@
         "judged_proposed": "Terminal 6 - My Neck My Back.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.329Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/terminal6ix/my-neck-my-back-terminal-6",
+        "title": "My Neck My Back (Terminal 6 Flip)",
+        "uploader": "Terminal 6",
+        "metadata_artist": "Terminal 6",
+        "label_name": null
       }
     },
     {
@@ -1210,6 +1553,13 @@
         "judged_proposed": "FLY - MONSOON.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.333Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/flybassmusic/monsooon",
+        "title": "MONSOON",
+        "uploader": "FLY",
+        "metadata_artist": "FLY",
+        "label_name": null
       }
     },
     {
@@ -1230,6 +1580,13 @@
         "judged_proposed": "niko - LSD.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.348Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/97_niko/niko-lsd-2",
+        "title": "niko - LSD",
+        "uploader": "niko",
+        "metadata_artist": "niko",
+        "label_name": null
       }
     },
     {
@@ -1251,6 +1608,13 @@
         "judged_proposed": "omen - Bukkha x Killa P - Badda Den Dem.aif",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.383Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/0mensounds/bukka-ft-killa-p-badda-den-dem",
+        "title": "Bukkha ft. Killa P - Badda Den Dem (𝔬𝔪𝔢𝔫 𝔟𝔬𝔬𝔱𝔩𝔢𝔤)",
+        "uploader": "𝔬𝔪𝔢𝔫",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -1272,6 +1636,13 @@
         "judged_proposed": "COZY KEV - JOHN SUMMIT x ABSOLUTELY - DONT BELIEVE IT.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.455Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/cozykevvv/dont-believe-it-cozy-kev-1",
+        "title": "JOHN SUMMIT FT ABSOLUTELY - DONT BELIEVE IT (COZY KEV REMIX)",
+        "uploader": "cozy kev",
+        "metadata_artist": "cozy kev",
+        "label_name": null
       }
     },
     {
@@ -1292,6 +1663,13 @@
         "judged_proposed": "Robin Nap - The Old School Vibe.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.422Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/robinnapmusic/the-old-school-vibe-original-mix",
+        "title": "The Old School Vibe (Original Mix)",
+        "uploader": "Robin Nap",
+        "metadata_artist": "Robin Nap",
+        "label_name": "Robin Nap Music"
       }
     },
     {
@@ -1313,6 +1691,13 @@
         "judged_proposed": "G-Space x greyfate x Mystyk Forest - Jkyl x Hyde - Sensory Session.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.410Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/gspacemusic/jkyl-x-hyde-sensory-session-g",
+        "title": "Jkyl & Hyde - Sensory Session (G-Space x greyfate x Mystyk Forest Remix)",
+        "uploader": "G-Space",
+        "metadata_artist": "G-Space, greyfate, Mystyk Forest",
+        "label_name": null
       }
     },
     {
@@ -1333,6 +1718,13 @@
         "judged_proposed": "L8NITE - WAGWAN.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.459Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/l8nitesounds/wagwan",
+        "title": "L8NITE - WAGWAN [FREE DL]",
+        "uploader": "L8NITE",
+        "metadata_artist": "L8NITE",
+        "label_name": null
       }
     },
     {
@@ -1355,6 +1747,13 @@
         "judged_proposed": "MORTY - Deftones - My Own Summer.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.475Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/mortymortymorty/deftones-my-own-summer-morty-bootleg",
+        "title": "Deftones - My Own Summer (Shove it) (MORTY BOOTLEG)",
+        "uploader": "MORTY",
+        "metadata_artist": "MORTY",
+        "label_name": null
       }
     },
     {
@@ -1377,6 +1776,13 @@
         "judged_proposed": "Pretty Sweet - Chris Lorenzo - in dis bih.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.456Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/prettysweet2/chris-lorenzo-in-dis-bih",
+        "title": "Chris Lorenzo - in dis bih (Pretty Sweet Flip)",
+        "uploader": "Pretty Sweet",
+        "metadata_artist": "Pretty Sweet, Chris Lorenzo",
+        "label_name": null
       }
     },
     {
@@ -1398,6 +1804,13 @@
         "judged_proposed": "Lowcation - Qualia - Headway.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.478Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/qualiasound/headway-lowcation-remix",
+        "title": "Headway (Lowcation Remix)",
+        "uploader": "Qualia",
+        "metadata_artist": "ASHEZ, Gallium, Lowcation",
+        "label_name": "Qualia"
       }
     },
     {
@@ -1418,6 +1831,13 @@
         "judged_proposed": "Kodiak Kid - Qualia - Voyage.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.515Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/qualiasound/voyage-kodiak-kid-remix",
+        "title": "Voyage (Kodiak Kid Remix)",
+        "uploader": "Qualia",
+        "metadata_artist": "ASHEZ, Gallium, Kodiak Kid",
+        "label_name": "Qualia"
       }
     },
     {
@@ -1439,6 +1859,13 @@
         "judged_proposed": "ZUKE - San Andreas Dub.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.528Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/zukemusic/zuke-san-andreas-dub-extended",
+        "title": "ZUKE - San Andreas Dub [FREE DOWNLOAD]",
+        "uploader": "ZUKE",
+        "metadata_artist": "ZUKE",
+        "label_name": null
       }
     },
     {
@@ -1460,6 +1887,13 @@
         "judged_proposed": "sfam - cunning mc - slazenger.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.546Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/sfamofficial/cunning-mc-slazenger-sfam-1",
+        "title": "cunning mc - slazenger (sfam remix)",
+        "uploader": "sfam",
+        "metadata_artist": "sfam",
+        "label_name": null
       }
     },
     {
@@ -1502,6 +1936,13 @@
         "judged_proposed": "Kvolx - San Pacho - Bootay.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.599Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/kvolxmusic/san-pacho-bootay-kvolx-flip",
+        "title": "San Pacho - Bootay (Kvolx Flip)",
+        "uploader": "Kvolx",
+        "metadata_artist": "Kvolx",
+        "label_name": null
       }
     },
     {
@@ -1523,6 +1964,13 @@
         "judged_proposed": "STAR SEED x PIERCE - THE PRODIGY - SMACK MY BITCH UP.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.598Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/piercesounds/the-prodigy-smack-my-bitch-1",
+        "title": "THE PRODIGY - SMACK MY BITCH UP (STAR SEED & PIERCE REMIX)",
+        "uploader": "PIERCE",
+        "metadata_artist": "PIERCE, STAR SEED",
+        "label_name": null
       }
     },
     {
@@ -1544,6 +1992,13 @@
         "judged_proposed": "Virx - Subtronics x Inez - Eyes Cut Deeper.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.580Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/virxmusic/subtronics-x-inez-eyes-cut",
+        "title": "Subtronics x Inéz - Eyes Cut Deeper (Virx Remix)",
+        "uploader": "Virx",
+        "metadata_artist": "virx",
+        "label_name": null
       }
     },
     {
@@ -1564,6 +2019,13 @@
         "judged_proposed": "SPASMA - CORDYCEPS.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.592Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/spasmadubstep/spasma-cordyceps-free",
+        "title": "SPASMA - CORDYCEPS  (FREE)",
+        "uploader": "SPASMA",
+        "metadata_artist": "SPASMA",
+        "label_name": null
       }
     },
     {
@@ -1585,6 +2047,13 @@
         "judged_proposed": "YAANO - NOTION x Willow Kayne - WAITING.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.630Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/yaanodnb/notion-x-willow-kayne-waiting-yaano-edit",
+        "title": "NOTION x Willow Kayne - WAITING (YAANO Edit)",
+        "uploader": "YAANO",
+        "metadata_artist": "NOTION, Willow Kayne, YAANO",
+        "label_name": null
       }
     },
     {
@@ -1605,6 +2074,13 @@
         "judged_proposed": "Zei - party & bullshit.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.639Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/onezei/party-bullshit",
+        "title": "party & bullshit",
+        "uploader": "Zei",
+        "metadata_artist": "The Notorious B.I.G. x  Zei",
+        "label_name": null
       }
     },
     {
@@ -1625,6 +2101,13 @@
         "judged_proposed": "FINNUH - ACTIN UP.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.645Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/finnuh/actin-up",
+        "title": "FINNUH - ACTIN UP [FREE DOWNLOAD]",
+        "uploader": "finnuh",
+        "metadata_artist": "finnuh",
+        "label_name": null
       }
     },
     {
@@ -1647,6 +2130,13 @@
         "judged_proposed": "DAZEY UKG - Flight Facilities - CRAVE YOU.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.722Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/dazey-crue/crave-you-dazey-remix-final",
+        "title": "Flight Facilities - CRAVE YOU (DAZEY UKG BOOTLEG)",
+        "uploader": "DAZEYLANES",
+        "metadata_artist": "DazeyLanes",
+        "label_name": null
       }
     },
     {
@@ -1667,6 +2157,13 @@
         "judged_proposed": "spicy bois - that's sum.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.677Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/spicyboismusic/thats-sum",
+        "title": "that's sum",
+        "uploader": "spicy bois",
+        "metadata_artist": "DEVOWR.",
+        "label_name": "spicy bois"
       }
     },
     {
@@ -1687,6 +2184,13 @@
         "judged_proposed": "Jake Rollinson - Before Bed Records - The Basement Tool.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.709Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/before-bed-records/jake-rollinson-the-basement-tool-free-download",
+        "title": "Jake Rollinson - The Basement Tool (Free Download)",
+        "uploader": "Before Bed Records",
+        "metadata_artist": "Jake Rollinson",
+        "label_name": "Before Bed Records"
       }
     },
     {
@@ -1729,6 +2233,13 @@
         "judged_proposed": "Disaffected - Sampha - Blood On Me.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.711Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/dsffctd/sampha-blood-on-me-disaffected",
+        "title": "Sampha - Blood On Me (Disaffected Bootleg)",
+        "uploader": "Disaffected",
+        "metadata_artist": "Disaffected",
+        "label_name": null
       }
     },
     {
@@ -1770,6 +2281,13 @@
         "judged_proposed": "Wxnted - Can't Forget About Dub.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.777Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/wxntedmusic/cant-forget-about-dub",
+        "title": "Can't Forget About Dub",
+        "uploader": "Wxnted",
+        "metadata_artist": "Wxnted",
+        "label_name": null
       }
     },
     {
@@ -1791,6 +2309,13 @@
         "judged_proposed": "odd language - Flume - Helix.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.782Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/oddlanguage/flume-helix-odd-language-1",
+        "title": "Flume - Helix (odd language remix)",
+        "uploader": "odd language",
+        "metadata_artist": "odd language",
+        "label_name": null
       }
     },
     {
@@ -1812,6 +2337,13 @@
         "judged_proposed": "SKEEMUH - Zeds Dead - Out Of Time.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.807Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/skeemuh/zeds-dead-out-of-time-skeemuh",
+        "title": "Zeds Dead - Out Of Time (SKEEMUH Flip)",
+        "uploader": "SKEEMUH",
+        "metadata_artist": "SKEEMUH",
+        "label_name": null
       }
     },
     {
@@ -1833,6 +2365,13 @@
         "judged_proposed": "Virx - Disco Lines - TECHNO + TEQUILA.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.828Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/virxmusic/disco-lines-techno-tequila",
+        "title": "Disco Lines -  TECHNO + TEQUILA (Virx Remix)",
+        "uploader": "Virx",
+        "metadata_artist": "VIRX",
+        "label_name": null
       }
     },
     {
@@ -1853,6 +2392,13 @@
         "judged_proposed": "Sidd - Special Request.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.826Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/siddbeats/danial03-b-01-tun-it-up-new-master",
+        "title": "Special Request",
+        "uploader": "Sidd",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -1873,6 +2419,13 @@
         "judged_proposed": "kollaba - DAKA.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.826Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/kollaba/daka",
+        "title": "DAKA",
+        "uploader": "kollaba",
+        "metadata_artist": "Kollaba",
+        "label_name": null
       }
     },
     {
@@ -1893,6 +2446,13 @@
         "judged_proposed": "Sinatra - Shake.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.883Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/sinatradubz/sinatra-shake",
+        "title": "Sinatra - Shake",
+        "uploader": "Sinatra",
+        "metadata_artist": "Sinatra",
+        "label_name": null
       }
     },
     {
@@ -1913,6 +2473,13 @@
         "judged_proposed": "ZUZE - THIS IS LOVE.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.898Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/zuzeofficial/this-is-love",
+        "title": "THIS IS LOVE",
+        "uploader": "ZUZE",
+        "metadata_artist": "ZUZE",
+        "label_name": null
       }
     },
     {
@@ -1933,6 +2500,13 @@
         "judged_proposed": "MPH x Nathan Nicholson - Dr. Ushūu - Long Goodbye.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.931Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/danyushuu/long-goodbye",
+        "title": "MPH & Nathan Nicholson - Long Goodbye (Ushuuedit)",
+        "uploader": "Dr. Ushūu",
+        "metadata_artist": "MPH & Nathan Nicholson",
+        "label_name": null
       }
     },
     {
@@ -1943,7 +2517,14 @@
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
       ],
-      "decision": "apply"
+      "decision": "apply",
+      "soundcloud": {
+        "url": "https://soundcloud.com/swamp2dubstep/lower-jadha-on-my-level-free",
+        "title": "LOWER & JADHA - ON MY LEVEL (FREE DOWNLOAD)",
+        "uploader": "LOWER [SKANK GANG]",
+        "metadata_artist": "LOWER [SKANK GANG]",
+        "label_name": null
+      }
     },
     {
       "src": "Lykwid - Dude, not those subs!.wav",
@@ -1963,6 +2544,13 @@
         "judged_proposed": "Lykwid - Dude, not those subs!.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.938Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/lykwidbeats/dude-not-those-subs",
+        "title": "Dude, not those subs!",
+        "uploader": "Lykwid",
+        "metadata_artist": "Lykwid",
+        "label_name": null
       }
     },
     {
@@ -1984,6 +2572,13 @@
         "judged_proposed": "Kleptoe - MPH x y3kfae - Flex It.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.948Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/kleptoe/mph-flex-it-kleptoe-remix-wip",
+        "title": "MPH, y3kfae - Flex It (Kleptoe Remix) [free dl]",
+        "uploader": "Kleptoe",
+        "metadata_artist": "MPH, y3kfae",
+        "label_name": null
       }
     },
     {
@@ -2006,6 +2601,13 @@
         "judged_proposed": "STRANGE LANGUAGE 5K - Gucci Mane - Pillz.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.935Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/strangelanguagee/rolling",
+        "title": "Gucci Mane - Pillz (STRANGE LANGUAGE 5K FLIP)",
+        "uploader": "strange language",
+        "metadata_artist": "strange language",
+        "label_name": null
       }
     },
     {
@@ -2028,6 +2630,13 @@
         "judged_proposed": "Virx - Beyonce - Diva.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.972Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/virxmusic/beyonce-diva-virx-remix",
+        "title": "Beyonce - Diva (Virx Remix)",
+        "uploader": "Virx",
+        "metadata_artist": "Virx",
+        "label_name": null
       }
     },
     {
@@ -2048,6 +2657,13 @@
         "judged_proposed": "JMOSS - BRAZY!.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.960Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/theofficialjmoss/brazy-v7-1",
+        "title": "BRAZY!",
+        "uploader": "JMOSS",
+        "metadata_artist": "JMOSS",
+        "label_name": null
       }
     },
     {
@@ -2068,6 +2684,13 @@
         "judged_proposed": "MiNiM - GO LOW.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.076Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/minimdub/go-low-1",
+        "title": "GO LOW  [FREE]",
+        "uploader": "MiNiM",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -2088,6 +2711,13 @@
         "judged_proposed": "Serpnt - Forbidden Frequencies - Brand New.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.001Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/forbiddenfrequenciesdnb/serpnt-brand-new",
+        "title": "Serpnt - Brand New [Free Download]",
+        "uploader": "Forbidden Frequencies",
+        "metadata_artist": "Serpnt",
+        "label_name": null
       }
     },
     {
@@ -2109,6 +2739,13 @@
         "judged_proposed": "Dirt Monkey - Out in The Street Dub.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.059Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/dirtmonkey/out-in-the-street-dub",
+        "title": "Out in The Street Dub",
+        "uploader": "Dirt Monkey",
+        "metadata_artist": "Dirt Monkey",
+        "label_name": null
       }
     },
     {
@@ -2131,6 +2768,13 @@
         "judged_proposed": "FURTHA x SOUNDZZZ - Key Glock - Big 5.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.051Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/furtha-dubs/furtha-x-soundzzz-cookbois",
+        "title": "Key Glock - Big 5 (FURTHA x SOUNDZZZ FLIP)",
+        "uploader": "FURTHA",
+        "metadata_artist": "FURTHA, SoundzZz",
+        "label_name": null
       }
     },
     {
@@ -2151,6 +2795,13 @@
         "judged_proposed": "Crastinate - NOTHING.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.067Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/crastinate/nothing",
+        "title": "NOTHING",
+        "uploader": "Crastinate",
+        "metadata_artist": "Crastinate",
+        "label_name": null
       }
     },
     {
@@ -2171,6 +2822,13 @@
         "judged_proposed": "duffeey - undrgnd.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.064Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/duffeey/duffeey-undrgnd-pl8list",
+        "title": "duffeey - undrgnd (FREE)",
+        "uploader": "DUFFEEY",
+        "metadata_artist": "duffeey",
+        "label_name": null
       }
     },
     {
@@ -2191,6 +2849,13 @@
         "judged_proposed": "Shakes - confusion.aiff",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.062Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/shakethefoundation/confusion",
+        "title": "confusion",
+        "uploader": "Shakes",
+        "metadata_artist": "Shakes",
+        "label_name": null
       }
     },
     {
@@ -2212,6 +2877,13 @@
         "judged_proposed": "aiser x KYNEKTA - SYNK - BIOMASS.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.092Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/wearesynk/biomass-synked",
+        "title": "aiser & KYNEKTA - BIOMASS (SYNKED UP) [5K FREE]",
+        "uploader": "SYNK",
+        "metadata_artist": "SYNK",
+        "label_name": null
       }
     },
     {
@@ -2232,6 +2904,13 @@
         "judged_proposed": "2TALL - Geeked Up.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.129Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/2tall-990903700/geeked-up",
+        "title": "Geeked Up",
+        "uploader": "2TALL",
+        "metadata_artist": "2TALL",
+        "label_name": null
       }
     },
     {
@@ -2252,6 +2931,13 @@
         "judged_proposed": "SMAL B - FOGER.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.183Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/smalb_monsters/smal-b-foger-free-dl",
+        "title": "SMAL B - FOGER (FREE DL)",
+        "uploader": "SMAL B",
+        "metadata_artist": "SMAL B",
+        "label_name": null
       }
     },
     {
@@ -2272,6 +2958,13 @@
         "judged_proposed": "40KALL - FENNEK (VIP).wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.184Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/40kall/fennek-vip-free",
+        "title": "FENNEK (VIP) (FREE)",
+        "uploader": "40KALL",
+        "metadata_artist": "40KALL",
+        "label_name": null
       }
     },
     {
@@ -2292,6 +2985,13 @@
         "judged_proposed": "BIYO - TRIBAL RIDDIM.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.173Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/biyo420/tribal-riddim",
+        "title": "TRIBAL RIDDIM (FREE DL)",
+        "uploader": "BIYO",
+        "metadata_artist": "BIYO | SORCERERS CREW",
+        "label_name": null
       }
     },
     {
@@ -2312,6 +3012,13 @@
         "judged_proposed": "BODYSNATCHERZ - KNOW'M SAYIN.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.194Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/dirtykirby/knowm-sayin-free-dl",
+        "title": "KNOW'M SAYIN [FREE DL]",
+        "uploader": "‎BODYSNATCHERZ",
+        "metadata_artist": "‎BODYSNATCHERZ",
+        "label_name": null
       }
     },
     {
@@ -2342,7 +3049,14 @@
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
       ],
-      "decision": "apply"
+      "decision": "apply",
+      "soundcloud": {
+        "url": "https://soundcloud.com/ccivtrap/discombobulatedwportals",
+        "title": "CCIV x Portals - Discombobulated",
+        "uploader": "ＣＣＩＶ",
+        "metadata_artist": "ＣＣＩＶ",
+        "label_name": null
+      }
     },
     {
       "src": "Claymore - Lost in Blackwood.wav",
@@ -2362,6 +3076,13 @@
         "judged_proposed": "Claymore - Lost in Blackwood.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.175Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/claymoremusic/lost-in-blackwood-1",
+        "title": "Lost in Blackwood",
+        "uploader": "Claymore",
+        "metadata_artist": "Claymore",
+        "label_name": null
       }
     },
     {
@@ -2382,6 +3103,13 @@
         "judged_proposed": "CRYSOMEMORE - KISS ME AGAIN.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.209Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/cry-some-more/kissmeagain",
+        "title": "KISS ME AGAIN [FREE DOWNLOAD]",
+        "uploader": "CRYSOMEMORE",
+        "metadata_artist": "CRYSOMEMORE",
+        "label_name": null
       }
     },
     {
@@ -2403,6 +3131,13 @@
         "judged_proposed": "CRYSOMEMORE - SIMON SAYS.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.258Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/cry-some-more/simon-says-crysomemore",
+        "title": "SIMON SAYS (CRYSOMEMORE REMIX) [FREE DL]",
+        "uploader": "CRYSOMEMORE",
+        "metadata_artist": "CRYSOMEMORE, MYTHM",
+        "label_name": null
       }
     },
     {
@@ -2424,6 +3159,13 @@
         "judged_proposed": "Fez The Kid - Duality - Policeman And Soldier.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.313Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/dademolitionsquad/duality-policeman-and-1",
+        "title": "Duality - Policeman And Soldier [Fez The Kid Remix]",
+        "uploader": "DA DEMOLITION SQUAD",
+        "metadata_artist": "Duality & Fez The Kid",
+        "label_name": null
       }
     },
     {
@@ -2464,6 +3206,13 @@
         "judged_proposed": "DEVOWR. - still.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.309Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/devowr404/still",
+        "title": "still",
+        "uploader": "DEVOWR.",
+        "metadata_artist": "DEVOWR.",
+        "label_name": null
       }
     },
     {
@@ -2484,6 +3233,13 @@
         "judged_proposed": "DLO - CHOSEN.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.289Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/30011/dlo-chosen-2k-free-dl",
+        "title": "DLO - CHOSEN (2K FREE DL)",
+        "uploader": "dLo",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -2504,6 +3260,13 @@
         "judged_proposed": "Dmtree - On My Mind.aiff",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.291Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/dmtreemusic/dmtree-on-my-mind",
+        "title": "On My Mind",
+        "uploader": "Dmtree",
+        "metadata_artist": "Dmtree",
+        "label_name": null
       }
     },
     {
@@ -2524,6 +3287,13 @@
         "judged_proposed": "DEVOWR. - earth Hz - SIDE EFFECTS.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.313Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/earth-hz/devowr-side-effects",
+        "title": "DEVOWR. - SIDE EFFECTS",
+        "uploader": "earth Hz",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -2544,6 +3314,13 @@
         "judged_proposed": "FEEL SUITE - POWER.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.329Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/feelsuite/power",
+        "title": "POWER",
+        "uploader": "FEEL SUITE",
+        "metadata_artist": "FEEL SUITE",
+        "label_name": null
       }
     },
     {
@@ -2595,6 +3372,13 @@
         "judged_proposed": "Taiki Nulight - Gunpoint - Style.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.448Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/gunpointmusic/taiki-nulight-style-gunpoint-3",
+        "title": "Taiki Nulight - Style (Gunpoint Reload)",
+        "uploader": "Gunpoint",
+        "metadata_artist": "Gunpoint",
+        "label_name": null
       }
     },
     {
@@ -2605,7 +3389,14 @@
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
       ],
-      "decision": "apply"
+      "decision": "apply",
+      "soundcloud": {
+        "url": "https://soundcloud.com/kollaba/maybebetter",
+        "title": "CRASTINATE x KOLLABA - MAYBEBETTER",
+        "uploader": "kollaba",
+        "metadata_artist": "kollaba, crastinate",
+        "label_name": null
+      }
     },
     {
       "src": "Kwizma - Emalkay - When I Look At You (Kwizma Bootleg).wav",
@@ -2626,6 +3417,13 @@
         "judged_proposed": "Kwizma - Emalkay - When I Look At You.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.424Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/kwizma/emalkay-when-i-look-at-you-1",
+        "title": "Emalkay - When I Look At You (Kwizma Bootleg) [Free Download]",
+        "uploader": "Kwizma",
+        "metadata_artist": "Kwizma",
+        "label_name": null
       }
     },
     {
@@ -2646,6 +3444,13 @@
         "judged_proposed": "Lowshade - Spliffers.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.428Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/lowshade/spliffers",
+        "title": "Spliffers",
+        "uploader": "Lowshade",
+        "metadata_artist": "Lowshade",
+        "label_name": null
       }
     },
     {
@@ -2666,6 +3471,13 @@
         "judged_proposed": "LUCUNA - INJUSTICE.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.421Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/lucuna-dubstep/lucuna-injustice",
+        "title": "LUCUNA - INJUSTICE",
+        "uploader": "LUCUNA",
+        "metadata_artist": "LUCUNA",
+        "label_name": null
       }
     },
     {
@@ -2688,6 +3500,13 @@
         "judged_proposed": "MAYETRIX - Kesha - TiK ToK.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.439Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/mayetrix/tiktokremix",
+        "title": "Kesha - TiK ToK (MAYETRIX Remix)",
+        "uploader": "MAYETRIX",
+        "metadata_artist": "MAYETRIX",
+        "label_name": null
       }
     },
     {
@@ -2729,6 +3548,13 @@
         "judged_proposed": "MOUSAI - BALL SO HARD.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.459Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/mousaitherealest/ball-so-hard-mousai-urboin8",
+        "title": "BALL SO HARD (Mousai & UrBoiN8)",
+        "uploader": "MOUSAI",
+        "metadata_artist": "MOUSAI & Urboin8",
+        "label_name": null
       }
     },
     {
@@ -2749,6 +3575,13 @@
         "judged_proposed": "Mystic Grizzly - Drop Top.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.505Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/mysticgrizzly/drop-top",
+        "title": "Drop Top  (FREE DOWNLOAD)",
+        "uploader": "Mystic Grizzly",
+        "metadata_artist": "Mystic Grizzly",
+        "label_name": null
       }
     },
     {
@@ -2769,6 +3602,13 @@
         "judged_proposed": "NEO_G - SIGNAL_01.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.566Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/user-842190044-351023253/neo_g-invest-ahh-project-140-1",
+        "title": "NEO_G - SIGNAL_01",
+        "uploader": "NEO_G",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -2791,6 +3631,13 @@
         "judged_proposed": "VelcroShirt - ALEA - Like This.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.538Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/nohypemusicofficial/alea-like-this-velcroshirt-remix-2",
+        "title": "ALEA - Like This  (VelcroShirt Remix)",
+        "uploader": "No Hype Music",
+        "metadata_artist": "VelcroShirt",
+        "label_name": "No Hype Music"
       }
     },
     {
@@ -2814,6 +3661,13 @@
         "judged_proposed": "DEVOWR. - ALEA - Like This.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.560Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/nohypemusicofficial/alea-like-this-devowr-remix-1",
+        "title": "ALEA - Like This (DEVOWR. Remix)",
+        "uploader": "No Hype Music",
+        "metadata_artist": "DEVOWR.",
+        "label_name": "No Hype Music"
       }
     },
     {
@@ -2837,6 +3691,13 @@
         "judged_proposed": "Noctiil x bd hbt - DJ Snake - Propaganda.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.558Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/noctiil/propaganda",
+        "title": "DJ Snake - Propaganda (Noctiil & bd hbt Flip)",
+        "uploader": "Noctiil",
+        "metadata_artist": "Noctiil",
+        "label_name": null
       }
     },
     {
@@ -2858,6 +3719,13 @@
         "judged_proposed": "OkayJake - SVDDEN DEATH - Shallow Land Burial.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.594Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/okayjake/svdden-death-shallow-land",
+        "title": "SVDDEN DEATH - Shallow Land Burial (OkayJake Flip)",
+        "uploader": "OkayJake",
+        "metadata_artist": "OkayJake",
+        "label_name": null
       }
     },
     {
@@ -2881,6 +3749,13 @@
         "judged_proposed": "sevenseven - Blaze - Lovlee Dae.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.576Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/onlybangs/blaze-lovlee-dae-sevenseven",
+        "title": "Blaze - Lovlee Dae (sevenseven Edit)",
+        "uploader": "Only Bangs",
+        "metadata_artist": "sevenseven",
+        "label_name": null
       }
     },
     {
@@ -2902,6 +3777,13 @@
         "judged_proposed": "pearsy. - BLP Kosher - Jack and Jill.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.608Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/pearsy_beats/blp-kosher-jack-and-jill",
+        "title": "BLP Kosher - Jack and Jill (pearsy. flip)",
+        "uploader": "pearsy.",
+        "metadata_artist": "pearsy.",
+        "label_name": null
       }
     },
     {
@@ -2923,6 +3805,13 @@
         "judged_proposed": "pearsy. - Kodak Black x 1900Rugrat - Nunchucks.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.614Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/pearsy_beats/kodak-black-x-1900rugrat-1",
+        "title": "Kodak Black x 1900Rugrat - Nunchucks (pearsy. flip)",
+        "uploader": "pearsy.",
+        "metadata_artist": "pearsy.",
+        "label_name": null
       }
     },
     {
@@ -2944,6 +3833,13 @@
         "judged_proposed": "PIERCE - BELTRAN - SMACK YO.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.662Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/piercesounds/beltran-smack-yo-pierce-remixx",
+        "title": "BELTRAN - SMACK YO (PIERCE REMIX)",
+        "uploader": "PIERCE",
+        "metadata_artist": "PIERCE",
+        "label_name": null
       }
     },
     {
@@ -2964,6 +3860,13 @@
         "judged_proposed": "RumTheVoyager - Fool's Cup.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.662Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/rumthevoyager/fools-cup",
+        "title": "Fool's Cup",
+        "uploader": "RumTheVoyager",
+        "metadata_artist": "RumTheVoyager",
+        "label_name": null
       }
     },
     {
@@ -2987,6 +3890,13 @@
         "judged_proposed": "SECR3T - Will Smith - Gettin Jiggy Wit It.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.708Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/secr3tsounds/will-smith-gettin-jiggy-wit-it",
+        "title": "Will Smith - Gettin Jiggy Wit It (SECR3T Remix)",
+        "uploader": "SECR3T",
+        "metadata_artist": "SECR3T",
+        "label_name": null
       }
     },
     {
@@ -3007,6 +3917,13 @@
         "judged_proposed": "SENRI - PROFESSOR, COME OUT!.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.667Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/senridubs/senri-professor-come-out-free",
+        "title": "SENRI -  PROFESSOR, COME OUT! [FREE DOWNLOAD]",
+        "uploader": "SENRI",
+        "metadata_artist": "SENRI",
+        "label_name": null
       }
     },
     {
@@ -3027,6 +3944,13 @@
         "judged_proposed": "spicy bois - Big Blade!.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.698Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/spicyboismusic/big-blade",
+        "title": "Big Blade!",
+        "uploader": "spicy bois",
+        "metadata_artist": "ERBES",
+        "label_name": "spicy bois"
       }
     },
     {
@@ -3037,7 +3961,14 @@
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
       ],
-      "decision": "apply"
+      "decision": "apply",
+      "soundcloud": {
+        "url": "https://soundcloud.com/statiq_aus/statiq-niko-guns-of-fury",
+        "title": "statiq. niko - guns of fury",
+        "uploader": "statiq.",
+        "metadata_artist": "statiq. niko",
+        "label_name": "statiq. niko"
+      }
     },
     {
       "src": "SubCarbon Records - IDHS x XI - Stealth.wav",
@@ -3057,6 +3988,13 @@
         "judged_proposed": "IDHS x XI - SubCarbon Records - Stealth.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.701Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/subcarbon/stealth",
+        "title": "IDHS x XI - Stealth [Free Download]",
+        "uploader": "SubCarbon Records",
+        "metadata_artist": "IDHS, XI",
+        "label_name": "Subcarbon Records"
       }
     },
     {
@@ -3078,6 +4016,13 @@
         "judged_proposed": "MYRIAS x FEEL SUITE - SubCarbon Records - STEP BACK.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.725Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/subcarbon/myrias-feelsuite-stepback",
+        "title": "MYRIAS x FEEL SUITE - STEP BACK [Free Download]",
+        "uploader": "SubCarbon Records",
+        "metadata_artist": "MYRIAS, FEEL SUITE",
+        "label_name": "Subcarbon Records"
       }
     },
     {
@@ -3098,6 +4043,13 @@
         "judged_proposed": "runnit x gurf - SUS COLLECTIVE - test run.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.727Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/innersus/runnit-x-gurf-test-run",
+        "title": "runnit x gurf - test run",
+        "uploader": "SUS COLLECTIVE",
+        "metadata_artist": "Runnit, Gurf",
+        "label_name": null
       }
     },
     {
@@ -3118,6 +4070,13 @@
         "judged_proposed": "JG DUBZ - THE BUZZ - KILL BABYLON.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.762Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/the-buzz-295311491/jg-dubz-kill-babylon-the-buzz-spesh",
+        "title": "JG DUBZ - KILL BABYLON [THE BUZZ SPESH]",
+        "uploader": "THE BUZZ",
+        "metadata_artist": "THE BUZZ",
+        "label_name": null
       }
     },
     {
@@ -3139,6 +4098,13 @@
         "judged_proposed": "XAEBOR - LOST x 50 CARROT - LEANIN.mp3",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.779Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/xaebor/leanin",
+        "title": "LOST & 50 CARROT - LEANIN (XAEBOR REMIX)",
+        "uploader": "XAEBOR",
+        "metadata_artist": "XAEBOR",
+        "label_name": null
       }
     },
     {
@@ -3160,6 +4126,13 @@
         "judged_proposed": "Yoto Swords - LOOK DUB.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.796Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/yotoswords/lookdub",
+        "title": "LOOK DUB [Free DL]",
+        "uploader": "Yoto Swords",
+        "metadata_artist": "Yoto Swords",
+        "label_name": null
       }
     },
     {
@@ -3180,6 +4153,13 @@
         "judged_proposed": "YUNIT. - THREAT.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.807Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/yunitbass/yunit-threat-1",
+        "title": "YUNIT. - THREAT",
+        "uploader": "YUNIT.",
+        "metadata_artist": "YUNIT.",
+        "label_name": null
       }
     },
     {
@@ -3201,6 +4181,13 @@
         "judged_proposed": "zero point - CONTRA x Saturna - What I Can Do.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.820Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/imzeropoint/what-i-can-do-flip",
+        "title": "CØNTRA x Saturna - What I Can Do (zero point flip) [+ Get To You]",
+        "uploader": "zero point",
+        "metadata_artist": null,
+        "label_name": null
       }
     },
     {
@@ -3222,6 +4209,13 @@
         "judged_proposed": "zero point - Fred again.. x Sammi Virji x Winny - Winny.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.848Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/imzeropoint/winny-flip",
+        "title": "Fred again.., Sammi Virji, Winny - Winny (zero point flip)",
+        "uploader": "zero point",
+        "metadata_artist": "zero point",
+        "label_name": null
       }
     }
   ]

@@ -80,6 +80,14 @@ removes the hardest cases, which are the ones most worth pinning. If you review 
 and decide it was actually fine, flip its `decision` back to `apply` before running `promote` so
 it isn't lost to the corpus.
 
+### SoundCloud credits
+
+A file soundcloud_dl downloaded gets a `soundcloud` field on its manifest entry (from
+`logs/soundcloud_dl/track_index.json`; `rM` prints how many entries matched). If SoundCloud credits
+an artist, other than the uploader, that the proposed name leaves out, the entry drops from `apply` to
+`review` with a `soundcloud credits <name>` reason (`src/core/soundcloudFacts.ts`). Like a Jev
+downgrade, a flagged entry only reaches the corpus if you flip it back to `apply`.
+
 When changing `parser.ts`, run `deno task test` and inspect the corpus output for entries where `proposed !== parser_output` — those are open improvement targets. If your change closes one (parser now matches the user's override), the corpus summary says how many now match; run `deno task promote --refresh` to convert them from "improvement target" to "regression test" so they stay locked in. Re-promoting a manifest does not do this — its `parser_output` is frozen at dry-run time.
 
 ## Architecture
@@ -108,6 +116,7 @@ When changing `parser.ts`, run `deno task test` and inspect the corpus output fo
 - **`captcha.py`** — Detects Cloudflare/captcha walls; pauses for manual completion.
 - **`resume.py`** — Records each URL's terminal state (`done`/`unsupported`/`captcha_pending`/`manual_review`/`failed`) in `logs/soundcloud_dl/processed.json`.
 - **`playlist_cache.py`** — Caches playlist track lists in `logs/soundcloud_dl/playlist_cache.json` to skip API hits on re-runs.
+- **`track_index.py`** — `record_track()` saves what SoundCloud reported (uploader, `metadata_artist`, `label_name`, url) in `logs/soundcloud_dl/track_index.json`, keyed by the filename stem a download is saved under. `deno task rM` reads it.
 - **`comment_guard.py`** — `keep_one_comment()`: after a gate run, deletes extra copies of the bot's own comment on a track (a gate rerun posts its comment box again on every attempt), keeping the lowest comment id. Only deletes a comment whose text matches the *current* `TUNEWRANGLER_SC_COMMENT` — one posted under an older value is left alone. `--dedupe-comments [--apply]` (`dedupe_comments.py`) sweeps every track ever processed the same way; dry run by default.
 
 ## Logs and state

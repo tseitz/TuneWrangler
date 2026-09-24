@@ -29,6 +29,27 @@ def test_track_item_defaults_optional_fields_to_none() -> None:
 # ── _track_to_item ───────────────────────────────────────────────────────────
 
 
+def test_track_to_item_keeps_who_soundcloud_credits() -> None:
+    track = {
+        "permalink_url": "https://soundcloud.com/subcarbon/stealth",
+        "user": {"username": "SubCarbon Records"},
+        "metadata_artist": "IDHS, XI ",
+        "label_name": "Subcarbon Records",
+    }
+    item = _track_to_item(track)
+    assert item is not None
+    assert item.metadata_artist == "IDHS, XI"
+    assert item.label_name == "Subcarbon Records"
+
+
+def test_track_to_item_reads_blank_credits_as_absent() -> None:
+    track = {"permalink_url": "https://soundcloud.com/u/t", "metadata_artist": " ", "label_name": ""}
+    item = _track_to_item(track)
+    assert item is not None
+    assert item.metadata_artist is None
+    assert item.label_name is None
+
+
 def test_track_to_item_prefers_permalink_url() -> None:
     track = {
         "permalink_url": "https://soundcloud.com/u/track-a",

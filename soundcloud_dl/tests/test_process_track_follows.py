@@ -171,3 +171,24 @@ async def test_without_sc_actions_there_is_nothing_to_hand_back(released, monkey
     # No sc_actions and the gate has no comment box in this fake, but the gate still ran
     # — the clean-up is gated on that, not on sc_actions.
     assert cleaned == [TRACK.url]
+
+
+@pytest.mark.asyncio
+async def test_the_judged_filename_is_recorded_with_what_soundcloud_credits(
+    released, monkeypatch
+):
+    import json
+
+    from soundcloud_dl import track_index
+
+    async def _run(_self, _page):
+        return {}
+
+    _handler_that(_run, monkeypatch)
+    track = TrackItem(
+        url="https://soundcloud.com/a/b", title="A - B", artist="A", metadata_artist="A, C"
+    )
+    await main_mod._process_track(_context(), track)
+    index = json.loads(track_index.get_track_index_file().read_text(encoding="utf-8"))
+    assert index["A - B"]["metadata_artist"] == "A, C"
+    assert index["A - B"]["url"] == track.url

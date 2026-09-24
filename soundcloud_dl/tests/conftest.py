@@ -69,3 +69,13 @@ def _isolate_pending_follows(tmp_path, monkeypatch):
     monkeypatch.setattr(
         pending_follows, "get_pending_follows_file", lambda: tmp_path / "pending_follows.json"
     )
+
+
+@pytest.fixture(autouse=True)
+def _isolate_track_index(tmp_path, monkeypatch):
+    """Keep test tracks out of the index the rename flow reads for real downloads."""
+    from soundcloud_dl import track_index
+
+    monkeypatch.setattr(
+        track_index, "get_track_index_file", lambda: tmp_path / "track_index.json"
+    )

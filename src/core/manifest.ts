@@ -10,6 +10,15 @@ export interface EntryJudgement {
   error?: string;
 }
 
+/** What SoundCloud reported for the file when soundcloud_dl downloaded it. */
+export interface SoundcloudFacts {
+  url: string;
+  title: string | null;
+  uploader: string | null;
+  metadata_artist: string | null;
+  label_name: string | null;
+}
+
 export interface ManifestEntry {
   src: string;
   /** What the user approved (may be edited from parser_output before --apply). */
@@ -21,6 +30,8 @@ export interface ManifestEntry {
   decision: Decision;
   /** Set only when run with --judge. Absent means the entry was never judged. */
   judgement?: EntryJudgement;
+  /** Absent for any file soundcloud_dl did not download. */
+  soundcloud?: SoundcloudFacts;
 }
 
 export interface Manifest {
@@ -106,6 +117,18 @@ function validateEntry(entry: unknown, index: number, path: string): void {
   if (e.judgement !== undefined) {
     validateJudgement(e.judgement, index, path);
   }
+  if (e.soundcloud !== undefined && !isSoundcloudFacts(e.soundcloud)) {
+    throw new Error(`Manifest entry ${index} at ${path} has invalid soundcloud (needs a string url; other fields string or null)`);
+  }
+}
+
+const OPTIONAL_FACTS = ["title", "uploader", "metadata_artist", "label_name"] as const;
+
+export function isSoundcloudFacts(value: unknown): value is SoundcloudFacts {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const v = value as Record<string, unknown>;
+  return typeof v.url === "string" &&
+    OPTIONAL_FACTS.every((key) => v[key] === null || typeof v[key] === "string");
 }
 
 function validateJudgement(judgement: unknown, index: number, path: string): void {

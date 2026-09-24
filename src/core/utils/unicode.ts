@@ -560,3 +560,12 @@ export function getUnicodeCharacters(text: string): string[] {
 
   return Array.from(unicodeChars);
 }
+
+/**
+ * A name reduced to lowercase ASCII letters and digits, for deciding whether two spellings
+ * are the same artist. NFKC first: uploaders style their names in mathematical bold, which
+ * no plain spelling matches until it is folded back.
+ */
+export function foldName(text: string): string {
+  return normalizeUnicode(text.normalize("NFKC")).toLowerCase().replace(/[^a-z0-9]/g, "");
+}

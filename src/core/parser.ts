@@ -1,5 +1,5 @@
 import { DownloadedSong } from "./models/Song.ts";
-import { normalizeUnicode } from "./utils/unicode.ts";
+import { foldName as fold, normalizeUnicode } from "./utils/unicode.ts";
 
 /**
  * Runs the full filename-parsing pipeline on a DownloadedSong.
@@ -47,10 +47,6 @@ function grabDownloadedArtist(song: DownloadedSong): DownloadedSong {
 const COLLAB_SEPARATOR = /\s+(?:x|&|and)\s+|,\s+/i;
 const TRAILING_BRACKET = /[[(]([^\])]+)[\])]\s*$/;
 const MIN_NAME = 3;
-
-function fold(text: string): string {
-  return normalizeUnicode(text.normalize("NFC")).toLowerCase().replace(/[^a-z0-9]/g, "");
-}
 
 function lower(text: string): string {
   return normalizeUnicode(text.normalize("NFC")).toLowerCase();

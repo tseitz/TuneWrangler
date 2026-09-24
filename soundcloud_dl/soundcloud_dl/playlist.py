@@ -33,6 +33,10 @@ class TrackItem:
     #: scraping while the API keeps answering.
     downloadable: bool = False
     download_url: str | None = None
+    #: Who SoundCloud credits, which is not always the uploader: a label posts other
+    #: artists' tracks, and a remix credits the original artist too.
+    metadata_artist: str | None = None
+    label_name: str | None = None
 
 
 def _get_access_token(client_id: str, client_secret: str) -> str:
@@ -102,7 +106,16 @@ def _track_to_item(track: dict) -> TrackItem | None:
         artist=artist if isinstance(artist, str) else None,
         downloadable=track.get("downloadable") is True,
         download_url=download_url if isinstance(download_url, str) else None,
+        metadata_artist=blank_to_none(track.get("metadata_artist")),
+        label_name=blank_to_none(track.get("label_name")),
     )
+
+
+def blank_to_none(value: object) -> str | None:
+    """A string field with its whitespace trimmed; blank reads as absent."""
+    if not isinstance(value, str):
+        return None
+    return value.strip() or None
 
 
 def _tracks_from_playlist_data(data: dict) -> list[TrackItem]:

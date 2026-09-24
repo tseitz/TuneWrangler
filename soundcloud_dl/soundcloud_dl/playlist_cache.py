@@ -52,6 +52,8 @@ def _item_to_track(item: object) -> TrackItem | None:
         artist=_str_or_none(d.get("artist")),
         downloadable=d.get("downloadable") is True,
         download_url=_str_or_none(d.get("download_url")),
+        metadata_artist=_str_or_none(d.get("metadata_artist")),
+        label_name=_str_or_none(d.get("label_name")),
     )
 
 
@@ -94,6 +96,11 @@ def load_cached_tracks(playlist_url: str) -> list[TrackItem] | None:
     if any(isinstance(i, dict) and "url" in i and "downloadable" not in i for i in stored):
         logger.info("Playlist cache predates the download fields — re-reading from the API")
         return None
+    # Same trap for the credit fields: absent reads as "SoundCloud credits nobody", and the
+    # rename manifest would never see who a label upload is really by.
+    if any(isinstance(i, dict) and "url" in i and "metadata_artist" not in i for i in stored):
+        logger.info("Playlist cache predates the credit fields — re-reading from the API")
+        return None
     tracks: list[TrackItem] = []
     for item in stored:
         track = _item_to_track(item)
@@ -116,6 +123,8 @@ def save_cached_tracks(playlist_url: str, tracks: list[TrackItem]) -> None:
             "artist": t.artist,
             "downloadable": t.downloadable,
             "download_url": t.download_url,
+            "metadata_artist": t.metadata_artist,
+            "label_name": t.label_name,
         }
         for t in tracks
     ]
