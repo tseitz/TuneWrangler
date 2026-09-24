@@ -35,12 +35,23 @@ Deno.test("an Unknown placeholder in the name is a blank field, not a value", ()
 
 Deno.test("retag fills missing tags but keeps a set one unless told to overwrite", () => {
   const current = { artist: "", album: "", title: "Wrong Title" };
-  const fill = planRetag("Rayment - STPTBOOTS - Wicked & Dark.aiff", current, false);
+  const fill = planRetag("Rayment - STPTBOOTS - Wicked & Dark.aiff", current, "none");
   assertEquals(fill.next, { artist: "Rayment", album: "STPTBOOTS", title: "Wrong Title" });
   assertEquals(fill.kept.length, 1);
 
-  const overwrite = planRetag("Rayment - STPTBOOTS - Wicked & Dark.aiff", current, true);
+  const overwrite = planRetag("Rayment - STPTBOOTS - Wicked & Dark.aiff", current, "all");
   assertEquals(overwrite.next.title, "Wicked & Dark");
+});
+
+Deno.test("cosmetic overwrite fixes case and accents but leaves a real disagreement alone", () => {
+  const plan = planRetag(
+    "Reece Rose - Dissonance.aiff",
+    { artist: "REECE ROSÉ", album: "", title: "Dissonance (Original Mix)" },
+    "cosmetic",
+  );
+  assertEquals(plan.next.artist, "Reece Rose");
+  assertEquals(plan.next.title, "Dissonance (Original Mix)");
+  assertEquals(plan.kept.length, 1);
 });
 
 Deno.test("retagging an AIFF stores artist and album where a reader can find them", async () => {

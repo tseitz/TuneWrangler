@@ -7,15 +7,25 @@ read tags (Rekordbox reads them on import) agree with the filename.
   deno task retag --yes               write the tags (audio is stream-copied, never re-encoded)
   deno task retag --overwrite         also replace tags that are set but disagree with the name;
                                       by default only missing tags are filled in
+  deno task retag --overwrite-cosmetic
+                                      also replace set tags that differ from the name only in
+                                      case or accents (THE WIDDLER → The Widdler, Rosé → Rose)
 */
 import { parseArgs } from "@std/cli/parse-args";
 import { extname, join } from "@std/path";
 
 import { getFolder, isProcessable } from "../core/utils/common.ts";
+import { normalizeUnicode } from "../core/utils/unicode.ts";
 import { readTags, tagsFromFilename, TrackTags, writeTagsInPlace } from "../core/tagging.ts";
 
 const TAGGABLE = new Set([".aiff", ".aif", ".mp3"]);
 const FIELDS = ["artist", "album", "title"] as const;
+
+export type OverwriteMode = "none" | "cosmetic" | "all";
+
+function fold(text: string): string {
+  return normalizeUnicode(text.normalize("NFC")).toLowerCase();
+}
 
 export interface RetagPlan {
   file: string;
@@ -25,8 +35,8 @@ export interface RetagPlan {
 }
 
 /** What the file's tags should become. Missing fields are filled; set ones are replaced only
- * with `overwrite`, and otherwise reported so a disagreement is never silent. */
-export function planRetag(file: string, current: TrackTags, overwrite: boolean): RetagPlan {
+ * as far as `overwrite` allows, and otherwise reported so a disagreement is never silent. */
+export function planRetag(file: string, current: TrackTags, overwrite: OverwriteMode): RetagPlan {
   const wanted = tagsFromFilename(file);
   const next = { ...current };
   const changes: string[] = [];
@@ -35,7 +45,8 @@ export function planRetag(file: string, current: TrackTags, overwrite: boolean):
     const have = current[field].trim();
     const want = wanted[field];
     if (!want || have.normalize("NFC") === want) continue;
-    if (!have || overwrite) {
+    const replace = overwrite === "all" || (overwrite === "cosmetic" && fold(have) === fold(want));
+    if (!have || replace) {
       next[field] = want;
       changes.push(`${field}: ${have ? `"${have}" → ` : ""}"${want}"`);
     } else {
@@ -46,7 +57,8 @@ export function planRetag(file: string, current: TrackTags, overwrite: boolean):
 }
 
 async function main(): Promise<void> {
-  const args = parseArgs(Deno.args, { string: ["dir"], boolean: ["yes", "overwrite"] });
+  const args = parseArgs(Deno.args, { string: ["dir"], boolean: ["yes", "overwrite", "overwrite-cosmetic"] });
+  const overwrite: OverwriteMode = args.overwrite ? "all" : args["overwrite-cosmetic"] ? "cosmetic" : "none";
   const dir = args.dir ? (args.dir.endsWith("/") ? args.dir : `${args.dir}/`) : getFolder("rename");
 
   const plans: RetagPlan[] = [];
@@ -61,7 +73,7 @@ async function main(): Promise<void> {
       skipped.push(entry.name);
       continue;
     }
-    plans.push(planRetag(entry.name, await readTags(join(dir, entry.name)), args.overwrite));
+    plans.push(planRetag(entry.name, await readTags(join(dir, entry.name)), overwrite));
   }
 
   const toWrite = plans.filter((p) => p.changes.length > 0);
