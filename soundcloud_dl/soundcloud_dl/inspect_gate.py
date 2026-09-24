@@ -205,7 +205,9 @@ async def _wait_for_done(page: Page) -> None:
                 )
         else:
             stalled = 0
-        await page.wait_for_timeout(_DONE_POLL_MS)
+        if page.is_closed():
+            return
+        await asyncio.sleep(_DONE_POLL_MS / 1000)
 
 
 def _report(before: dict[str, dict[str, Any]], after: dict[str, dict[str, Any]]) -> None:
@@ -319,6 +321,10 @@ async def inspect_gate(url: str) -> None:
             await _write_page(page, debug_dir / "inspect-before.html", "before")
 
             await _wait_for_done(page)
+            if page.is_closed():
+                # Downloads the operator started are still saved, in the finally below.
+                logger.warning("The gate tab was closed before Done; no after-snapshot.")
+                return
 
             # Before the after-snapshot, or our own button lands in the diff as a NEW element.
             try:

@@ -133,8 +133,9 @@ async def test_the_click_is_what_ends_the_wait_without_a_tty(monkeypatch):
     """The crash this replaces: no stdin meant a bare EOFError, after the before-snapshot
     had already been spent."""
     monkeypatch.setattr(ig, "_stdin_is_a_terminal", lambda: False)
+    monkeypatch.setattr(ig, "_DONE_POLL_MS", 0)
     page = MagicMock()
-    page.wait_for_timeout = AsyncMock()
+    page.is_closed = MagicMock(return_value=False)
     clicks = iter([False, False, True])
     page.evaluate = AsyncMock(side_effect=lambda *_a, **_k: next(clicks, True))
 
@@ -145,8 +146,9 @@ async def test_the_click_is_what_ends_the_wait_without_a_tty(monkeypatch):
 async def test_a_button_that_can_never_be_placed_is_reported(monkeypatch, caplog):
     """Without this the loop stalls in silence, and with no terminal there is no way out."""
     monkeypatch.setattr(ig, "_stdin_is_a_terminal", lambda: False)
+    monkeypatch.setattr(ig, "_DONE_POLL_MS", 0)
     page = MagicMock()
-    page.wait_for_timeout = AsyncMock()
+    page.is_closed = MagicMock(return_value=False)
     tries = {"n": 0}
 
     async def always_broken(*_a, **_k):
@@ -237,3 +239,15 @@ async def test_a_download_never_overwrites_an_earlier_one(tmp_path):
 
     assert (tmp_path / "master.wav").read_bytes() == b"first"
     assert (tmp_path / "master (1).wav").exists()
+
+
+@pytest.mark.asyncio
+async def test_a_closed_gate_tab_ends_the_wait_instead_of_crashing(monkeypatch):
+    """valorizd's walkthrough died on a closed tab, taking any in-flight download with it."""
+    monkeypatch.setattr(ig, "_stdin_is_a_terminal", lambda: False)
+    monkeypatch.setattr(ig, "_DONE_POLL_MS", 0)
+    page = MagicMock()
+    page.evaluate = AsyncMock(return_value=False)
+    page.is_closed = MagicMock(side_effect=[False, True])
+
+    await ig._wait_for_done(page)  # returns rather than raising TargetClosedError
