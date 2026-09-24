@@ -35,7 +35,15 @@ _DISABLED_TOKENS = frozenset({"disable", "disabled", "pointer-events-none"})
 # Exact labels rather than a substring so "Download the app on iOS" cannot match; a gate
 # with a label not listed here fails closed, which costs a run rather than a wrong click.
 _DOWNLOAD_BUTTON_TEXTS = frozenset(
-    {"download", "free download", "download now", "download file", "download track"}
+    {
+        "download",
+        "free download",
+        "download now",
+        "download file",
+        "download track",
+        # droploud's success page, when the download it starts on arrival does not fire.
+        "download again",
+    }
 )
 
 _DEAD_HREFS = frozenset({"", "#", "javascript:void(0)"})

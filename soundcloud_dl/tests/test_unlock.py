@@ -302,3 +302,10 @@ def test_a_button_that_merely_mentions_downloading_is_not_the_download(text):
 @pytest.mark.parametrize("text", ["Download", "FREE DOWNLOAD", "  download  ", "Download."])
 def test_the_observed_download_labels_all_match(text):
     assert is_download_element(el(tag="button", text=text))
+
+
+def test_droploud_download_again_is_the_download():
+    """The success page's own download did not start; its button was never seen as one."""
+    button = el(tag="button", text="Download again", icons=["download"])
+    assert is_download_element(button)
+    assert find_download_target({"k": button}) is button
