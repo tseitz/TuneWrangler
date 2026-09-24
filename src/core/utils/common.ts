@@ -348,5 +348,11 @@ async function retagMp3(song: Song, outputFile: string, _artworkFile?: string) {
 }
 
 export function isProcessable(folderItem: Deno.DirEntry): boolean {
-  return folderItem.isFile && folderItem.name !== ".DS_Store" && folderItem.name !== ".spotdl-cache";
+  return (
+    folderItem.isFile &&
+    folderItem.name !== ".DS_Store" &&
+    folderItem.name !== ".spotdl-cache" &&
+    // macOS AppleDouble metadata, written beside every file on a non-Mac-formatted drive
+    !folderItem.name.startsWith("._")
+  );
 }
