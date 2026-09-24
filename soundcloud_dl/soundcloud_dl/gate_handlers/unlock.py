@@ -8,7 +8,8 @@ from __future__ import annotations
 from typing import Any
 
 # hypeddit.yaml's final_download selector list, as data.
-_DOWNLOAD_IDS = frozenset({"gatedownloadbutton", "downloadprocess"})
+# downloadbutton: MediaFire's file page, where a pumpyoursound gate hands off.
+_DOWNLOAD_IDS = frozenset({"gatedownloadbutton", "downloadprocess", "downloadbutton"})
 _DOWNLOAD_CLASSES = frozenset({"free_dwln", "dp", "download-link", "post-gate-btn"})
 
 # These open the gate rather than serve the file; see _is_href_gated.

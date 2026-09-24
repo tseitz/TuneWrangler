@@ -61,6 +61,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("soundcloud_dl.gate_handlers.judgment")
 
+# Where a gate can send the tab for the file itself, once its steps are done.
+_FILE_HOSTS = ("mediafire.com", "dropbox.com", "wetransfer.com", "we.tl", "drive.google.com")
+
 _SMARTLINK_DOWNLOAD_JS = """
 () => {
   const a = [...document.querySelectorAll('a.smartlink-click-button')]
@@ -975,6 +978,21 @@ class JudgmentGateHandler(GateHandler):
             return here == ""
         return here == gate or here.startswith(gate + "/")
 
+    def _adopt_file_host(self, page: Page) -> None:
+        """Make a file host the gate's next step rather than a place to be dragged back from.
+
+        Pumpyoursound finishes by sending the tab to MediaFire, whose Download link is the
+        file itself. Treated as leaving the gate, the run went back and redid the steps.
+        """
+        host = normalize_host(page.url)
+        if host == self._gate_host or not any(
+            host == d or host.endswith(f".{d}") for d in _FILE_HOSTS
+        ):
+            return
+        logger.info("[%s] the gate handed off to %s; continuing there", self.gate_name, host)
+        self._gate_host = host
+        self._gate_url = page.url
+
     async def _reanchor_page(self, page: Page) -> bool:
         """Go back to the gate if a click navigated off it. True if it had to.
 
@@ -1231,6 +1249,9 @@ class JudgmentGateHandler(GateHandler):
         with contextlib.suppress(Exception):
             await page.bring_to_front()
         self._raise_if_consent_declined(page)
+        # First: a handoff to a file host is another host, which the login-wall guard reads
+        # as leaving the gate.
+        self._adopt_file_host(page)
         await self._raise_on_login_wall(page)
         # Before the reanchor: a click that landed on a wall off the gate path would
         # otherwise be dragged back to the gate before anything classified the wall.

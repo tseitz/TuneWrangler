@@ -1317,6 +1317,7 @@ async def test_a_captcha_is_seen_before_the_run_is_dragged_back_to_the_gate():
     handler._raise_on_login_wall = AsyncMock()
     handler._reanchor_scroll = AsyncMock()
     page = MagicMock()
+    page.url = "https://gate.example/track"
     page.bring_to_front = AsyncMock()
     with pytest.raises(CaptchaEncountered):
         await handler._turn_guards(page, set(), None)
@@ -1456,3 +1457,36 @@ async def test_a_page_that_is_not_a_smartlink_stays_put():
     await handler._anchor_run(page)
 
     page.goto.assert_not_awaited()
+
+
+def _guarded(url: str):
+    handler = make_handler(config={"gate": "pumpyoursound", "steps": []})
+    handler._gate_host = "pumpyoursound.com"
+    handler._gate_url = "https://pumpyoursound.com/f/pys/yunit-threat/221441"
+    handler._raise_on_captcha = AsyncMock()
+    handler._reanchor_scroll = AsyncMock()
+    page = MagicMock()
+    page.url = url
+    page.bring_to_front = AsyncMock()
+    page.goto = AsyncMock()
+    return handler, page
+
+
+@pytest.mark.asyncio
+async def test_a_handoff_to_mediafire_is_the_next_step_not_a_wall():
+    """Pumpyoursound ends on MediaFire, whose Download link is the file."""
+    handler, page = _guarded("https://www.mediafire.com/file/qjl4ai7otl4fj8j/YUNIT._-_THREAT.wav/file")
+
+    await handler._turn_guards(page, set(), None)
+
+    page.goto.assert_not_awaited()
+    assert handler._gate_host == "mediafire.com"
+
+
+@pytest.mark.asyncio
+async def test_leaving_for_a_host_that_is_not_a_file_host_is_still_a_wall():
+    from soundcloud_dl.gate_handlers.login_wall import LoginWallEncountered  # noqa: PLC0415
+
+    handler, page = _guarded("https://accounts.google.com/v3/signin")
+    with pytest.raises(LoginWallEncountered):
+        await handler._turn_guards(page, set(), None)

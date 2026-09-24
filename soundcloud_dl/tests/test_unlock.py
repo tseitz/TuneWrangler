@@ -309,3 +309,9 @@ def test_droploud_download_again_is_the_download():
     button = el(tag="button", text="Download again", icons=["download"])
     assert is_download_element(button)
     assert find_download_target({"k": button}) is button
+
+
+def test_mediafire_download_button_is_the_download():
+    link = el(tag="a", id="downloadButton", text="Download (36.91MB)",
+              href="https://download938.mediafire.com/abc/YUNIT._-_THREAT.wav")
+    assert is_download_element(link)
