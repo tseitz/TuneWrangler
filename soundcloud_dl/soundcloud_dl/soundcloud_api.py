@@ -24,6 +24,7 @@ import json
 import logging
 import re
 import urllib.parse
+from dataclasses import dataclass
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -192,8 +193,8 @@ async def post_comment(client: httpx.AsyncClient, track_id: int, text: str) -> t
     return True, f"comment {comment_id} posted"
 
 
-def _same_host_path(next_href: str) -> str:
-    """Reduce a pagination cursor to a path on our own API host.
+def _same_host_path(next_href: str, base: str = SOUNDCLOUD_API_BASE) -> str:
+    """Reduce a pagination cursor to a path on the given API host.
 
     next_href is an absolute URL taken from a response body, and api_client() carries the
     user's OAuth token as a default header — which httpx attaches to whatever host it is
@@ -202,47 +203,10 @@ def _same_host_path(next_href: str) -> str:
     another host would hand that host the token.
     """
     parsed = urllib.parse.urlparse(next_href)
-    if parsed.netloc and parsed.netloc != urllib.parse.urlparse(SOUNDCLOUD_API_BASE).netloc:
+    if parsed.netloc and parsed.netloc != urllib.parse.urlparse(base).netloc:
         msg = f"pagination cursor pointed off-host: {parsed.netloc}"
         raise ApiError(msg)
     return parsed.path + (f"?{parsed.query}" if parsed.query else "")
-
-
-async def my_comment_on(client: httpx.AsyncClient, track_id: int, user_id: int) -> int | None:
-    """The id of a comment this user has already left on the track, or None.
-
-    Read to the end of the collection, unlike the like/repost checks: a like the newest
-    page missed is re-sent harmlessly because the write is a set, while a comment the
-    newest page missed is posted a second time and only the user can delete it.
-
-    /me/comments does not exist (405 'unknown route'), so the track's own collection is
-    the only way to ask.
-    """
-    path = f"/tracks/{track_id}/comments"
-    params: dict[str, Any] | None = {
-        "limit": _COMMENT_PAGE_SIZE,
-        "linked_partitioning": 1,
-    }
-    for _ in range(_MAX_COMMENT_PAGES):
-        resp = await client.get(path, params=params)
-        if resp.status_code != _HTTP_OK:
-            msg = f"GET {path} returned {resp.status_code}: {resp.text[:120]}"
-            raise ApiError(msg)
-        body = resp.json()
-        items = body if isinstance(body, list) else body.get("collection", [])
-        for item in items:
-            if (item.get("user") or {}).get("id") == user_id:
-                return int(item["id"])
-        next_href = body.get("next_href") if isinstance(body, dict) else None
-        if not next_href:
-            return None
-        # next_href carries its own query string; re-sending params would duplicate it.
-        path, params = _same_host_path(next_href), None
-
-    # Running out of pages is not "no comment found": that reading is what posts a second
-    # one. The caller treats an ApiError as a reason to leave the track alone.
-    msg = f"comments on track {track_id} did not end within {_MAX_COMMENT_PAGES} pages"
-    raise ApiError(msg)
 
 
 async def _in_recent(client: httpx.AsyncClient, path: str, track_id: int) -> bool:
@@ -276,6 +240,16 @@ async def ensure_on_soundcloud(page: Page) -> None:
 
 
 async def _api_v2(page: Page, method: str, path: str) -> tuple[int, str]:
+    """Call api-v2 at `path`, which the in-page JS appends to the host with bare string
+    concatenation — so a path that does not open with exactly one '/' does not land on
+    api-v2 at all; it changes the host the OAuth cookie is sent to (e.g. ".evil.com/x" or
+    "//evil.com/x"). Every caller's path is a literal or comes from _same_host_path, which
+    already refuses an off-host next_href, but this is the one place that would catch a
+    caller either missed.
+    """
+    if not path.startswith("/") or path.startswith("//"):
+        msg = f"api-v2 path must start with a single '/': {path!r}"
+        raise ApiError(msg)
     result = await page.evaluate(_API_V2_JS, [method, path])
     return int(result["status"]), str(result["body"])
 
@@ -308,6 +282,152 @@ async def assert_same_account(page: Page, token_user_id: int) -> int:
         )
         raise AccountMismatch(msg)
     return browser_id
+
+
+# SoundCloud's own ids are alphanumeric, dash and underscore. This is also what stands
+# between a client_id read off some unrelated request and a raw value with an unescaped
+# character going straight into a query string.
+_CLIENT_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
+_CLIENT_ID_TIMEOUT_SECONDS = 15
+
+# Read once per process and reused for the rest of the run. A rotation between runs is
+# fine — this only has to be right for the run it was read in.
+_web_client_id_cache: str | None = None
+
+
+def invalidate_client_id() -> None:
+    """Forget the cached client_id, so the next call re-reads it from a live page.
+
+    For a 401/403 on a read that used to work — the client_id can go stale mid-run, and
+    without this every later read fails the same way instead of just re-collecting it.
+    """
+    global _web_client_id_cache  # noqa: PLW0603
+    _web_client_id_cache = None
+
+
+async def web_client_id(page: Page) -> str:
+    """The web app's own client_id, taken from a request it makes — never guessed.
+
+    api-v2 answers a GET with no client_id "missing params" (400), and there is no
+    endpoint that hands one out; the only place it exists is a request the web app
+    already made. The listener is attached before the navigation expected to carry it,
+    so the first load yields it and nothing needs a second round trip. A page already on
+    soundcloud.com is reloaded instead, since ensure_on_soundcloud would otherwise
+    navigate nowhere and no new request would fire.
+    """
+    global _web_client_id_cache  # noqa: PLW0603
+    if _web_client_id_cache is not None:
+        return _web_client_id_cache
+
+    found: asyncio.Future[str] = asyncio.get_event_loop().create_future()
+
+    def on_request(request: Any) -> None:  # noqa: ANN401
+        if found.done():
+            return
+        # A substring check on the whole URL would also match a third-party request that
+        # merely mentions api-v2.soundcloud.com in a query string — the actual host, and
+        # the query parameter, have to be parsed out rather than pattern-matched raw.
+        parsed = urllib.parse.urlsplit(request.url)
+        if parsed.hostname != "api-v2.soundcloud.com":
+            return
+        candidates = urllib.parse.parse_qs(parsed.query).get("client_id") or []
+        if candidates and _CLIENT_ID_PATTERN.match(candidates[0]):
+            found.set_result(candidates[0])
+
+    page.on("request", on_request)
+    try:
+        if "soundcloud.com" in (page.url or ""):
+            await page.reload(wait_until="domcontentloaded", timeout=40_000)
+        else:
+            await ensure_on_soundcloud(page)
+        client_id = await asyncio.wait_for(found, timeout=_CLIENT_ID_TIMEOUT_SECONDS)
+    except TimeoutError as exc:
+        msg = "no client_id seen among api-v2 requests after loading soundcloud.com"
+        raise ApiError(msg) from exc
+    finally:
+        page.remove_listener("request", on_request)
+
+    _web_client_id_cache = client_id
+    return client_id
+
+
+async def resolve_v2(page: Page, url: str, client_id: str) -> dict[str, Any]:
+    """Turn a soundcloud.com permalink into its resource, from the page's own session.
+
+    Comment clean-up has to work with no stored user token: a gate can post a comment
+    through the page alone, before --sc-auth has ever been run. This is the web app's own
+    /resolve call, the same one resolve() makes through the token API instead.
+    """
+    query = urllib.parse.urlencode({"url": url, "client_id": client_id})
+    status, body = await _api_v2(page, "GET", f"/resolve?{query}")
+    if status != _HTTP_OK:
+        msg = f"api-v2 resolve({url}) returned {status}: {body[:120]}"
+        raise ApiError(msg)
+    return json.loads(body)
+
+
+@dataclass(frozen=True)
+class MyComment:
+    """One comment this account left on a track, from the web (api-v2) read."""
+
+    id: int
+    created_at: str
+    body: str
+
+
+async def my_comments_v2(
+    page: Page, track_id: int, user_id: int, client_id: str
+) -> list[MyComment]:
+    """Every comment this account left on a track, read fresh through the page's session.
+
+    api.soundcloud.com's own collection can go 40s+ without showing a comment that was
+    just posted or just deleted (see the module docstring) — long enough that a rerun
+    reads it as missing and posts a duplicate. The web API this drives is what
+    soundcloud.com itself trusts, and does not have that lag.
+    """
+    query = urllib.parse.urlencode(
+        {
+            "threaded": 1,
+            "filter_replies": 0,
+            "sort": "newest",
+            "client_id": client_id,
+            "limit": _COMMENT_PAGE_SIZE,
+            "offset": 0,
+            "linked_partitioning": 1,
+        }
+    )
+    path = f"/tracks/{track_id}/comments?{query}"
+    found: list[MyComment] = []
+    for _ in range(_MAX_COMMENT_PAGES):
+        status, body_text = await _api_v2(page, "GET", path)
+        if status != _HTTP_OK:
+            msg = f"api-v2 GET {path} returned {status}: {body_text[:120]}"
+            raise ApiError(msg)
+        body = json.loads(body_text)
+        for item in body.get("collection", []):
+            uid = (item.get("user") or {}).get("id", item.get("user_id"))
+            if uid == user_id:
+                found.append(
+                    MyComment(
+                        id=int(item["id"]),
+                        created_at=str(item.get("created_at", "")),
+                        body=str(item.get("body", "")),
+                    )
+                )
+        next_href = body.get("next_href")
+        if not next_href:
+            return found
+        path = _same_host_path(next_href, base=API_V2)
+
+    # Running out of pages is not "no comments found": that reading is what leaves a
+    # duplicate the clean-up never sees, and posts another one from _comment_once.
+    msg = f"comments on track {track_id} did not end within {_MAX_COMMENT_PAGES} pages"
+    raise ApiError(msg)
+
+
+async def delete_comment_v2(page: Page, comment_id: int) -> tuple[bool, str]:
+    """DELETE a comment via api-v2. A 404 means it is already gone — also a success here."""
+    return await _write_v2(page, "DELETE", f"/comments/{comment_id}")
 
 
 async def _write_v2(page: Page, method: str, path: str) -> tuple[bool, str]:

@@ -29,13 +29,14 @@ from soundcloud_dl.soundcloud_api import (
     is_liked,
     is_reposted,
     me,
-    my_comment_on,
+    my_comments_v2,
     post_comment,
     resolve,
     resolve_user,
     set_following,
     set_like,
     set_repost,
+    web_client_id,
     write_by_token,
 )
 from soundcloud_dl.soundcloud_auth import SoundCloudAuthError
@@ -375,21 +376,27 @@ async def _verified(
 
 
 async def _comment_once(
-    client: httpx.AsyncClient, track_id: int, user_id: int, text: str
+    client: httpx.AsyncClient, page: Page, track_id: int, user_id: int, text: str
 ) -> ActionResult:
     """Post the comment unless this account already left one on the track.
 
     A like and a repost are sets, so re-running one costs a wasted write and nothing else.
     A comment is a list: every re-run leaves another copy on the artist's track, and only
     the user can delete them.
+
+    Reads through the web API, not the public one: the public collection can take 40s+ to
+    show a comment that was just posted, and that lag is exactly what posts a second one.
+    Any comment by this account blocks the post, including a hand-written one — only the
+    clean-up (comment_guard.py) is limited to the bot's own text.
     """
     try:
-        existing = await my_comment_on(client, track_id, user_id)
+        client_id = await web_client_id(page)
+        existing = await my_comments_v2(page, track_id, user_id, client_id)
     except ApiError as e:
         # Not treated as "no comment found": that reading is what posts the duplicate.
         return ActionResult("comment", ok=False, detail=f"could not read comments: {e}")
-    if existing is not None:
-        return ActionResult("comment", ok=True, detail=f"already commented ({existing})")
+    if existing:
+        return ActionResult("comment", ok=True, detail=f"already commented ({existing[0].id})")
     ok, detail = await post_comment(client, track_id, text)
     return ActionResult("comment", ok=ok, detail=detail, changed=ok)
 
@@ -476,7 +483,7 @@ async def _perform_via_api(
             )
 
             if comment_text and not undo:
-                record(await _comment_once(client, track_id, token_user_id, comment_text))
+                record(await _comment_once(client, page, track_id, token_user_id, comment_text))
             return results
         finally:
             await page.close()

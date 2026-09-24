@@ -10,6 +10,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from soundcloud_dl import pending_follows
+from soundcloud_dl.comment_guard import keep_one_comment
 from soundcloud_dl.config import (
     ACTION_DELAY_MAX_MS,
     ACTION_DELAY_MIN_MS,
@@ -39,6 +40,8 @@ from soundcloud_dl.soundcloud_page import get_gate_url
 from soundcloud_dl.track_naming import judge_track_filename
 
 if TYPE_CHECKING:
+    from playwright.async_api import BrowserContext
+
     from soundcloud_dl.soundcloud_actions import ActionResult
 
 logger = logging.getLogger("soundcloud_dl.jev_pilot")
@@ -101,6 +104,18 @@ async def _settle_follows(actions: dict[str, ActionResult], *, resuming: bool) -
         pending_follows.hold(actions)
     else:
         await release_follows_taken(actions)
+
+
+async def _clean_up_comment(context: BrowserContext, url: str, *, resuming: bool) -> None:
+    """Delete extra copies of the bot's comment, after the follows (see main.py's
+    _process_track for why), skipping a bare gate URL and a run left for a person.
+    """
+    if "soundcloud.com" not in url or resuming:
+        return
+    try:
+        await keep_one_comment(context, url, apply=True)
+    except Exception:
+        logger.exception("Comment clean-up failed for %s", url)
 
 
 async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = False) -> None:
@@ -213,6 +228,8 @@ async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = Fal
                 await _save_debug_artifacts(page, "jev_pilot")
                 logger.warning("GATE_INCOMPLETE | no download step reached | steps=%s", results)
         finally:
+            # After the follows, never before — see main.py's _process_track for why.
             await _settle_follows(actions, resuming=resuming)
+            await _clean_up_comment(context, url, resuming=resuming)
 
         await page.close()

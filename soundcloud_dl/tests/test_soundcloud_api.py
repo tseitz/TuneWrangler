@@ -7,6 +7,7 @@ of them silently stops the action landing.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import httpx
@@ -24,6 +25,8 @@ class FakePage:
         self.replies = replies or []
         self.url = url
         self.goto_urls: list[str] = []
+        self.reload_count = 0
+        self._request_listeners: list[Any] = []
 
     async def evaluate(self, _js: str, args: list[str]) -> dict[str, Any]:
         method, path = args
@@ -33,6 +36,36 @@ class FakePage:
     async def goto(self, url: str, **_kw: object) -> None:
         self.goto_urls.append(url)
         self.url = url
+        self._fire_requests()
+
+    async def reload(self, **_kw: object) -> None:
+        self.reload_count += 1
+        self._fire_requests()
+
+    def on(self, event: str, handler: Any) -> None:
+        if event == "request":
+            self._request_listeners.append(handler)
+
+    def remove_listener(self, event: str, handler: Any) -> None:
+        if event == "request" and handler in self._request_listeners:
+            self._request_listeners.remove(handler)
+
+    def fire_request(self, url: str) -> None:
+        """Let a test simulate an arbitrary outgoing request, not just the happy path."""
+        for handler in list(self._request_listeners):
+            handler(_FakeRequest(url))
+
+    def _fire_requests(self) -> None:
+        """Simulate the page firing the api-v2 request web_client_id listens for."""
+        self.fire_request(f"https://api-v2.soundcloud.com/me?client_id={self.client_id}")
+
+    #: The client_id a navigation is set up to reveal. Tests override this per case.
+    client_id = "live-client-id-1234567"
+
+
+class _FakeRequest:
+    def __init__(self, url: str) -> None:
+        self.url = url
 
 
 def client_for(handler: Any) -> httpx.AsyncClient:
@@ -40,6 +73,12 @@ def client_for(handler: Any) -> httpx.AsyncClient:
     return httpx.AsyncClient(
         base_url="https://api.soundcloud.com", transport=httpx.MockTransport(handler)
     )
+
+
+@pytest.fixture(autouse=True)
+def _reset_client_id_cache() -> None:
+    """web_client_id caches module-wide; without this, test order decides the result."""
+    api.invalidate_client_id()
 
 
 # ── api.soundcloud.com ─────────────────────────────────────────────────────────
@@ -191,93 +230,205 @@ async def test_comment_without_an_id_is_not_treated_as_posted() -> None:
     assert "no id" in detail
 
 
-async def test_my_own_comment_is_found_among_other_peoples() -> None:
-    body = {
-        "collection": [
-            {"id": 1, "user": {"id": 999}},
-            {"id": 2, "user": {"id": 46056733}},
-        ],
-        "next_href": None,
-    }
-    async with client_for(lambda _r: httpx.Response(200, json=body)) as c:
-        assert await api.my_comment_on(c, 7, 46056733) == 2
+def _v2_reply(body: dict[str, Any]) -> dict[str, Any]:
+    return {"status": 200, "body": json.dumps(body)}
 
 
-async def test_a_track_nobody_commented_on_reads_as_none() -> None:
-    body = {"collection": [{"id": 1, "user": {"id": 999}}], "next_href": None}
-    async with client_for(lambda _r: httpx.Response(200, json=body)) as c:
-        assert await api.my_comment_on(c, 7, 46056733) is None
+async def test_my_own_comment_is_found_among_other_peoples_v2() -> None:
+    page = FakePage(
+        [
+            _v2_reply(
+                {
+                    "collection": [
+                        {"id": 1, "user": {"id": 999}},
+                        {"id": 2, "user": {"id": 46056733}},
+                    ],
+                    "next_href": None,
+                }
+            )
+        ]
+    )
+    found = await api.my_comments_v2(page, 7, 46056733, "cid")
+    assert [c.id for c in found] == [2]
+
+
+async def test_a_track_nobody_commented_on_reads_as_empty() -> None:
+    page = FakePage(
+        [_v2_reply({"collection": [{"id": 1, "user": {"id": 999}}], "next_href": None})]
+    )
+    assert await api.my_comments_v2(page, 7, 46056733, "cid") == []
 
 
 async def test_a_comment_past_the_first_page_is_still_found() -> None:
     # The duplicate this guard exists to stop is exactly the one that falls off page one.
-    pages = [
-        httpx.Response(
-            200,
-            json={
-                "collection": [{"id": 1, "user": {"id": 999}}],
-                "next_href": "https://api.soundcloud.com/tracks/7/comments?offset=200",
-            },
-        ),
-        httpx.Response(
-            200,
-            json={"collection": [{"id": 2, "user": {"id": 46056733}}], "next_href": None},
-        ),
-    ]
-    seen: list[str] = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen.append(str(request.url))
-        return pages.pop(0)
-
-    async with client_for(handler) as c:
-        assert await api.my_comment_on(c, 7, 46056733) == 2
-    # The second hop must not re-send limit/linked_partitioning on top of next_href's own.
-    assert seen[1] == "https://api.soundcloud.com/tracks/7/comments?offset=200"
+    page = FakePage(
+        [
+            _v2_reply(
+                {
+                    "collection": [{"id": 1, "user": {"id": 999}}],
+                    "next_href": "https://api-v2.soundcloud.com/tracks/7/comments?offset=200",
+                }
+            ),
+            _v2_reply({"collection": [{"id": 2, "user": {"id": 46056733}}], "next_href": None}),
+        ]
+    )
+    found = await api.my_comments_v2(page, 7, 46056733, "cid")
+    assert [c.id for c in found] == [2]
+    # The second hop must not re-send client_id/limit on top of next_href's own query.
+    assert page.calls[1] == ("GET", "/tracks/7/comments?offset=200")
 
 
 async def test_an_unreadable_comment_list_raises_instead_of_reading_as_empty() -> None:
-    # Returning None here would post the duplicate this whole function exists to prevent.
-    async with client_for(lambda _r: httpx.Response(500, text="boom")) as c:
-        with pytest.raises(ApiError):
-            await api.my_comment_on(c, 7, 46056733)
+    # Returning [] here would post the duplicate this whole function exists to prevent.
+    page = FakePage([{"status": 500, "body": "boom"}])
+    with pytest.raises(ApiError):
+        await api.my_comments_v2(page, 7, 46056733, "cid")
 
 
 async def test_a_cursor_pointing_off_host_is_refused() -> None:
-    # api_client carries the OAuth token as a default header, so httpx would hand it to
-    # whatever host a response body names — it only strips credentials across a redirect.
-    seen: list[str] = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen.append(str(request.url))
-        return httpx.Response(
-            200,
-            json={"collection": [], "next_href": "https://evil.example.com/steal"},
-        )
-
-    async with client_for(handler) as c:
-        with pytest.raises(ApiError, match="off-host"):
-            await api.my_comment_on(c, 7, 46056733)
-    assert not any("evil.example.com" in url for url in seen)
+    # api-v2 next_href naming another host must not be followed blindly.
+    page = FakePage([_v2_reply({"collection": [], "next_href": "https://evil.example.com/steal"})])
+    with pytest.raises(ApiError, match="off-host"):
+        await api.my_comments_v2(page, 7, 46056733, "cid")
 
 
 async def test_a_cursor_that_never_ends_stops_rather_than_hanging() -> None:
-    # Exhaustion must not read as "no comment found" — that is what posts the duplicate.
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            200,
-            json={
-                "collection": [],
-                "next_href": "https://api.soundcloud.com/tracks/7/comments?offset=0",
-            },
-        )
+    # Exhaustion must not read as "no comments found" — that is what leaves a duplicate.
+    page = FakePage(
+        [
+            _v2_reply(
+                {
+                    "collection": [],
+                    "next_href": "https://api-v2.soundcloud.com/tracks/7/comments?offset=0",
+                }
+            )
+        ]
+        * api._MAX_COMMENT_PAGES
+    )
+    with pytest.raises(ApiError, match="did not end"):
+        await api.my_comments_v2(page, 7, 46056733, "cid")
 
-    async with client_for(handler) as c:
-        with pytest.raises(ApiError, match="did not end"):
-            await api.my_comment_on(c, 7, 46056733)
+
+async def test_deleting_a_comment_that_is_already_gone_is_success() -> None:
+    page = FakePage([{"status": 404, "body": ""}])
+    ok, detail = await api.delete_comment_v2(page, 99)
+    assert ok is True
+    assert "was not set" in detail
+
+
+async def test_deleting_a_comment_sends_the_right_path() -> None:
+    page = FakePage([{"status": 204, "body": ""}])
+    ok, _ = await api.delete_comment_v2(page, 99)
+    assert ok is True
+    assert page.calls == [("DELETE", "/comments/99")]
+
+
+async def test_resolve_v2_raises_on_a_non_200() -> None:
+    page = FakePage([{"status": 400, "body": "missing params"}])
+    with pytest.raises(ApiError, match="resolve"):
+        await api.resolve_v2(page, "https://soundcloud.com/a/b", "cid")
+
+
+async def test_resolve_v2_url_encodes_its_query_params() -> None:
+    # Built with urlencode(), not f-string interpolation — a raw '&' in either value
+    # would otherwise inject an extra query parameter into the api-v2 request.
+    page = FakePage([{"status": 200, "body": json.dumps({"kind": "track", "id": 7})}])
+    await api.resolve_v2(page, "https://soundcloud.com/a b?x=1&y=2", "cid&evil=1")
+    _, path = page.calls[0]
+    assert "cid%26evil%3D1" in path
+    assert "&evil=1" not in path
+
+
+async def test_resolve_v2_returns_the_parsed_resource() -> None:
+    page = FakePage([{"status": 200, "body": json.dumps({"kind": "track", "id": 7})}])
+    resource = await api.resolve_v2(page, "https://soundcloud.com/a/b", "cid")
+    assert resource == {"kind": "track", "id": 7}
+
+
+# ── the web app's client_id ────────────────────────────────────────────────────
+
+
+async def test_client_id_is_read_from_the_pages_own_first_request() -> None:
+    page = FakePage(url="https://droploud.com/gate/abc")
+    page.client_id = "found-me-123456789012"
+    client_id = await api.web_client_id(page)
+    assert client_id == "found-me-123456789012"
+    assert page.goto_urls == ["https://soundcloud.com/discover"]
+
+
+async def test_a_page_already_on_soundcloud_is_reloaded_for_a_fresh_request() -> None:
+    page = FakePage(url="https://soundcloud.com/indacollective/pressure")
+    page.client_id = "reloaded-456789012345"
+    assert await api.web_client_id(page) == "reloaded-456789012345"
+    assert page.reload_count == 1
+
+
+async def test_client_id_is_cached_after_the_first_read() -> None:
+    page = FakePage(url="https://droploud.com/gate/abc")
+    page.client_id = "cache-me-1234567890"
+    await api.web_client_id(page)
+    page.client_id = "should-not-be-seen-12345"
+    assert await api.web_client_id(page) == "cache-me-1234567890"
+    assert page.goto_urls == ["https://soundcloud.com/discover"]
+
+
+async def test_a_stale_client_id_can_be_forced_to_re_read() -> None:
+    page = FakePage(url="https://droploud.com/gate/abc")
+    page.client_id = "first-1234567890123"
+    await api.web_client_id(page)
+    api.invalidate_client_id()
+    page.client_id = "second-123456789012"
+    assert await api.web_client_id(page) == "second-123456789012"
+
+
+async def test_client_id_capture_ignores_a_lookalike_host() -> None:
+    """A substring match on the whole URL would fall for a request that merely mentions
+    api-v2.soundcloud.com somewhere in its query string; the hostname has to be parsed
+    out and compared exactly.
+    """
+    page = FakePage(url="https://droploud.com/gate/abc")
+    real_client_id = "real-client-id-123456"
+
+    async def _goto(url: str, **_kw: object) -> None:
+        page.goto_urls.append(url)
+        page.url = url
+        page.fire_request(
+            "https://tracker.example/?x=api-v2.soundcloud.com&client_id=attacker-supplied-1"
+        )
+        page.fire_request(f"https://api-v2.soundcloud.com/me?client_id={real_client_id}")
+
+    page.goto = _goto
+    assert await api.web_client_id(page) == real_client_id
+
+
+async def test_client_id_capture_ignores_a_malformed_value() -> None:
+    """A value with characters outside SoundCloud's own id shape is refused rather than
+    pasted straight into the next api-v2 query string.
+    """
+    page = FakePage(url="https://droploud.com/gate/abc")
+    good = "good-client-id-123456"
+
+    async def _goto(url: str, **_kw: object) -> None:
+        page.goto_urls.append(url)
+        page.url = url
+        page.fire_request("https://api-v2.soundcloud.com/me?client_id=has%2Fslash&x=1")
+        page.fire_request(f"https://api-v2.soundcloud.com/me?client_id={good}")
+
+    page.goto = _goto
+    assert await api.web_client_id(page) == good
 
 
 # ── api-v2 through the page ────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("bad_path", ["evil.com/x", ".evil.com/x", "@evil.com/x", "//evil.com/x"])
+async def test_a_path_that_would_smuggle_a_different_host_is_refused(bad_path: str) -> None:
+    # The in-page fetch builds the URL by string concatenation onto the api-v2 origin, so
+    # a path not opening with exactly one '/' changes which host gets the OAuth cookie.
+    page = FakePage([{"status": 200, "body": "{}"}])
+    with pytest.raises(ApiError, match="must start with"):
+        await api._api_v2(page, "GET", bad_path)
+    assert page.calls == []
 
 
 async def test_like_is_addressed_per_user() -> None:
