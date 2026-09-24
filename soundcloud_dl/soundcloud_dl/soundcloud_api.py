@@ -88,10 +88,12 @@ class AccountMismatch(RuntimeError):  # noqa: N818
 
 
 @contextlib.asynccontextmanager
-async def api_client() -> AsyncIterator[httpx.AsyncClient]:
-    """An httpx client carrying the stored user token, for api.soundcloud.com."""
+async def api_client(
+    token_file: Path | None = None, hint: str = "--sc-auth"
+) -> AsyncIterator[httpx.AsyncClient]:
+    """An httpx client carrying a stored user token (the bot's unless told otherwise)."""
     # load_access_token may refresh over the network, which would block the event loop.
-    token = await asyncio.to_thread(load_access_token)
+    token = await asyncio.to_thread(load_access_token, token_file, hint)
     async with httpx.AsyncClient(
         base_url=SOUNDCLOUD_API_BASE,
         headers={
@@ -193,7 +195,7 @@ async def post_comment(client: httpx.AsyncClient, track_id: int, text: str) -> t
     return True, f"comment {comment_id} posted"
 
 
-def _same_host_path(next_href: str, base: str = SOUNDCLOUD_API_BASE) -> str:
+def same_host_path(next_href: str, base: str = SOUNDCLOUD_API_BASE) -> str:
     """Reduce a pagination cursor to a path on the given API host.
 
     next_href is an absolute URL taken from a response body, and api_client() carries the
@@ -243,7 +245,7 @@ async def _api_v2(page: Page, method: str, path: str) -> tuple[int, str]:
     """Call api-v2 at `path`, which the in-page JS appends to the host with bare string
     concatenation — so a path that does not open with exactly one '/' does not land on
     api-v2 at all; it changes the host the OAuth cookie is sent to (e.g. ".evil.com/x" or
-    "//evil.com/x"). Every caller's path is a literal or comes from _same_host_path, which
+    "//evil.com/x"). Every caller's path is a literal or comes from same_host_path, which
     already refuses an off-host next_href, but this is the one place that would catch a
     caller either missed.
     """
@@ -417,7 +419,7 @@ async def my_comments_v2(
         next_href = body.get("next_href")
         if not next_href:
             return found
-        path = _same_host_path(next_href, base=API_V2)
+        path = same_host_path(next_href, base=API_V2)
 
     # Running out of pages is not "no comments found": that reading is what leaves a
     # duplicate the clean-up never sees, and posts another one from _comment_once.

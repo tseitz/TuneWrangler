@@ -226,6 +226,28 @@ def _parse_args() -> argparse.Namespace:
         ),
     )
     p.add_argument(
+        "--authorize-owner",
+        action="store_true",
+        help=(
+            "Sign in once as the account that OWNS the playlist (not the bot), in your "
+            "default browser. Saves a separate token, used only by --prune-playlist."
+        ),
+    )
+    p.add_argument(
+        "--prune-playlist",
+        action="store_true",
+        help=(
+            "Remove tracks from TUNEWRANGLER_SC_PLAYLIST_URL whose files are provably in the "
+            "Collection (TUNEWRANGLER_DJMUSIC_PATH). Dry run by default — add --apply. Needs "
+            "--authorize-owner once."
+        ),
+    )
+    p.add_argument(
+        "--allow-bulk",
+        action="store_true",
+        help="With --prune-playlist --apply, allow removing more than 20 tracks or 25%%.",
+    )
+    p.add_argument(
         "--debug",
         action="store_true",
         help="Enable DEBUG logging (shows per-selector probe results and full tracebacks).",
@@ -262,9 +284,29 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument(
         "--apply",
         action="store_true",
-        help="With --dedupe-comments, delete the extra copies instead of just listing them.",
+        help="With --dedupe-comments or --prune-playlist, make the change instead of listing it.",
     )
-    return p.parse_args()
+    args = p.parse_args()
+    chosen = [flag for flag in _ONE_SHOT_FLAGS if getattr(args, flag.lstrip("-").replace("-", "_"))]
+    if len(chosen) > 1:
+        # --apply means something different to each of them, so one run does one thing.
+        p.error(f"pick one of {', '.join(chosen)}")
+    return args
+
+
+_ONE_SHOT_FLAGS = (
+    "--record",
+    "--inspect",
+    "--sc-auth",
+    "--authorize-owner",
+    "--prune-playlist",
+    "--sc-do",
+    "--sc-undo",
+    "--sc-probe",
+    "--dedupe-comments",
+    "--jev",
+    "--login",
+)
 
 
 def _load_tracks(playlist_url: str) -> list[TrackItem]:
@@ -818,7 +860,7 @@ async def _run_login_bootstrap() -> None:
         await page.close()
 
 
-def _run_one_shot(args: argparse.Namespace) -> bool:
+def _run_one_shot(args: argparse.Namespace) -> bool:  # noqa: C901, PLR0912
     """Run whichever standalone tool the flags asked for. True if one ran."""
     if args.record:
         gate_name, url = args.record
@@ -829,6 +871,25 @@ def _run_one_shot(args: argparse.Namespace) -> bool:
         from soundcloud_dl.soundcloud_auth import authorize  # noqa: PLC0415
 
         asyncio.run(authorize())
+    elif args.authorize_owner:
+        from soundcloud_dl.soundcloud_auth import authorize  # noqa: PLC0415
+
+        asyncio.run(authorize(owner=True))
+    elif args.prune_playlist:
+        from soundcloud_dl.playlist_prune import (  # noqa: PLC0415
+            PruneError,
+            UpdateUncertainError,
+            prune_playlist,
+        )
+
+        try:
+            asyncio.run(prune_playlist(apply=args.apply, allow_bulk=args.allow_bulk))
+        except PruneError as exc:
+            logger.error("Playlist not changed: %s", exc)  # noqa: TRY400
+            sys.exit(1)
+        except UpdateUncertainError as exc:
+            logger.error("CHECK THE PLAYLIST: %s", exc)  # noqa: TRY400
+            sys.exit(1)
     elif args.sc_do or args.sc_undo:
         from soundcloud_dl.soundcloud_actions import run_actions  # noqa: PLC0415
 

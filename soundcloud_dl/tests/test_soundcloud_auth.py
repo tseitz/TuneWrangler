@@ -242,6 +242,82 @@ async def test_authorize_saves_tokens_on_the_happy_path(
     assert sent["code_verifier"]
 
 
+# ── The playlist owner's token ─────────────────────────────────────────────────
+
+
+@pytest.fixture
+def owner_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    path = tmp_path / "owner_token.json"
+    monkeypatch.setattr(auth, "get_owner_token_file", lambda: path)
+    return path
+
+
+def _grant(_data: dict[str, str]) -> dict[str, Any]:
+    return {"access_token": "at", "refresh_token": "rt", "expires_in": 3600, "scope": "*"}
+
+
+async def test_owner_sign_in_saves_to_its_own_file_after_the_owner_check(
+    monkeypatch: pytest.MonkeyPatch, token_file: Path, owner_file: Path
+) -> None:
+    _stub_authorize(monkeypatch, echo_state=True)
+    monkeypatch.setattr(auth, "_post_token", _grant)
+    monkeypatch.setattr(auth, "_me_id", lambda _t: 7)
+    monkeypatch.setattr(auth, "_playlist_owner_id", lambda _t: 7)
+    await auth.authorize(owner=True)
+    assert json.loads(owner_file.read_text())["access_token"] == "at"
+    assert not token_file.exists(), "the owner sign-in must never replace the bot's token"
+
+
+async def test_owner_sign_in_refuses_an_account_that_does_not_own_the_playlist(
+    monkeypatch: pytest.MonkeyPatch, token_file: Path, owner_file: Path
+) -> None:
+    _stub_authorize(monkeypatch, echo_state=True)
+    monkeypatch.setattr(auth, "_post_token", _grant)
+    monkeypatch.setattr(auth, "_me_id", lambda _t: 7)
+    monkeypatch.setattr(auth, "_playlist_owner_id", lambda _t: 8)
+    with pytest.raises(SoundCloudAuthError, match="belongs to 8"):
+        await auth.authorize(owner=True)
+    assert not owner_file.exists()
+    assert not token_file.exists()
+
+
+async def test_owner_sign_in_saves_nothing_when_me_does_not_answer(
+    monkeypatch: pytest.MonkeyPatch, owner_file: Path
+) -> None:
+    _stub_authorize(monkeypatch, echo_state=True)
+    monkeypatch.setattr(auth, "_post_token", _grant)
+
+    class _Resp:
+        status_code = 503
+
+    class _Client:
+        def __init__(self, **_kw: object) -> None: ...
+        def __enter__(self) -> _Client:
+            return self
+
+        def __exit__(self, *_a: object) -> None: ...
+        def get(self, *_a: object, **_kw: object) -> _Resp:
+            return _Resp()
+
+    monkeypatch.setattr(auth.httpx, "Client", _Client)
+    with pytest.raises(SoundCloudAuthError, match="503"):
+        await auth.authorize(owner=True)
+    assert not owner_file.exists()
+
+
+def test_load_access_token_reads_the_file_it_is_given(token_file: Path, tmp_path: Path) -> None:
+    owner = tmp_path / "owner.json"
+    auth._save_tokens({"access_token": "owner-at", "expires_in": 3600}, owner)
+    auth._save_tokens({"access_token": "bot-at", "expires_in": 3600})
+    assert auth.load_access_token(owner) == "owner-at"
+    assert auth.load_access_token() == "bot-at"
+
+
+def test_a_missing_owner_token_names_the_owner_sign_in(tmp_path: Path) -> None:
+    with pytest.raises(SoundCloudAuthError, match="--authorize-owner"):
+        auth.load_access_token(tmp_path / "none.json", "--authorize-owner")
+
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 
@@ -310,6 +386,7 @@ def _stub_authorize(
         return "a fake browser"
 
     monkeypatch.setattr(auth, "_open_sign_in", fake_open)
+    monkeypatch.setattr(auth.webbrowser, "open", lambda url: opened.update(url=url, default="yes"))
     monkeypatch.setattr(auth, "_whoami", lambda _t: "tester")
 
     bound: dict[str, str] = {}

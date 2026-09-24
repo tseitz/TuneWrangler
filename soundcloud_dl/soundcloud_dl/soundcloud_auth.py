@@ -23,7 +23,7 @@ import secrets
 import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
 import httpx
@@ -34,8 +34,13 @@ from soundcloud_dl.config import (
     SOUNDCLOUD_CLIENT_SECRET,
     SOUNDCLOUD_REDIRECT_URI,
     SOUNDCLOUD_TOKEN_URL,
+    TUNEWRANGLER_SC_PLAYLIST_URL,
+    get_owner_token_file,
     get_token_file,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger("soundcloud_dl.soundcloud_auth")
 
@@ -206,9 +211,9 @@ def _post_token(data: dict[str, str]) -> dict[str, Any]:
     return body
 
 
-def _save_tokens(body: dict[str, Any]) -> dict[str, Any]:
+def _save_tokens(body: dict[str, Any], token_file: Path | None = None) -> dict[str, Any]:
     """Write the token store with owner-only permissions, and return what was stored."""
-    path = get_token_file()
+    path = token_file or get_token_file()
     stored = {
         "access_token": body["access_token"],
         "refresh_token": body.get("refresh_token", ""),
@@ -227,10 +232,10 @@ def _save_tokens(body: dict[str, Any]) -> dict[str, Any]:
     return stored
 
 
-def _load_stored() -> dict[str, Any]:
-    path = get_token_file()
+def _load_stored(token_file: Path | None = None, hint: str = "--sc-auth") -> dict[str, Any]:
+    path = token_file or get_token_file()
     if not path.exists():
-        msg = f"No user token at {path}. Run: deno task py --sc-auth"
+        msg = f"No user token at {path}. Run: deno task py {hint}"
         raise SoundCloudAuthError(msg)
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -239,26 +244,29 @@ def _load_stored() -> dict[str, Any]:
         raise SoundCloudAuthError(msg) from exc
 
 
-def _refresh(refresh_token: str) -> dict[str, Any]:
+def _refresh(refresh_token: str, token_file: Path | None = None) -> dict[str, Any]:
     body = _post_token({"grant_type": "refresh_token", "refresh_token": refresh_token})
     # SoundCloud rotates the refresh token on use. Dropping the new one strands the store
     # on a value that is already spent, and the next run has to sign in by hand again.
     if not body.get("refresh_token"):
         body["refresh_token"] = refresh_token
-    return _save_tokens(body)
+    return _save_tokens(body, token_file)
 
 
-def load_access_token() -> str:
-    """Return a usable user access token, refreshing it first if it is close to expiry."""
-    stored = _load_stored()
+def load_access_token(token_file: Path | None = None, hint: str = "--sc-auth") -> str:
+    """Return a usable user access token, refreshing it first if it is close to expiry.
+
+    token_file defaults to the bot account's store; the playlist owner's is separate.
+    """
+    stored = _load_stored(token_file, hint)
     if float(stored.get("expires_at", 0)) - time.time() > _REFRESH_MARGIN_S:
         return str(stored["access_token"])
     refresh_token = str(stored.get("refresh_token", ""))
     if not refresh_token:
-        msg = "The stored token expired and carries no refresh token. Run: deno task py --sc-auth"
+        msg = f"The stored token expired and carries no refresh token. Run: deno task py {hint}"
         raise SoundCloudAuthError(msg)
     logger.info("User token expired or near expiry — refreshing")
-    return str(_refresh(refresh_token)["access_token"])
+    return str(_refresh(refresh_token, token_file)["access_token"])
 
 
 def _whoami(access_token: str) -> str:
@@ -304,8 +312,62 @@ async def _open_sign_in(stack: contextlib.AsyncExitStack, url: str) -> str:
     return "the automation Chrome"
 
 
-async def authorize() -> None:
-    """Run the interactive sign-in once and save the resulting tokens."""
+def _me_id(access_token: str) -> int:
+    """The id of the account a token belongs to. Raises rather than guessing."""
+    with httpx.Client(follow_redirects=True) as client:
+        resp = client.get(
+            f"{SOUNDCLOUD_API_BASE}/me",
+            headers={
+                "Authorization": f"OAuth {access_token}",
+                "Accept": "application/json; charset=utf-8",
+            },
+            timeout=30.0,
+        )
+    if resp.status_code != _HTTP_OK:
+        msg = f"Could not tell which account signed in: /me answered {resp.status_code}"
+        raise SoundCloudAuthError(msg)
+    return int(resp.json()["id"])
+
+
+def _playlist_owner_id(access_token: str) -> int:
+    """Who owns TUNEWRANGLER_SC_PLAYLIST_URL, read with the new token so a private one resolves."""
+    if not TUNEWRANGLER_SC_PLAYLIST_URL:
+        msg = "TUNEWRANGLER_SC_PLAYLIST_URL is not set, so there is no owner to check against"
+        raise SoundCloudAuthError(msg)
+    with httpx.Client(follow_redirects=True) as client:
+        resp = client.get(
+            f"{SOUNDCLOUD_API_BASE}/resolve",
+            params={"url": TUNEWRANGLER_SC_PLAYLIST_URL.strip()},
+            headers={
+                "Authorization": f"OAuth {access_token}",
+                "Accept": "application/json; charset=utf-8",
+            },
+            timeout=30.0,
+        )
+    if resp.status_code != _HTTP_OK:
+        msg = f"Could not read the playlist to check its owner: {resp.status_code}"
+        raise SoundCloudAuthError(msg)
+    return int(resp.json()["user"]["id"])
+
+
+def _check_owner(access_token: str) -> None:
+    """Refuse a token for anyone but the playlist's owner — the bot account above all."""
+    me, owner = _me_id(access_token), _playlist_owner_id(access_token)
+    if me != owner:
+        msg = (
+            f"Signed in as account {me}, but the playlist belongs to {owner}. Sign in to "
+            "SoundCloud in your default browser as the playlist's owner and run it again."
+        )
+        raise SoundCloudAuthError(msg)
+
+
+async def authorize(*, owner: bool = False) -> None:
+    """Run the interactive sign-in once and save the resulting tokens.
+
+    owner=True signs in the account that owns the playlist instead of the bot: it opens the
+    default browser, where that account is signed in, and saves only after checking the
+    token really belongs to the playlist's owner.
+    """
     parsed = urlparse(SOUNDCLOUD_REDIRECT_URI)
     if parsed.hostname not in ("localhost", "127.0.0.1") or not parsed.port:
         msg = (
@@ -334,7 +396,11 @@ async def authorize() -> None:
     server = _bind_callback_server("127.0.0.1", parsed.port, parsed.path or "/", state)
     try:
         async with contextlib.AsyncExitStack() as stack:
-            where = await _open_sign_in(stack, url)
+            if owner:
+                webbrowser.open(url)
+                where = "your default browser"
+            else:
+                where = await _open_sign_in(stack, url)
             logger.info("SoundCloud sign-in opened in %s", where)
             logger.info("If nothing opens, paste this into a browser:\n%s", url)
             # The blocking wait runs off the event loop so the browser attach above stays
@@ -359,21 +425,23 @@ async def authorize() -> None:
         msg = "The redirect carried no authorization code"
         raise SoundCloudAuthError(msg)
 
-    stored = _save_tokens(
-        _post_token(
-            {
-                "grant_type": "authorization_code",
-                "code": code,
-                "redirect_uri": SOUNDCLOUD_REDIRECT_URI,
-                "code_verifier": verifier,
-            }
-        )
+    body = _post_token(
+        {
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": SOUNDCLOUD_REDIRECT_URI,
+            "code_verifier": verifier,
+        }
     )
+    if owner:
+        _check_owner(body["access_token"])
+    token_file = get_owner_token_file() if owner else get_token_file()
+    stored = _save_tokens(body, token_file)
     # Named out loud because the account is the one thing a sign-in can get silently wrong,
     # and a token for the wrong account fails much later as a gate that never unlocks.
     logger.info(
         "Signed in as %r. Token saved to %s (refresh token %s)",
         _whoami(stored["access_token"]),
-        get_token_file(),
+        token_file,
         "stored" if stored["refresh_token"] else "MISSING — you will have to sign in again",
     )

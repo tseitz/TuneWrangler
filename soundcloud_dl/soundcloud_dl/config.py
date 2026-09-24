@@ -24,6 +24,8 @@ def _parse_int_env(name: str, default: int) -> int:
 
 # ── Phase 1: SoundCloud API ────────────────────────────────────────────────────
 TUNEWRANGLER_SC_PLAYLIST_URL = os.getenv("TUNEWRANGLER_SC_PLAYLIST_URL")
+#: The DJ Collection folder. A playlist track is pruned only once its file is here.
+TUNEWRANGLER_DJMUSIC_PATH = os.getenv("TUNEWRANGLER_DJMUSIC_PATH")
 SOUNDCLOUD_CLIENT_ID = os.getenv("SOUNDCLOUD_CLIENT_ID")
 SOUNDCLOUD_CLIENT_SECRET = os.getenv("SOUNDCLOUD_CLIENT_SECRET")
 
@@ -162,6 +164,28 @@ def get_playlist_cache_file() -> Path:
 def get_token_file() -> Path:
     """Path to the user OAuth token store. Under logs/, which is gitignored."""
     return get_log_dir() / "oauth_token.json"
+
+
+def get_manifest_dirs() -> list[Path]:
+    """Where the Deno rename flow writes its manifests, and where approved ones are kept."""
+    return [
+        _PROJECT_ROOT / "logs" / "tunewrangler" / "manifests",
+        _PROJECT_ROOT / "tests" / "corpus",
+    ]
+
+
+def get_playlist_backup_dir() -> Path:
+    """Full track lists saved before each playlist prune, so a removal can be undone."""
+    return get_log_dir() / "playlist_backups"
+
+
+def get_owner_token_file() -> Path:
+    """Token for the account that owns the playlist, which is not the bot account.
+
+    Only the playlist prune uses it. Everything that follows, likes or comments stays on
+    get_token_file(), so the owner's account never acts on a gate.
+    """
+    return get_log_dir() / "owner_token.json"
 
 
 # ── Validation ─────────────────────────────────────────────────────────────────
