@@ -7,6 +7,7 @@ import nodeId3 from "node-id3";
 import { join } from "@std/path";
 import { Semaphore } from "../models/Semaphore.ts";
 import { id3Flags } from "../tagging.ts";
+import { normalizeUnicode } from "./unicode.ts";
 
 const MAX_CONCURRENT_OPERATIONS = 10;
 const semaphore = new Semaphore(MAX_CONCURRENT_OPERATIONS);
@@ -52,7 +53,10 @@ export class MusicCache {
   private keys = new Set<string>();
 
   private static normalizeKey(artist: string, title: string): string {
-    return `${(artist || "").toUpperCase()}|||${(title || "").toUpperCase()}`;
+    // Folded the same way the parser folds filenames, so "Reece Rosé" in an older file
+    // matches the "Reece Rose" a new download is renamed to.
+    const fold = (text: string) => normalizeUnicode((text || "").normalize("NFC")).toUpperCase();
+    return `${fold(artist)}|||${fold(title)}`;
   }
 
   add(song: Song): void {
