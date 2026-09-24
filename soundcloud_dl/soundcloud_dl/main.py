@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 from playwright.async_api import Error as PlaywrightError
 
 from soundcloud_dl import pending_follows
+from soundcloud_dl.comment_guard import keep_one_comment
 from soundcloud_dl.config import (
     ACTION_DELAY_MAX_MS,
     ACTION_DELAY_MIN_MS,
@@ -247,6 +248,21 @@ def _parse_args() -> argparse.Namespace:
             "Combine with --limit 1 to step through them one at a time."
         ),
     )
+    p.add_argument(
+        "--dedupe-comments",
+        action="store_true",
+        help=(
+            "Sweep every track ever processed and delete extra copies of the bot's own "
+            "comment, keeping the lowest comment id (the first one posted). Dry run by "
+            "default — add --apply to delete. Only matches the current "
+            "TUNEWRANGLER_SC_COMMENT; comments posted under an older value are not found."
+        ),
+    )
+    p.add_argument(
+        "--apply",
+        action="store_true",
+        help="With --dedupe-comments, delete the extra copies instead of just listing them.",
+    )
     return p.parse_args()
 
 
@@ -340,6 +356,10 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
     # into SoundCloud's 2000-following cap. The two states below are the exceptions: both
     # leave the tab open for a person to finish, and the gate is still checking.
     keep_follows = False
+    # True once a comment could have been posted (sc_actions or the gate itself), so the
+    # finally knows whether there is anything for the clean-up to look at. A track that
+    # returned early via an API/native download never opened a page at all.
+    gate_attempted = False
     # Set as the run goes, so the finally can record how it ended whichever way it left.
     final_url: str | None = None
     results: dict[str, Any] = {}
@@ -380,6 +400,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             logger.warning("UNSUPPORTED | %s | %s: %s", track_label, skipped, gate_url)
             return TrackOutcome("unsupported", f"{skipped}: {gate_url}")
 
+        gate_attempted = True
         # After the blacklist check, because a gate we will not open must not cost
         # anything: the follow is given back but the comment is permanent and only the
         # user can delete it. Before the gate opens, though — a gate that checks
@@ -588,6 +609,18 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             pending_follows.hold(actions)
         else:
             await release_follows_taken(actions)
+        # After the follows, never before: asyncio.wait_for's CancelledError bypasses
+        # `except Exception` above, and a clean-up placed first would skip the release on
+        # a cancelled track. Skipped for captcha/login_required (keep_follows) — the tab is
+        # left for a person and the gate's own comment lands only once they finish; the
+        # --dedupe-comments sweep catches those tracks later.
+        if not keep_follows and gate_attempted:
+            try:
+                await keep_one_comment(context, track.url, apply=True)
+            except Exception:
+                # keep_one_comment already guards its own body; this is a second net so a
+                # bug in it can never spend the track's own recorded outcome.
+                logger.exception("Comment clean-up failed for %s", track_label)
 
 
 async def _run_phase2(
@@ -796,6 +829,10 @@ def _run_one_shot(args: argparse.Namespace) -> bool:
         from soundcloud_dl.soundcloud_actions import probe_urls  # noqa: PLC0415
 
         asyncio.run(probe_urls(args.sc_probe))
+    elif args.dedupe_comments:
+        from soundcloud_dl.dedupe_comments import dedupe_all  # noqa: PLC0415
+
+        asyncio.run(dedupe_all(apply=args.apply))
     elif args.jev:
         from soundcloud_dl.jev_pilot import run_jev_pilot  # noqa: PLC0415
 

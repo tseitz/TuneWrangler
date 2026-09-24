@@ -17,6 +17,7 @@ from soundcloud_dl.soundcloud_actions import (
     release_follows,
     track_path_for,
 )
+from soundcloud_dl.soundcloud_api import MyComment
 
 TRACK = "https://soundcloud.com/urboin8/mph-raw-urboin8-bootleg"
 
@@ -213,20 +214,25 @@ def test_a_failed_follow_is_not_given_back():
 # ── Not doing an action twice ──────────────────────────────────────────────────
 
 
+async def _fake_client_id(*_a: object, **_k: object) -> str:
+    return "abc123"
+
+
 async def test_a_track_already_commented_on_is_not_commented_on_again(monkeypatch):
     posted: list[str] = []
 
-    async def fake_existing(*_a: object, **_k: object) -> int | None:
-        return 2594494206
+    async def fake_existing(*_a: object, **_k: object) -> list[MyComment]:
+        return [MyComment(id=2594494206, created_at="", body="🔥🔥🔥")]
 
     async def fake_post(*_a: object, **_k: object) -> tuple[bool, str]:
         posted.append("posted")
         raise AssertionError("post_comment must not be reached")
 
-    monkeypatch.setattr(soundcloud_actions, "my_comment_on", fake_existing)
+    monkeypatch.setattr(soundcloud_actions, "web_client_id", _fake_client_id)
+    monkeypatch.setattr(soundcloud_actions, "my_comments_v2", fake_existing)
     monkeypatch.setattr(soundcloud_actions, "post_comment", fake_post)
 
-    r = await soundcloud_actions._comment_once(None, 7, 46056733, "nice one")
+    r = await soundcloud_actions._comment_once(None, None, 7, 46056733, "nice one")
     assert r.ok is True
     assert r.changed is False
     assert "already commented" in r.detail
@@ -234,31 +240,33 @@ async def test_a_track_already_commented_on_is_not_commented_on_again(monkeypatc
 
 
 async def test_a_track_not_yet_commented_on_gets_the_comment(monkeypatch):
-    async def fake_existing(*_a: object, **_k: object) -> int | None:
-        return None
+    async def fake_existing(*_a: object, **_k: object) -> list[Any]:
+        return []
 
     async def fake_post(*_a: object, **_k: object) -> tuple[bool, str]:
         return True, "comment 1 posted"
 
-    monkeypatch.setattr(soundcloud_actions, "my_comment_on", fake_existing)
+    monkeypatch.setattr(soundcloud_actions, "web_client_id", _fake_client_id)
+    monkeypatch.setattr(soundcloud_actions, "my_comments_v2", fake_existing)
     monkeypatch.setattr(soundcloud_actions, "post_comment", fake_post)
 
-    r = await soundcloud_actions._comment_once(None, 7, 46056733, "nice one")
+    r = await soundcloud_actions._comment_once(None, None, 7, 46056733, "nice one")
     assert r.ok is True
     assert r.changed is True
 
 
 async def test_comments_that_cannot_be_read_fail_rather_than_risk_a_duplicate(monkeypatch):
-    async def fake_existing(*_a: object, **_k: object) -> int | None:
+    async def fake_existing(*_a: object, **_k: object) -> list[Any]:
         raise soundcloud_actions.ApiError("500")
 
     async def fake_post(*_a: object, **_k: object) -> tuple[bool, str]:
         raise AssertionError("post_comment must not be reached")
 
-    monkeypatch.setattr(soundcloud_actions, "my_comment_on", fake_existing)
+    monkeypatch.setattr(soundcloud_actions, "web_client_id", _fake_client_id)
+    monkeypatch.setattr(soundcloud_actions, "my_comments_v2", fake_existing)
     monkeypatch.setattr(soundcloud_actions, "post_comment", fake_post)
 
-    r = await soundcloud_actions._comment_once(None, 7, 46056733, "nice one")
+    r = await soundcloud_actions._comment_once(None, None, 7, 46056733, "nice one")
     assert r.ok is False
     assert r.changed is False
 

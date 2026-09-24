@@ -107,6 +107,7 @@ When changing `parser.ts`, run `deno task test` and inspect the corpus output fo
 - **`captcha.py`** — Detects Cloudflare/captcha walls; pauses for manual completion.
 - **`resume.py`** — Records each URL's terminal state (`done`/`unsupported`/`captcha_pending`/`manual_review`/`failed`) in `logs/soundcloud_dl/processed.json`.
 - **`playlist_cache.py`** — Caches playlist track lists in `logs/soundcloud_dl/playlist_cache.json` to skip API hits on re-runs.
+- **`comment_guard.py`** — `keep_one_comment()`: after a gate run, deletes extra copies of the bot's own comment on a track (a gate rerun posts its comment box again on every attempt), keeping the lowest comment id. Only deletes a comment whose text matches the *current* `TUNEWRANGLER_SC_COMMENT` — one posted under an older value is left alone. `--dedupe-comments [--apply]` (`dedupe_comments.py`) sweeps every track ever processed the same way; dry run by default.
 
 ## Logs and state
 

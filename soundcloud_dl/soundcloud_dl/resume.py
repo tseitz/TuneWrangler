@@ -124,6 +124,20 @@ def load_attempts(playlist_url: str) -> dict[str, int]:
     return _coerce_to_attempt_map(_read_raw().get(_normalize_playlist_url(playlist_url)))
 
 
+def all_track_urls() -> list[str]:
+    """Every track URL ever recorded, across every playlist, query string stripped.
+
+    --dedupe-comments' sweep target: a duplicate comment can be left by a gate rerun from
+    any past run, not just the current playlist, so the sweep has to reach every track
+    this bot has ever touched.
+    """
+    seen: dict[str, None] = {}
+    for entry in _read_raw().values():
+        for url in _coerce_to_state_map(entry):
+            seen.setdefault(url.split("?", maxsplit=1)[0], None)
+    return list(seen)
+
+
 def record_state(playlist_url: str, track_url: str, state: TrackState, reason: str = "") -> None:
     """Set the state for one track in this playlist; overwrites prior state.
 
