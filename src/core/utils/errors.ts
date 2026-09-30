@@ -54,6 +54,17 @@ export class ConfigurationError extends TuneWranglerError {
 }
 
 /**
+ * Nothing was changed and a later run can succeed: a folder is unavailable (drive unplugged) or
+ * another run holds the lock
+ */
+export class TryLaterError extends TuneWranglerError {
+  constructor(message: string) {
+    super(message, "TRY_LATER");
+    this.name = "TryLaterError";
+  }
+}
+
+/**
  * Error thrown when duplicate files are detected
  */
 export class DuplicateError extends TuneWranglerError {

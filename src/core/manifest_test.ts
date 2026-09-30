@@ -116,3 +116,20 @@ Deno.test("readManifest keeps a well-formed soundcloud field and rejects a malfo
     await assertRejects(() => readManifest(path), Error, "soundcloud");
   });
 });
+
+Deno.test("a manifest entry whose name is a path is rejected before anything moves", async () => {
+  const dir = await Deno.makeTempDir();
+  for (const [field, value] of [["src", "../Blosso - Galvanize.wav"], ["proposed", "sub/Blosso - Galvanize.wav"]]) {
+    const path = `${dir}/${field}.json`;
+    const entry = {
+      src: "Blosso - Galvanize.wav",
+      proposed: "Blosso - Galvanize.wav",
+      confidence: "high",
+      reasons: [],
+      decision: "apply",
+      [field]: value,
+    };
+    await Deno.writeTextFile(path, JSON.stringify({ version: 1, generated_at: "", source_dir: dir, move_dir: dir, cache_dir: dir, entries: [entry] }));
+    await assertRejects(() => readManifest(path), Error, "must be a plain filename");
+  }
+});

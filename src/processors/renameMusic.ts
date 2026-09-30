@@ -6,10 +6,14 @@ Modes:
                          to logs/tunewrangler/manifests/rename-manifest-<timestamp>.json,
                          do not move anything.
   --apply <manifest>     read the given manifest and move only entries whose
-                         decision is "apply". Edit the manifest first to override.
+                         decision is "apply" into the DJ Collection. Edit the manifest
+                         first to override.
+  --auto                 dry run, then apply the manifest it just wrote (unattended runs).
   --move                 legacy: process and immediately move all files (no manifest).
   --prune [--keep N]     list backup runs beyond the newest N (default 5) in the backup
                          folder; add --yes to delete them.
+
+Exits 75 when a folder is unavailable or another run holds the lock; nothing was changed.
 
 Incoming (generally): album - artist - title
 Outgoing:             artist - album - title
@@ -30,7 +34,10 @@ import {
 } from "../core/utils/common.ts";
 import { DownloadedSong } from "../core/models/Song.ts";
 import { parseDownloadedSong } from "../core/parser.ts";
-import { tagsFromFilename } from "../core/tagging.ts";
+import { applyManifest, MoveFailure, settleMoves, withTrailingSlash } from "../core/applyManifest.ts";
+import { PATH_ENV_VARS, requireFolders } from "../config/paths.ts";
+import { TryLaterError } from "../core/utils/errors.ts";
+import { acquireRunLock } from "../core/utils/runLock.ts";
 import { scoreConfidence } from "../core/confidence.ts";
 import { applySoundcloudCredits, factsFor, loadSoundcloudIndex } from "../core/soundcloudFacts.ts";
 import {
@@ -44,9 +51,11 @@ import { applyJudgement, assertJudgeAvailable, getJudgeThreshold, judgeEntries }
 
 const startDir = getFolder("downloaded");
 const cacheDir = getFolder("djMusic");
-const moveDir = getFolder("rename");
+const moveDir = cacheDir;
 const backupDir = getFolder("backup");
 const MANIFEST_DIR = "./logs/tunewrangler/manifests";
+const LOCK_PATH = "./logs/tunewrangler/rm.lock";
+const EX_TEMPFAIL = 75;
 
 /** A duplicate skip always carries this reason first (see buildEntry) — distinguishes it from
  * the .m4s hard-skip path, which is not judged. */
@@ -54,7 +63,7 @@ const DUPLICATE_REASON = "duplicate of an existing track in the DJ collection";
 
 const args = parseArgs(Deno.args, {
   string: ["apply", "manifest", "keep"],
-  boolean: ["move", "no-clear", "judge", "prune", "yes"],
+  boolean: ["move", "no-clear", "judge", "prune", "yes", "auto"],
   default: { "no-clear": false, judge: false, keep: "5" },
 });
 
@@ -64,14 +73,43 @@ if (args.judge) {
   await assertJudgeAvailable();
 }
 
-if (args.prune) {
-  await runPrune(Number(args.keep), args.yes);
-} else if (args.apply) {
-  await runApply(args.apply);
-} else if (args.move) {
-  await runLegacyMove(!args["no-clear"]);
-} else {
-  await runDryRun(args.manifest);
+const modes = [args.prune, Boolean(args.apply), args.move, args.auto].filter(Boolean).length;
+if (modes > 1) {
+  console.error("Pick one of --prune, --apply, --move, --auto.");
+  Deno.exit(2);
+}
+
+try {
+  if (args.prune) {
+    await runPrune(Number(args.keep), args.yes);
+  } else if (args.apply) {
+    await withRunLock(() => runApply(args.apply!));
+  } else if (args.move) {
+    await withRunLock(() => runLegacyMove(!args["no-clear"]));
+  } else if (args.auto) {
+    await withRunLock(async () => await runApply(await runDryRun(args.manifest, { auto: true })));
+  } else {
+    await runDryRun(args.manifest);
+  }
+} catch (error) {
+  if (!(error instanceof TryLaterError)) throw error;
+  console.error(error.message);
+  Deno.exit(EX_TEMPFAIL);
+}
+
+async function withRunLock(run: () => Promise<void>): Promise<void> {
+  await fs.ensureDir("./logs/tunewrangler");
+  const release = await acquireRunLock(LOCK_PATH);
+  try {
+    await run();
+  } finally {
+    // The OS frees the lock on exit anyway; a failed release must not hide the run's own error.
+    await release().catch((error) => console.error(`Could not release ${LOCK_PATH}: ${error}`));
+  }
+}
+
+function envFolders(...keys: (keyof typeof PATH_ENV_VARS)[]): Record<string, string> {
+  return Object.fromEntries(keys.map((key) => [PATH_ENV_VARS[key], getFolder(key)]));
 }
 
 function isJudgeCandidate(entry: ManifestEntry): boolean {
@@ -81,8 +119,10 @@ function isJudgeCandidate(entry: ManifestEntry): boolean {
 /**
  * Default mode: parse + score every file, write a manifest, do not move.
  * The user reviews the manifest, edits any "review" decisions, then runs --apply.
+ * Returns the manifest path once it is final, i.e. after any --judge rewrite.
  */
-async function runDryRun(manifestOverride?: string): Promise<void> {
+async function runDryRun(manifestOverride?: string, { auto = false } = {}): Promise<string> {
+  await requireFolders(envFolders("downloaded", "djMusic", ...(auto ? ["backup" as const] : [])));
   const cache = await cacheMusic(cacheDir);
   const soundcloud = await loadSoundcloudIndex();
   const built: BuildResult[] = [];
@@ -111,7 +151,8 @@ async function runDryRun(manifestOverride?: string): Promise<void> {
 
   const finalEntries = args.judge ? await judgeAndRewrite(built, manifest, manifestPath) : manifest.entries;
 
-  printSummary(finalEntries, manifestPath);
+  printSummary(finalEntries, manifestPath, { auto });
+  return manifestPath;
 }
 
 /**
@@ -155,79 +196,28 @@ async function judgeAndRewrite(
  */
 async function runApply(manifestPath: string): Promise<void> {
   const manifest = await readManifest(manifestPath);
+  // The manifest's folders, not the env's: apply lands where the dry run said it would.
+  await requireFolders({
+    [`${manifestPath} source_dir`]: manifest.source_dir,
+    [`${manifestPath} move_dir`]: manifest.move_dir,
+    [`${manifestPath} cache_dir`]: manifest.cache_dir,
+    [PATH_ENV_VARS.backup]: backupDir,
+  });
 
-  // Use paths from the manifest so --apply works regardless of env vars set at
-  // the time of this invocation. Ensure trailing slash for string concatenation.
-  const sourceDir = trailingSlash(manifest.source_dir);
-  const destDir = trailingSlash(manifest.move_dir);
-
-  const cache = await cacheMusic(cacheDir);
-  const runBackupDir = await startBackupRun(backupDir, "rename-music");
-
-  const moveOps: Promise<void>[] = [];
-  const opSources: string[] = [];
-  let applied = 0;
-  let skipped = 0;
-
-  for (const entry of manifest.entries) {
-    if (entry.decision !== "apply") {
-      skipped++;
-      continue;
-    }
-
-    if (entry.judgement && entry.judgement.judged_proposed !== entry.proposed) {
-      logWithBreak(
-        `***Warning: judgement for ${entry.src} graded "${entry.judgement.judged_proposed}", but proposed is now "${entry.proposed}" — its probabilities describe a different string***`,
-      );
-    }
-
-    const song = new DownloadedSong(entry.src, sourceDir);
-    if (song.dashCount > 0) parseDownloadedSong(song);
-    setFinalDownloadedSongName(song);
-
-    // Honor user override: if the manifest's proposed name differs from what
-    // the parser produces, trust the manifest (the user may have edited it).
-    if (entry.proposed && entry.proposed !== song.finalFilename) {
-      song.finalFilename = entry.proposed;
-      // The tags are written from these fields, so without this an override renames the
-      // file while its tags keep the parse the user rejected.
-      Object.assign(song, tagsFromFilename(entry.proposed));
-    }
-
-    if (checkIfDuplicate(song, cache)) {
-      logWithBreak(`***Duplicate, skipping: ${song.finalFilename}***`);
-      skipped++;
-      continue;
-    }
-    cache.add(song);
-
-    moveOps.push(
-      backupFile(sourceDir, runBackupDir, entry.src).then(() =>
-        renameAndMove(destDir, song, undefined, true)
-      )
-    );
-    opSources.push(entry.src);
-    applied++;
-  }
-
-  const failed = await settleMoves(moveOps, opSources);
-  console.log(`\nApplied: ${applied - failed}, failed: ${failed}, skipped (review/skip/duplicate): ${skipped}`);
-  console.log(`Originals backed up to: ${runBackupDir}`);
+  const result = await applyManifest(manifest, { backupDir });
+  reportFailures(result.failures);
+  console.log(
+    `\nApplied: ${result.applied}, failed: ${result.failures.length}, skipped (review/skip/duplicate): ${result.skipped}`,
+  );
+  console.log(`Moved into: ${withTrailingSlash(manifest.move_dir)}`);
+  if (result.runBackupDir) console.log(`Originals backed up to: ${result.runBackupDir}`);
 }
 
-/**
- * Waits for every move, not just until the first failure: Promise.all would reject while the
- * rest kept converting in the background, and the summary would never print.
- */
-async function settleMoves(ops: Promise<void>[], sources: string[]): Promise<number> {
-  const results = await Promise.allSettled(ops);
-  const failures = results.flatMap((r, i) => r.status === "rejected" ? [{ src: sources[i], reason: r.reason }] : []);
-  if (failures.length > 0) {
-    console.error(`\n${failures.length} file(s) failed — each original is still in the source folder:`);
-    for (const f of failures) console.error(`  ${f.src}: ${f.reason instanceof Error ? f.reason.message : f.reason}`);
-    Deno.exitCode = 1;
-  }
-  return failures.length;
+function reportFailures(failures: MoveFailure[]): void {
+  if (failures.length === 0) return;
+  console.error(`\n${failures.length} file(s) failed — each original is still in the source folder:`);
+  for (const f of failures) console.error(`  ${f.src}: ${f.reason instanceof Error ? f.reason.message : f.reason}`);
+  Deno.exitCode = 1;
 }
 
 async function runPrune(keep: number, apply: boolean): Promise<void> {
@@ -241,15 +231,12 @@ async function runPrune(keep: number, apply: boolean): Promise<void> {
   if (!apply) console.log("\nRe-run with --yes to delete them.");
 }
 
-function trailingSlash(p: string): string {
-  return p.endsWith("/") ? p : p + "/";
-}
-
 /**
  * Legacy mode: parse and immediately move all files in one shot.
  * Preserved so existing workflows (deno task rM --move) keep working.
  */
 async function runLegacyMove(clear: boolean): Promise<void> {
+  await requireFolders(envFolders("downloaded", "djMusic", "backup"));
   const cache = await cacheMusic(cacheDir);
   const runBackupDir = await startBackupRun(backupDir, "rename-music");
 
@@ -279,8 +266,9 @@ async function runLegacyMove(clear: boolean): Promise<void> {
     count++;
   }
 
-  const failed = await settleMoves(moveOps, opSources);
-  console.log(`\nTotal moved: ${count - failed}, failed: ${failed}`);
+  const failures = await settleMoves(moveOps, opSources);
+  reportFailures(failures);
+  console.log(`\nTotal moved: ${count - failures.length}, failed: ${failures.length}`);
   console.log(`Originals backed up to: ${runBackupDir}`);
 }
 
@@ -344,7 +332,7 @@ function buildEntry(filename: string, cache: MusicCache): BuildResult | null {
   }
 }
 
-function printSummary(entries: ManifestEntry[], manifestPath: string): void {
+function printSummary(entries: ManifestEntry[], manifestPath: string, { auto }: { auto: boolean }): void {
   const byDecision = { apply: 0, review: 0, skip: 0 };
   const byConfidence = { high: 0, medium: 0, low: 0 };
   let downgradedByJudge = 0;
@@ -365,6 +353,12 @@ function printSummary(entries: ManifestEntry[], manifestPath: string): void {
   console.log("");
   console.log(`  confidence — high: ${byConfidence.high}, medium: ${byConfidence.medium}, low: ${byConfidence.low}`);
   console.log("");
+  if (auto) {
+    console.log(`Applying the ${byDecision.apply} "apply" entries now. The ${byDecision.review} needing review stay in`);
+    console.log(`the source folder, and every run lists them again until they are handled.`);
+    console.log("========================================");
+    return;
+  }
   console.log(`Next steps:`);
   console.log(`  1. Open ${manifestPath} and review the ${byDecision.review} entries needing review`);
   console.log(`  2. Edit "decision" fields ("apply" to move, "skip" to leave alone)`);

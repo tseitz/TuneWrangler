@@ -16,6 +16,7 @@ TuneWrangler is a music file management tool with two components:
 ```bash
 deno task rM                       # rename music: dry-run, writes manifest
 deno task rM --apply <manifest>    # apply approved entries from a manifest
+deno task rM --auto                # dry run + apply in one step (unattended runs)
 deno task rM --move                # legacy: parse + move all in one shot
 deno task rM --prune [--keep N]    # list backup runs beyond the newest N (5); --yes deletes
 deno task retag [--dir D] [--overwrite[-cosmetic]] [--yes]  # tags from `artist - album - title` names; dry run by default
@@ -49,13 +50,20 @@ The wrappers expand to `uv run --project soundcloud_dl <cmd>` — see `deno.json
 
 ## Rename workflow (the important one)
 
-The `rename-music` flow is **dry-run first, apply second** — never `--move` unless the user explicitly asks for it. The manifest exists so the user can review low-confidence entries before any files are touched.
+The `rename-music` flow is **dry-run first, apply second** — never `--move` or `--auto` unless the user explicitly asks for it. The manifest exists so the user can review low-confidence entries before any files are touched.
+
+Applied files go **straight into the DJ Collection** (`TUNEWRANGLER_DJMUSIC_PATH`); there is no
+`Renamed/` step. The human check is the manifest's `review` entries, which stay in the Downloaded
+folder. A move never overwrites a file already in the Collection. `--apply`, `--auto` and `--move`
+hold `logs/tunewrangler/rm.lock`, one run at a time. A missing folder (drive unplugged) or a held
+lock exits **75** with nothing changed — a scheduler should retry later, not alert. `--auto` (dry
+run, then apply the manifest it wrote) exists for the nightly job.
 
 ```
 1. deno task rM                       → writes logs/tunewrangler/manifests/rename-manifest-<ts>.json
                                         Each entry has confidence (high/medium/low) + decision (apply/review/skip)
 2. User opens manifest, edits "decision" or "proposed" fields for low-confidence entries
-3. deno task rM --apply <manifest>    → moves only entries with decision: "apply"
+3. deno task rM --apply <manifest>    → moves only entries with decision: "apply" into the Collection
                                         originals are copied to <backup>/<timestamp>_rename-music/ first
 4. deno task promote <manifest>       → locks the batch into tests/corpus/ as regression tests
 ```

@@ -35,7 +35,7 @@ export function detectPlatform(): PlatformConfig {
   };
 }
 
-import { ConfigurationError } from "../core/utils/errors.ts";
+import { ConfigurationError, TryLaterError } from "../core/utils/errors.ts";
 
 export const PATH_ENV_VARS: Readonly<Record<keyof PathConfig, string>> = {
   music: "TUNEWRANGLER_MUSIC_PATH",
@@ -100,4 +100,28 @@ export async function validatePaths(
     valid: errors.length === 0,
     errors,
   };
+}
+
+/**
+ * Throws TryLaterError listing every folder that is blank, missing or not a folder, keyed by the
+ * name the user would fix (an env var, or a manifest field). A blank path is checked before
+ * stat because callers add a trailing slash, and "/" always exists.
+ */
+export async function requireFolders(folders: Record<string, string>): Promise<void> {
+  const problems: string[] = [];
+  for (const [label, path] of Object.entries(folders)) {
+    if (!path.trim()) {
+      problems.push(`${label} is empty`);
+      continue;
+    }
+    try {
+      if (!(await Deno.stat(path)).isDirectory) problems.push(`${label} is not a folder: ${path}`);
+    } catch (error) {
+      if (!(error instanceof Deno.errors.NotFound)) throw error;
+      problems.push(`${label} does not exist (drive unplugged?): ${path}`);
+    }
+  }
+  if (problems.length > 0) {
+    throw new TryLaterError(`${problems.join("\n")}\nNothing was changed.`);
+  }
 }

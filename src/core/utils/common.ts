@@ -4,7 +4,7 @@ import { getPath, loadConfig, validatePaths } from "../../config/index.ts";
 import { logError } from "./errors.ts";
 // ffmpeg npm package no longer needed - using Deno.Command for all conversions
 import nodeId3 from "node-id3";
-import { join } from "@std/path";
+import { extname, join } from "@std/path";
 import { Semaphore } from "../models/Semaphore.ts";
 import { id3Flags } from "../tagging.ts";
 import { normalizeUnicode } from "./unicode.ts";
@@ -191,35 +191,86 @@ export function mergeMetadata(song: Song) {
   return { ...id3Tags, ...song.tags } as nodeId3.Tags & Partial<Tags>;
 }
 
+/** Destinations a move in this process is writing. Lower-cased: the Collection drive is exFAT,
+ * which treats names differing only in case as the same file. */
+const claimedPaths = new Set<string>();
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await Deno.lstat(path);
+    return true;
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) return false;
+    throw error;
+  }
+}
+
+async function removeIfPresent(path: string): Promise<void> {
+  try {
+    await Deno.remove(path);
+  } catch (error) {
+    if (!(error instanceof Deno.errors.NotFound)) throw error;
+  }
+}
+
+/**
+ * Writes the renamed, tagged file into moveDir, never over an existing file. ffmpeg writes a
+ * hidden temp file beside the destination that is renamed into place, so a crash never leaves a
+ * truncated file under a real name. rename(2) replaces its target, so the claim and the exists
+ * check are what prevent an overwrite; across processes, rM's run lock covers it.
+ */
 export async function renameAndMove(
   moveDir: string,
   song: DownloadedSong,
   mergedMetadata?: nodeId3.Tags & Partial<Tags>,
   clear: boolean = false
 ) {
-  await semaphore.acquire();
+  const isMp3 = song.extension === ".mp3";
+  // All non-MP3 formats (WAV, M4A, FLAC, OGG, OPUS, etc.) → AIFF
+  // extname of the final name, not the source's: an edited name may not end in the source's extension.
+  const stem = song.finalFilename.slice(0, song.finalFilename.length - extname(song.finalFilename).length);
+  const finalName = isMp3 ? song.finalFilename : `${stem}.aiff`;
+  const finalPath = `${moveDir}${finalName}`;
+
+  // Claimed before the first await, so two moves to one name in this process can't both pass.
+  const claim = finalPath.normalize("NFC").toLowerCase();
+  if (claimedPaths.has(claim)) {
+    throw new Error(`refusing to overwrite ${finalPath}: another move in this run is writing it`);
+  }
+  claimedPaths.add(claim);
+
   try {
-    let tempImageFile: string | undefined;
-    if (mergedMetadata && typeof mergedMetadata.image === "object" && mergedMetadata.image !== null) {
-      tempImageFile = join(Deno.makeTempDirSync(), `cover-${song.title}.jpg`);
-      await Deno.writeFile(tempImageFile, mergedMetadata.image.imageBuffer);
+    await semaphore.acquire();
+    try {
+      if (await pathExists(finalPath)) throw new Error(`refusing to overwrite ${finalPath}`);
+
+      let tempImageFile: string | undefined;
+      if (mergedMetadata && typeof mergedMetadata.image === "object" && mergedMetadata.image !== null) {
+        tempImageFile = join(Deno.makeTempDirSync(), `cover-${song.title}.jpg`);
+        await Deno.writeFile(tempImageFile, mergedMetadata.image.imageBuffer);
+      }
+
+      // Keeps the real extension: retagMp3 lets ffmpeg infer the format from it.
+      const partialPath = `${moveDir}.tw-partial-${Deno.pid}-${crypto.randomUUID().slice(0, 8)}-${finalName}`;
+      try {
+        if (isMp3) await retagMp3(song, partialPath, tempImageFile);
+        else await convertToAiff(song, partialPath, tempImageFile);
+        await Deno.rename(partialPath, finalPath);
+      } catch (error) {
+        await removeIfPresent(partialPath).catch((cleanup) =>
+          console.error(`Could not remove ${partialPath}: ${cleanup}`)
+        );
+        throw error;
+      }
+
+      if (clear) await Deno.remove(song.fullFilename);
+
+      if (tempImageFile) await Deno.remove(tempImageFile);
+    } finally {
+      semaphore.release();
     }
-
-    let finalPath = `${moveDir}${song.finalFilename}`;
-    if (song.extension === ".mp3") {
-      await retagMp3(song, finalPath, tempImageFile);
-    } else {
-      // All non-MP3 formats (WAV, M4A, FLAC, OGG, OPUS, etc.) → AIFF
-      const baseName = song.finalFilename.slice(0, song.extension.length * -1);
-      finalPath = `${moveDir}${baseName}.aiff`;
-      await convertToAiff(song, finalPath, tempImageFile);
-    }
-
-    if (clear) await Deno.remove(song.fullFilename);
-
-    if (tempImageFile) Deno.remove(tempImageFile);
   } finally {
-    semaphore.release();
+    claimedPaths.delete(claim);
   }
 }
 

@@ -1,3 +1,4 @@
+import { basename } from "@std/path";
 import { ConfidenceLevel, Decision } from "./confidence.ts";
 
 /** Jev's advisory verdict on a manifest entry. Never upgrades a decision, only downgrades. */
@@ -93,6 +94,12 @@ function validateEntry(entry: unknown, index: number, path: string): void {
 
   if (typeof e.src !== "string" || typeof e.proposed !== "string") {
     throw new Error(`Manifest entry ${index} at ${path} requires string src and proposed`);
+  }
+  // Both are joined onto folders by string concatenation; an edited "../x" would escape them.
+  for (const name of [e.src, e.proposed]) {
+    if (name !== basename(name) || name === "." || name === ".." || name.includes("\0")) {
+      throw new Error(`Manifest entry ${index} at ${path}: "${name}" must be a plain filename, not a path`);
+    }
   }
   // parser_output was added in a later version; default to proposed for older manifests
   if (e.parser_output !== undefined && typeof e.parser_output !== "string") {
