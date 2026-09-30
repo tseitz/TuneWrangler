@@ -141,3 +141,35 @@ async def test_a_missing_title_is_not_named_at_all(monkeypatch):
     monkeypatch.setattr(track_naming, "AsyncTypeSafeClient", _fake_client("x", 1.0, calls))
     assert await judge_track_filename(None, "FOSSILS") is None
     assert calls == []
+
+
+# ── Naming a rescued download ──────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_the_name_given_is_the_name_the_track_is_indexed_under(monkeypatch):
+    """The index entry is what links a download to its track in the rename manifest, so it
+    has to sit under the exact name the file is saved as."""
+    import contextlib
+
+    from soundcloud_dl import soundcloud_api, track_index
+
+    @contextlib.asynccontextmanager
+    async def fake_client():
+        yield object()
+
+    async def fake_resolve(_client: object, _url: str) -> dict[str, Any]:
+        return {"title": "PULL UP", "user": {"username": "FOSSILS"}, "label_name": ""}
+
+    monkeypatch.setattr(soundcloud_api, "api_client", fake_client)
+    monkeypatch.setattr(soundcloud_api, "resolve", fake_resolve)
+    url = "https://soundcloud.com/nohypemusicofficial/fossils-pull-up"
+
+    name = await track_naming.name_and_record(url)
+
+    import json
+
+    index = json.loads(track_index.get_track_index_file().read_text(encoding="utf-8"))
+    assert name == "FOSSILS - PULL UP"
+    assert index[name]["url"] == url
+    assert index[name]["label_name"] is None

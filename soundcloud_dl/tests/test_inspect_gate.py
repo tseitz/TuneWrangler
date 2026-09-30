@@ -251,3 +251,20 @@ async def test_a_closed_gate_tab_ends_the_wait_instead_of_crashing(monkeypatch):
     page.is_closed = MagicMock(side_effect=[False, True])
 
     await ig._wait_for_done(page)  # returns rather than raising TargetClosedError
+
+
+@pytest.mark.asyncio
+async def test_a_download_for_a_known_track_is_saved_under_the_track_name(tmp_path):
+    """The rename manifest links a file to its SoundCloud track by this name. Left with the
+    gate's own name, the track can never be pruned from the playlist."""
+    context, page = FakeEmitter(), FakeEmitter()
+    saves = ig._keep_downloads(context, page, tmp_path, "FOSSILS - PULL UP")
+
+    page.emit("download", fake_download("Fossils - FOSSILS - PULL UP.wav"))
+    page.emit("download", fake_download("master.zip"))
+    await ig._finish_saves(saves)
+
+    assert sorted(p.name for p in tmp_path.iterdir()) == [
+        "FOSSILS - PULL UP.wav",
+        "FOSSILS - PULL UP.zip",
+    ]

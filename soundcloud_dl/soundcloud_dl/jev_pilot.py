@@ -29,7 +29,6 @@ from soundcloud_dl.gate_handlers.jev import gate_name_for
 from soundcloud_dl.gate_handlers.judgment import JudgmentGateHandler
 from soundcloud_dl.gate_handlers.login_wall import LoginWallEncountered
 from soundcloud_dl.main import _save_debug_artifacts
-from soundcloud_dl.playlist import blank_to_none
 from soundcloud_dl.playwright_browser import attached_browser
 from soundcloud_dl.run_artifacts import RunRecorder
 from soundcloud_dl.sc_actions_flow import (
@@ -38,8 +37,7 @@ from soundcloud_dl.sc_actions_flow import (
     requirement_follower,
 )
 from soundcloud_dl.soundcloud_page import get_gate_url
-from soundcloud_dl.track_index import record_track
-from soundcloud_dl.track_naming import judge_track_filename
+from soundcloud_dl.track_naming import name_and_record, warn_unlinked
 
 if TYPE_CHECKING:
     from playwright.async_api import BrowserContext
@@ -65,42 +63,13 @@ def _apply_oauth_policy(handler: GateHandler, gate_url: str) -> None:
     handler.oauth_approve_once = policy.oauth_approve_once
 
 
-async def _resolve_track_title(url: str) -> str | None:
-    """Name the file "<artist> - <title>", the same as the playlist pipeline does.
-
-    A bare gate URL carries no track, and the resolve needs a working API token, so this
-    is allowed to come back empty — the download then keeps the name the gate suggested,
-    which is worse but is not worth failing a run over.
-    """
-    if "soundcloud.com" not in url:
+async def _name_download(url: str, track_url: str | None) -> str | None:
+    """The download's name, from --track if given, else from the URL when it is a track."""
+    track_url = track_url or (url if "soundcloud.com" in url else None)
+    if track_url is None:
+        warn_unlinked()
         return None
-    try:
-        from soundcloud_dl.soundcloud_api import api_client, resolve  # noqa: PLC0415
-
-        async with api_client() as client:
-            track = await resolve(client, url)
-        uploader = (track.get("user") or {}).get("username")
-        title = await judge_track_filename(track.get("title"), uploader)
-        if title:
-            record_track(
-                title,
-                url=url,
-                title=track.get("title"),
-                uploader=uploader,
-                metadata_artist=blank_to_none(track.get("metadata_artist")),
-                label_name=blank_to_none(track.get("label_name")),
-            )
-    except Exception:  # noqa: BLE001
-        # Auth, network and a resolve that answers something other than a track all end the
-        # same way here: name the file what the gate called it and get on with the run.
-        logger.warning(
-            "Could not read the track's title from SoundCloud — the download will keep "
-            "the filename the gate suggests",
-            exc_info=True,
-        )
-        return None
-    logger.info("Downloads will be named %r", title)
-    return title
+    return await name_and_record(track_url)
 
 
 async def _settle_follows(actions: dict[str, ActionResult], *, resuming: bool) -> None:
@@ -128,12 +97,14 @@ async def _clean_up_comment(context: BrowserContext, url: str, *, resuming: bool
         logger.exception("Comment clean-up failed for %s", url)
 
 
-async def run_jev_pilot(url: str, *, pause: bool = False, sc_actions: bool = False) -> None:
+async def run_jev_pilot(
+    url: str, *, track_url: str | None = None, pause: bool = False, sc_actions: bool = False
+) -> None:
     """Open a gate URL and let JudgmentGateHandler drive it, reporting the outcome."""
     validate_jev_config()
 
     actions: dict[str, ActionResult] = {}
-    track_title = await _resolve_track_title(url)
+    track_title = await _name_download(url, track_url)
 
     # --pause exists so the page can be inspected between steps; that needs a window.
     # None rather than False otherwise, so a configured preference for headed still wins.

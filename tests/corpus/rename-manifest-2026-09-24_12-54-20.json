@@ -2211,6 +2211,13 @@
         "judged_proposed": "INAKTIV - MUD.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.698Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/inaktivity/inaktiv-mud",
+        "title": "INAKTIV - MUD (FREE)",
+        "uploader": "INAKTIV",
+        "metadata_artist": "INAKTIV",
+        "label_name": null
       }
     },
     {
@@ -2261,6 +2268,13 @@
         "judged_proposed": "Midnight Club - Drown - Wink & Borne.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:21.772Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/midnightclubworldwide/drown-wink-borne-midnight-club",
+        "title": "Wink & Borne - Drown (Midnight Club Flip)",
+        "uploader": "Midnight Club",
+        "metadata_artist": "Midnight Club",
+        "label_name": null
       }
     },
     {
@@ -3039,6 +3053,13 @@
         "judged_proposed": "Britto - Bounce.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.214Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/brittomusicofficial/bounce-britto-remixx",
+        "title": "Bounce (Britto Remix) [FREE DL]",
+        "uploader": "Britto",
+        "metadata_artist": "Britto",
+        "label_name": null
       }
     },
     {
@@ -3186,6 +3207,13 @@
         "judged_proposed": "dad hat - twerk (extended mix).wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.338Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/dad-hat-music/twerk",
+        "title": "twerk",
+        "uploader": "dad hat",
+        "metadata_artist": "dad hat",
+        "label_name": null
       }
     },
     {
@@ -3341,6 +3369,13 @@
         "judged_proposed": "2JUICY - Fineshrine.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.365Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/2juicymusic/fineshrine-2juicy-flip",
+        "title": "Fineshrine (2JUICY Remix)",
+        "uploader": "2JUICY💦",
+        "metadata_artist": "2JUICY",
+        "label_name": null
       }
     },
     {
@@ -3351,7 +3386,14 @@
       "reasons": [
         "artist name appears in both artist and album fields (likely self-remix or parser confusion)"
       ],
-      "decision": "apply"
+      "decision": "apply",
+      "soundcloud": {
+        "url": "https://soundcloud.com/nohypemusicofficial/fossils-pull-up",
+        "title": "FOSSILS - PULL UP",
+        "uploader": "No Hype Music",
+        "metadata_artist": "Fossils",
+        "label_name": "No Hype Music"
+      }
     },
     {
       "src": "Gunpoint - Taiki Nulight - Style (Gunpoint Reload).wav",
@@ -3527,6 +3569,13 @@
         "judged_proposed": "mindsplitter - The One That Whispers.wav",
         "model": "jev-1.13.0",
         "judged_at": "2026-09-24T12:54:22.443Z"
+      },
+      "soundcloud": {
+        "url": "https://soundcloud.com/mindsplitter/the-one-that-whispers-1",
+        "title": "The One That Whispers",
+        "uploader": "Mind Splitter",
+        "metadata_artist": "Mind Splitter",
+        "label_name": null
       }
     },
     {

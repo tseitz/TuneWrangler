@@ -181,6 +181,15 @@ def _parse_args() -> argparse.Namespace:
         ),
     )
     p.add_argument(
+        "--track",
+        metavar="TRACK_URL",
+        help=(
+            "With --jev or --inspect on a bare gate URL: the SoundCloud track it belongs to. "
+            "The download is then named and indexed like a playlist run's, so the rename "
+            "manifest links it to the track and --prune-playlist can remove it."
+        ),
+    )
+    p.add_argument(
         "--sc-probe",
         metavar="TRACK_URL",
         help=(
@@ -291,6 +300,10 @@ def _parse_args() -> argparse.Namespace:
     if len(chosen) > 1:
         # --apply means something different to each of them, so one run does one thing.
         p.error(f"pick one of {', '.join(chosen)}")
+    if args.track and not (args.jev or args.inspect):
+        p.error("--track only applies to --jev or --inspect")
+    if args.track and "soundcloud.com" not in args.track:
+        p.error("--track takes a SoundCloud track URL")
     return args
 
 
@@ -866,7 +879,7 @@ def _run_one_shot(args: argparse.Namespace) -> bool:  # noqa: C901, PLR0912
         gate_name, url = args.record
         record(gate_name, url)
     elif args.inspect:
-        asyncio.run(inspect_gate(args.inspect))
+        asyncio.run(inspect_gate(args.inspect, args.track))
     elif args.sc_auth:
         from soundcloud_dl.soundcloud_auth import authorize  # noqa: PLC0415
 
@@ -907,7 +920,11 @@ def _run_one_shot(args: argparse.Namespace) -> bool:  # noqa: C901, PLR0912
     elif args.jev:
         from soundcloud_dl.jev_pilot import run_jev_pilot  # noqa: PLC0415
 
-        asyncio.run(run_jev_pilot(args.jev, pause=args.pause, sc_actions=args.sc_actions))
+        asyncio.run(
+            run_jev_pilot(
+                args.jev, track_url=args.track, pause=args.pause, sc_actions=args.sc_actions
+            )
+        )
     elif args.login:
         asyncio.run(_run_login_bootstrap())
     else:

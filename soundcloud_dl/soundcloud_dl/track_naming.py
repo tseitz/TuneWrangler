@@ -18,6 +18,8 @@ from typesafe_sdk import AsyncTypeSafeClient, Choice
 
 from soundcloud_dl.config import TYPESAFE_API_KEY
 from soundcloud_dl.downloads import track_filename
+from soundcloud_dl.playlist import blank_to_none
+from soundcloud_dl.track_index import record_track
 
 logger = logging.getLogger("soundcloud_dl.track_naming")
 
@@ -135,3 +137,47 @@ async def judge_track_filename(title: str | None, artist: str | None) -> str | N
             answer.confidence,
         )
     return answer.choice
+
+
+async def name_and_record(track_url: str) -> str | None:
+    """Name a download "<artist> - <title>" as the playlist run does, and index it by that name.
+
+    The index entry is what links the file to its track in the rename manifest; without one,
+    --prune-playlist can never prove the track was collected. Allowed to come back empty (no
+    API token, a URL that is not a track) — the download then keeps the gate's own name,
+    which is worse but not worth failing a run over.
+    """
+    try:
+        from soundcloud_dl.soundcloud_api import api_client, resolve  # noqa: PLC0415
+
+        async with api_client() as client:
+            track = await resolve(client, track_url)
+        uploader = (track.get("user") or {}).get("username")
+        title = await judge_track_filename(track.get("title"), uploader)
+        if title:
+            record_track(
+                title,
+                url=track_url,
+                title=track.get("title"),
+                uploader=uploader,
+                metadata_artist=blank_to_none(track.get("metadata_artist")),
+                label_name=blank_to_none(track.get("label_name")),
+            )
+    except Exception:  # noqa: BLE001
+        # Auth, network and a resolve that answers something other than a track all end the
+        # same way here: name the file what the gate called it and get on with the run.
+        logger.warning(
+            "Could not read the track's title from SoundCloud — the download will keep "
+            "the filename the gate suggests",
+            exc_info=True,
+        )
+        return None
+    logger.info("Downloads will be named %r", title)
+    return title
+
+
+def warn_unlinked() -> None:
+    logger.warning(
+        "No SoundCloud track URL: the download keeps the gate's filename and is not linked "
+        "to its track, so --prune-playlist will never remove it. Pass --track <soundcloud-url>."
+    )

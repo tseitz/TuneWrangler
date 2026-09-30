@@ -9,7 +9,7 @@ is the one the handler has to wait for.
 A gate is one-shot — completing it satisfies it for this account forever — so everything
 here is built to not lose a walkthrough that cannot be repeated.
 
-Run it with: deno task py --inspect <gate-url>
+Run it with: deno task py --inspect <gate-url> [--track <soundcloud-url>]
 """
 
 import asyncio
@@ -27,6 +27,7 @@ from soundcloud_dl.config import DOWNLOAD_DIR, get_debug_dir, get_log_dir
 from soundcloud_dl.downloads import save_download
 from soundcloud_dl.gate_handlers.dom_snapshot import SNAPSHOT_JS, snapshot_elements
 from soundcloud_dl.playwright_browser import attached_browser
+from soundcloud_dl.track_naming import name_and_record, warn_unlinked
 
 logger = logging.getLogger("soundcloud_dl.inspect_gate")
 
@@ -251,7 +252,12 @@ async def _write_page(page: Page, path: Any, label: str) -> None:  # noqa: ANN40
     logger.info("Snapshot → %s", path)
 
 
-def _keep_downloads(context: Any, page: Any, dest_dir: Path) -> list[asyncio.Future]:  # noqa: ANN401
+def _keep_downloads(
+    context: Any,  # noqa: ANN401
+    page: Any,  # noqa: ANN401
+    dest_dir: Path,
+    track_title: str | None = None,
+) -> list[asyncio.Future]:
     """Save every download the operator starts, on the gate page or any popup.
 
     An attached browser's downloads land in a Playwright temp dir that is deleted on
@@ -262,7 +268,7 @@ def _keep_downloads(context: Any, page: Any, dest_dir: Path) -> list[asyncio.Fut
     # Plain functions: Playwright tags a handler with an attribute, which a bound method
     # cannot carry, so page.on raises at attach time.
     def keep(download: Any) -> None:  # noqa: ANN401
-        saves.append(asyncio.ensure_future(_save(download, dest_dir)))
+        saves.append(asyncio.ensure_future(_save(download, dest_dir, track_title)))
 
     def watch(new_page: Any) -> None:  # noqa: ANN401
         new_page.on("download", keep)
@@ -272,14 +278,17 @@ def _keep_downloads(context: Any, page: Any, dest_dir: Path) -> list[asyncio.Fut
     return saves
 
 
-async def _save(download: Any, dest_dir: Path) -> None:  # noqa: ANN401
-    dest = await save_download(download, _free_path(dest_dir / download.suggested_filename))
+async def _save(download: Any, dest_dir: Path, track_title: str | None) -> None:  # noqa: ANN401
+    name = download.suggested_filename
+    if track_title:
+        name = f"{track_title}{Path(name).suffix}"
+    dest = await save_download(download, _free_path(dest_dir / name))
     logger.info("Saved inspect download → %s", dest)
 
 
 def _free_path(path: Path) -> Path:
-    """`path`, or `name (n).ext` if taken — these files keep the gate's own name, and
-    artists reuse names like master.wav."""
+    """`path`, or `name (n).ext` if taken — artists reuse gate names like master.wav, and
+    one track can unlock several files."""
     n = 1
     candidate = path
     while candidate.exists():
@@ -305,13 +314,20 @@ async def _finish_saves(saves: list[asyncio.Future]) -> None:
             logger.warning("A download could not be saved: %s", task.exception())
 
 
-async def inspect_gate(url: str) -> None:
+async def inspect_gate(url: str, track_url: str | None = None) -> None:
     """Open a gate page, wait for a manual unlock, and report what the unlock changed."""
     debug_dir = get_debug_dir()
+    if track_url:
+        track_title = await name_and_record(track_url)
+    else:
+        track_title = None
+        warn_unlinked()
     # The unlock being measured is performed by hand, so this one always needs a window.
     async with attached_browser(headed=True) as context:
         page = await context.new_page()
-        saves = _keep_downloads(context, page, DOWNLOAD_DIR or get_log_dir() / "downloads")
+        saves = _keep_downloads(
+            context, page, DOWNLOAD_DIR or get_log_dir() / "downloads", track_title
+        )
         try:
             await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
             logger.info("Gate page open: %s", page.url)
