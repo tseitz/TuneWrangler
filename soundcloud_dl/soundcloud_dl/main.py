@@ -72,7 +72,12 @@ from soundcloud_dl.sc_actions_flow import (
     release_follows_taken,
     requirement_follower,
 )
-from soundcloud_dl.soundcloud_page import SoundCloudPageError, get_gate_url, try_native_sc_download
+from soundcloud_dl.soundcloud_page import (
+    SoundCloudPageError,
+    gate_in_description,
+    get_gate_url,
+    try_native_sc_download,
+)
 from soundcloud_dl.track_index import record_track
 from soundcloud_dl.track_naming import judge_track_filename
 
@@ -456,7 +461,16 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             logger.info("DOWNLOAD_SUCCESS | %s | native SC download", track_label)
             return TrackOutcome("done")
 
-        if track.purchase_url:
+        if (
+            track.purchase_url
+            and skip_reason(track.purchase_url) is not None
+            and (described := gate_in_description(track.description))
+        ):
+            gate_url = described
+            logger.info(
+                "Buy link %s is skipped; using description gate %s", track.purchase_url, gate_url
+            )
+        elif track.purchase_url:
             gate_url = track.purchase_url
             logger.info("Using purchase_url from API: %s", gate_url)
         else:

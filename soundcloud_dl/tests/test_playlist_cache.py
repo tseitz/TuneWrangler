@@ -146,10 +146,10 @@ def test_load_returns_none_on_corrupt_json(cache_path: Path) -> None:
 def test_load_skips_invalid_items_returns_valid_ones(cache_path: Path) -> None:
     payload = {
         "https://soundcloud.com/u/sets/p": [
-            {"url": "https://x", "title": "ok", "downloadable": False, "metadata_artist": None},
+            {"url": "https://x", "title": "ok", "downloadable": False, "metadata_artist": None, "description": None},
             {"title": "no url"},  # invalid — skipped
             "not a dict",  # invalid — skipped
-            {"url": "https://y", "downloadable": False, "metadata_artist": None},
+            {"url": "https://y", "downloadable": False, "metadata_artist": None, "description": None},
         ]
     }
     cache_path.write_text(json.dumps(payload), encoding="utf-8")
@@ -204,5 +204,17 @@ def test_a_cache_written_before_the_credit_fields_is_re_read(cache_path: Path) -
 
 def test_the_credit_fields_survive_a_cache_round_trip(cache_path: Path) -> None:
     track = TrackItem(url="https://sc/t", metadata_artist="IDHS, XI", label_name="Subcarbon")
+    save_cached_tracks("https://x/p", [track])
+    assert load_cached_tracks("https://x/p") == [track]
+
+
+def test_a_cache_written_before_the_description_field_is_re_read(cache_path: Path) -> None:
+    stored = {"url": "https://sc/t", "downloadable": False, "metadata_artist": None}
+    cache_path.write_text(json.dumps({"https://x/p": [stored]}), encoding="utf-8")
+    assert load_cached_tracks("https://x/p") is None
+
+
+def test_the_description_survives_a_cache_round_trip(cache_path: Path) -> None:
+    track = TrackItem(url="https://sc/t", description="FREE DL: https://hypeddit.com/a/b")
     save_cached_tracks("https://x/p", [track])
     assert load_cached_tracks("https://x/p") == [track]

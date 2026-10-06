@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, urlparse
@@ -77,6 +78,18 @@ async def track_content_frame(page: Page) -> Frame | None:
 def _host_is_gate(url: str) -> bool:
     host = (urlparse(url).hostname or "").lower()
     return any(host == d or host.endswith(f".{d}") for d in _GATE_DOMAINS)
+
+
+_URL_IN_TEXT = re.compile(r"https?://[^\s<>\"')\]]+")
+
+
+def gate_in_description(description: str | None) -> str | None:
+    """The first gate link in a track description that is not skip-listed."""
+    for found in _URL_IN_TEXT.findall(description or ""):
+        url = _unwrap_gate_sc(found.rstrip(".,;!"))
+        if _host_is_gate(url) and skip_reason(url) is None:
+            return url
+    return None
 
 
 def _unwrap_gate_sc(href: str) -> str:

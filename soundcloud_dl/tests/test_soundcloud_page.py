@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from soundcloud_dl.soundcloud_page import _decode_gate_sc
+from soundcloud_dl.soundcloud_page import _decode_gate_sc, gate_in_description
 
 
 @pytest.mark.parametrize(
@@ -90,3 +90,21 @@ def test_unwrap_gate_sc(href: str, expected: str) -> None:
     from soundcloud_dl.soundcloud_page import _unwrap_gate_sc  # noqa: PLC0415
 
     assert _unwrap_gate_sc(href) == expected
+
+
+def test_gate_in_description_finds_the_gate_link() -> None:
+    text = "Out now on vinyl https://x.bandcamp.com/album/y\nFREE DL: https://hypeddit.com/a/b."
+    assert gate_in_description(text) == "https://hypeddit.com/a/b"
+
+
+def test_gate_in_description_unwraps_gate_sc() -> None:
+    text = "DL https://gate.sc?url=https%3A%2F%2Fhypeddit.com%2Fa%2Fb&token=x"
+    assert gate_in_description(text) == "https://hypeddit.com/a/b"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [None, "", "no links", "https://x.bandcamp.com/album/y", "https://instagram.com/hypeddit"],
+)
+def test_gate_in_description_ignores_non_gates(text: str | None) -> None:
+    assert gate_in_description(text) is None

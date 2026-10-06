@@ -37,6 +37,7 @@ class TrackItem:
     #: artists' tracks, and a remix credits the original artist too.
     metadata_artist: str | None = None
     label_name: str | None = None
+    description: str | None = None
 
 
 def _get_access_token(client_id: str, client_secret: str) -> str:
@@ -108,6 +109,7 @@ def _track_to_item(track: dict) -> TrackItem | None:
         download_url=download_url if isinstance(download_url, str) else None,
         metadata_artist=blank_to_none(track.get("metadata_artist")),
         label_name=blank_to_none(track.get("label_name")),
+        description=blank_to_none(track.get("description")),
     )
 
 

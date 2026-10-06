@@ -192,3 +192,30 @@ async def test_the_judged_filename_is_recorded_with_what_soundcloud_credits(
     index = json.loads(track_index.get_track_index_file().read_text(encoding="utf-8"))
     assert index["A - B"]["metadata_artist"] == "A, C"
     assert index["A - B"]["url"] == track.url
+
+
+@pytest.mark.asyncio
+async def test_a_description_gate_is_opened_instead_of_a_bandcamp_buy_link(
+    released, monkeypatch
+):
+    from soundcloud_dl.gate_handlers import skip_reason
+
+    monkeypatch.setattr(main_mod, "skip_reason", skip_reason)
+
+    async def _run(_self, _page):
+        return {}
+
+    _handler_that(_run, monkeypatch)
+    hypeddit = "https://hypeddit.com/wormholemusicgroup/faketwopiececheapbastards"
+    track = TrackItem(
+        url="https://soundcloud.com/a/b",
+        title="A - B",
+        purchase_url="https://wormholemusicgroup.bandcamp.com/album/severance-ep",
+        description=f"STREAM//DOWNLOAD: {hypeddit}\n\nFOLLOW: @a",
+    )
+    context = _context()
+    outcome = await main_mod._process_track(context, track, sc_actions=False)
+    assert outcome.state != "unsupported"
+    page = context.new_page.return_value
+    page.goto.assert_awaited_once()
+    assert page.goto.await_args.args[0] == hypeddit

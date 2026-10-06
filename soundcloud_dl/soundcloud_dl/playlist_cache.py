@@ -27,6 +27,9 @@ def _normalize_playlist_url(url: str) -> str:
     return s.rstrip("/")
 
 
+_REQUIRED_FIELDS = ("downloadable", "metadata_artist", "description")
+
+
 def _str_or_none(value: object) -> str | None:
     """Return value if it's a string, else None — used to filter optional cache fields."""
     return value if isinstance(value, str) else None
@@ -54,6 +57,7 @@ def _item_to_track(item: object) -> TrackItem | None:
         download_url=_str_or_none(d.get("download_url")),
         metadata_artist=_str_or_none(d.get("metadata_artist")),
         label_name=_str_or_none(d.get("label_name")),
+        description=_str_or_none(d.get("description")),
     )
 
 
@@ -90,17 +94,14 @@ def load_cached_tracks(playlist_url: str) -> list[TrackItem] | None:
     stored = _get_stored_list(data, key)
     if not isinstance(stored, list):
         return None
-    # An entry written before downloadable/download_url existed cannot answer whether a
-    # track has its own download, and absent would read as "no" — silently retiring every
-    # cached track to the gate flow, or to NO_GATE. Re-read the playlist instead.
-    if any(isinstance(i, dict) and "url" in i and "downloadable" not in i for i in stored):
-        logger.info("Playlist cache predates the download fields — re-reading from the API")
-        return None
-    # Same trap for the credit fields: absent reads as "SoundCloud credits nobody", and the
-    # rename manifest would never see who a label upload is really by.
-    if any(isinstance(i, dict) and "url" in i and "metadata_artist" not in i for i in stored):
-        logger.info("Playlist cache predates the credit fields — re-reading from the API")
-        return None
+    # An entry written before a field existed reads it as absent, and absent is a wrong
+    # answer: no `downloadable` retires every cached track to the gate flow, no
+    # `metadata_artist` hides who a label upload is really by, no `description` hides the
+    # gate link a store buy link displaces. Re-read the playlist instead.
+    for field in _REQUIRED_FIELDS:
+        if any(isinstance(i, dict) and "url" in i and field not in i for i in stored):
+            logger.info("Playlist cache predates %r — re-reading from the API", field)
+            return None
     tracks: list[TrackItem] = []
     for item in stored:
         track = _item_to_track(item)
@@ -125,6 +126,7 @@ def save_cached_tracks(playlist_url: str, tracks: list[TrackItem]) -> None:
             "download_url": t.download_url,
             "metadata_artist": t.metadata_artist,
             "label_name": t.label_name,
+            "description": t.description,
         }
         for t in tracks
     ]
