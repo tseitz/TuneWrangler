@@ -404,9 +404,9 @@ def test_real_library_has_no_broken_links():
 
 @pytest.mark.integration
 def test_uniform_contexts_share_identical_core():
-    # Every context has an identical 82-leaf CORE. Some (Pool Party, Chillin,
+    # Every context has an identical 85-leaf CORE. Some (Pool Party, Chillin,
     # Franky's Beach) additionally carry an optional Clean/ folder — excluded
-    # from the core via AUGMENTABLE_SUBTREES — so they resolve to >82 leaves.
+    # from the core via AUGMENTABLE_SUBTREES — so they resolve to >85 leaves.
     sigs = {}
     for stem in UNIFORM_CONTEXTS:
         res = resolve_context(PLAYLIST_DATA / f"{stem}.json", PLAYLIST_DATA)
@@ -415,7 +415,7 @@ def test_uniform_contexts_share_identical_core():
             for leaf in res.leaves
             if not (len(leaf.path) > 1 and leaf.path[1] in AUGMENTABLE_SUBTREES)
         ]
-        assert len(core) == 82, f"{stem} core has {len(core)} leaves, expected 82"
+        assert len(core) == 85, f"{stem} core has {len(core)} leaves, expected 85"
         sigs[stem] = _signature(res.leaves, ignore=AUGMENTABLE_SUBTREES)
     assert len(set(sigs.values())) == 1, "uniform contexts do not share an identical core"
 
@@ -425,6 +425,6 @@ def test_library_total_is_within_expected_range():
     total = sum(
         len(resolve_context(f, PLAYLIST_DATA).leaves) for f in _context_files(PLAYLIST_DATA)
     )
-    # 15*82 core + My Set 34 + Genres 20 + Light 6*8 + Recent 4 + Go Through 3
-    # + Clean folders 2*8 (Pool Party, Chillin) = 1355
+    # 15*85 core + My Set 35 + Genres 21 + Light 6*8 + Recent 4 + Go Through 3
+    # + Clean folders 2*8 (Pool Party, Chillin) = 1402
     assert 1300 <= total <= 1420, f"unexpected library total: {total}"
