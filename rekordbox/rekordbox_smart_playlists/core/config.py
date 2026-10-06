@@ -24,11 +24,6 @@ class Config:
     """Configuration class with default values and validation."""
 
     # Paths
-    collection_path: str = field(
-        default_factory=lambda: os.path.expanduser(
-            "~/Library/CloudStorage/GoogleDrive-tdseitz10@gmail.com/My Drive/DJ/Dane Dubz DJ Music/Collection"
-        )
-    )
     playlist_data_path: str = field(default_factory=lambda: "playlist-data")
     backup_base_path: str = field(
         default_factory=lambda: os.path.expanduser(
@@ -53,20 +48,10 @@ class Config:
     auto_backup: bool = True
     backup_before_changes: bool = True
 
-    # Metadata settings
-    metadata_newer_than_days: int = 30
-
     # Processing settings
     dry_run: bool = False
     verbose: bool = False
     progress_interval: int = 10
-
-    # Audio file extensions
-    # ".aif" is the same format as ".aiff". Leaving it out made those files
-    # invisible to every scan, so they were never checked for metadata drift.
-    audio_extensions: set = field(
-        default_factory=lambda: {".mp3", ".wav", ".flac", ".aiff", ".aif", ".m4a"}
-    )
 
     # Logging
     log_level: str = "INFO"
@@ -109,11 +94,7 @@ class Config:
         # Update with provided values
         for key, value in config_data.items():
             if hasattr(config, key):
-                # Handle special cases
-                if key == "audio_extensions" and isinstance(value, list):
-                    setattr(config, key, set(value))
-                else:
-                    setattr(config, key, value)
+                setattr(config, key, value)
             else:
                 logger.warning(f"Unknown configuration key: {key}")
 
@@ -125,11 +106,9 @@ class Config:
         config = cls()
 
         env_mapping = {
-            "REKORDBOX_COLLECTION_PATH": "collection_path",
             "REKORDBOX_PLAYLIST_DATA_PATH": "playlist_data_path",
             "REKORDBOX_BACKUP_PATH": "backup_base_path",
             "REKORDBOX_PIONEER_INSTALL": "pioneer_install_dir",
-            "REKORDBOX_METADATA_NEWER_THAN_DAYS": "metadata_newer_than_days",
             "REKORDBOX_DRY_RUN": "dry_run",
             "REKORDBOX_VERBOSE": "verbose",
             "REKORDBOX_LOG_LEVEL": "log_level",
@@ -148,7 +127,7 @@ class Config:
                 ]:
                     bool_value = value.lower() in ("true", "1", "yes", "on")
                     setattr(config, config_key, bool_value)
-                elif config_key in ["max_backups", "progress_interval", "metadata_newer_than_days"]:
+                elif config_key in ["max_backups", "progress_interval"]:
                     try:
                         int_value = int(value)
                         setattr(config, config_key, int_value)
@@ -185,7 +164,6 @@ class Config:
 
         # Validate paths
         required_paths = {
-            "collection_path": self.collection_path,
             "playlist_data_path": self.playlist_data_path,
         }
 
@@ -202,10 +180,6 @@ class Config:
 
         if self.progress_interval < 1:
             logger.error("progress_interval must be at least 1")
-            is_valid = False
-
-        if self.metadata_newer_than_days < 1:
-            logger.error("metadata_newer_than_days must be at least 1")
             is_valid = False
 
         # Validate log level

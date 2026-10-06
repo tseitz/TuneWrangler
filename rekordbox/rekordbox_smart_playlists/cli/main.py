@@ -11,7 +11,7 @@ from typing import Optional, List
 
 from ..utils.logging import setup_logging, get_logger
 from ..core.config import Config, load_config, find_config_file
-from .commands import PlaylistCommand, BackupCommand, MetadataCommand
+from .commands import PlaylistCommand, BackupCommand
 
 logger = get_logger(__name__)
 
@@ -32,12 +32,6 @@ Examples:
   
   # Create backup before operations
   rekordbox-smart-playlists backup create
-  
-  # Fix metadata interactively
-  rekordbox-smart-playlists metadata fix --interactive
-  
-  # Preview metadata changes
-  rekordbox-smart-playlists metadata preview
         """,
     )
 
@@ -79,12 +73,6 @@ Examples:
         "backup", help="Backup and restore commands", aliases=["bk"]
     )
     BackupCommand.setup_parser(backup_parser)
-
-    # Metadata commands
-    metadata_parser = subparsers.add_parser(
-        "metadata", help="Metadata synchronization commands", aliases=["meta"]
-    )
-    MetadataCommand.setup_parser(metadata_parser)
 
     return parser
 
@@ -160,8 +148,6 @@ def validate_args(args: argparse.Namespace) -> bool:
         return PlaylistCommand.validate_args(args)
     elif args.command in ["backup", "bk"]:
         return BackupCommand.validate_args(args)
-    elif args.command in ["metadata", "meta"]:
-        return MetadataCommand.validate_args(args)
 
     return True
 
@@ -209,9 +195,6 @@ def main(argv: Optional[List[str]] = None) -> int:
         elif args.command in ["backup", "bk"]:
             backup_command = BackupCommand(config)
             exit_code = backup_command.execute(args)
-        elif args.command in ["metadata", "meta"]:
-            metadata_command = MetadataCommand(config)
-            exit_code = metadata_command.execute(args)
         else:
             logger.error(f"Unknown command: {args.command}")
             exit_code = 1

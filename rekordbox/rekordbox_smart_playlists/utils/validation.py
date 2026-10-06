@@ -361,45 +361,6 @@ def validate_audio_file_extensions(
     )
 
 
-def validate_rekordbox_paths(config: Dict[str, Any]) -> Tuple[bool, List[str]]:
-    """
-    Validate Rekordbox-specific paths in configuration.
-
-    Args:
-        config: Configuration dictionary
-
-    Returns:
-        Tuple of (is_valid, list_of_errors)
-    """
-    errors = []
-
-    # Check Pioneer directories
-    pioneer_paths = {
-        "pioneer_app_support": "Pioneer Application Support directory",
-        "pioneer_library": "Pioneer Library directory",
-    }
-
-    for path_key, description in pioneer_paths.items():
-        if path_key in config:
-            is_valid, error = validate_directory_path(config[path_key], must_exist=False)
-            if not is_valid:
-                errors.append(f"{description}: {error}")
-
-    # Check collection path
-    if "collection_path" in config:
-        is_valid, error = validate_directory_path(config["collection_path"], must_exist=True)
-        if not is_valid:
-            errors.append(f"Collection path: {error}")
-
-    # Check playlist data path
-    if "playlist_data_path" in config:
-        is_valid, error = validate_directory_path(config["playlist_data_path"], must_exist=True)
-        if not is_valid:
-            errors.append(f"Playlist data path: {error}")
-
-    return len(errors) == 0, errors
-
-
 if __name__ == "__main__":
     # Example usage and testing
     import logging
