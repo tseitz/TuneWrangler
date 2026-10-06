@@ -2,8 +2,8 @@
 Command-line interface modules.
 """
 
+from .commands import BackupCommand, PlaylistCommand
 from .main import main
-from .commands import PlaylistCommand, BackupCommand
 
 __all__ = [
     "main",

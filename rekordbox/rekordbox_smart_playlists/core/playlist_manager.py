@@ -6,29 +6,29 @@ Provides high-level operations for playlist creation with proper error handling 
 """
 
 import json
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Union, Set
-from dataclasses import dataclass
+from typing import Any
 
 from pyrekordbox.db6.smartlist import (
-    SmartList,
-    Property,
-    Operator,
     LogicalOperator,
+    Operator,
+    Property,
+    SmartList,
     left_bitshift,
 )
 
 from ..utils.logging import (
+    create_progress_logger,
     get_logger,
-    log_success,
     log_error,
     log_exception,
-    create_progress_logger,
+    log_success,
 )
 from ..utils.validation import validate_playlist_config
-from .database import RekordboxDatabase
 from .config import Config
+from .database import RekordboxDatabase
 
 logger = get_logger(__name__)
 
@@ -59,10 +59,10 @@ class PlaylistCreationResult:
 
     success: bool
     playlist_name: str
-    error_message: Optional[str] = None
+    error_message: str | None = None
     skipped: bool = False
-    skip_reason: Optional[str] = None
-    created_playlists: Optional[List[str]] = None
+    skip_reason: str | None = None
+    created_playlists: list[str] | None = None
 
     def __post_init__(self) -> None:
         if self.created_playlists is None:
@@ -85,9 +85,9 @@ class PlaylistManager:
         self.db = database
         self.config = config
         self.existing_strategy = ExistingPlaylistStrategy.PROMPT_EACH
-        self._created_playlists: List[str] = []
-        self._skip_parents: Set[str] = set()
-        self._tag_cache: Dict[str, Any] = {}
+        self._created_playlists: list[str] = []
+        self._skip_parents: set[str] = set()
+        self._tag_cache: dict[str, Any] = {}
         self._load_tag_cache()
 
     def _load_tag_cache(self) -> None:
@@ -100,8 +100,8 @@ class PlaylistManager:
             log_exception(logger, e, "loading tag cache")
 
     def create_playlists_from_file(
-        self, config_file: Union[str, Path], start_sequence: Optional[int] = None
-    ) -> List[PlaylistCreationResult]:
+        self, config_file: str | Path, start_sequence: int | None = None
+    ) -> list[PlaylistCreationResult]:
         """
         Create playlists from a JSON configuration file.
 
@@ -122,7 +122,7 @@ class PlaylistManager:
             raise PlaylistCreationError(f"Configuration file not found: {config_path}")
 
         try:
-            with open(config_path, "r", encoding="utf-8") as f:
+            with open(config_path, encoding="utf-8") as f:
                 config_data = json.load(f)
         except json.JSONDecodeError as e:
             raise PlaylistValidationError(f"Invalid JSON in {config_path}: {e}") from e
@@ -140,9 +140,9 @@ class PlaylistManager:
 
     def create_playlists_from_data(
         self,
-        playlist_data: List[Dict[str, Any]],
-        start_sequence: Optional[int] = None,
-    ) -> List[PlaylistCreationResult]:
+        playlist_data: list[dict[str, Any]],
+        start_sequence: int | None = None,
+    ) -> list[PlaylistCreationResult]:
         """
         Create playlists from configuration data.
 
@@ -179,8 +179,8 @@ class PlaylistManager:
         return results
 
     def _create_category_playlists(
-        self, category_data: Dict[str, Any], sequence: Optional[int] = None
-    ) -> List[PlaylistCreationResult]:
+        self, category_data: dict[str, Any], sequence: int | None = None
+    ) -> list[PlaylistCreationResult]:
         """
         Create playlists for a single category.
 
@@ -248,8 +248,8 @@ class PlaylistManager:
         return results
 
     def _get_or_create_parent_folder(
-        self, parent_name: str, sequence: Optional[int] = None
-    ) -> Optional[Any]:
+        self, parent_name: str, sequence: int | None = None
+    ) -> Any | None:
         """
         Get existing parent folder or create new one.
 
@@ -297,10 +297,10 @@ class PlaylistManager:
 
     def _create_single_playlist(
         self,
-        playlist_config: Dict[str, Any],
+        playlist_config: dict[str, Any],
         parent_playlist: Any,
-        main_conditions: Set[str],
-        negative_conditions: Set[str],
+        main_conditions: set[str],
+        negative_conditions: set[str],
     ) -> PlaylistCreationResult:
         """
         Create a single smart playlist.
@@ -388,10 +388,10 @@ class PlaylistManager:
 
     def _create_folder_playlist(
         self,
-        playlist_config: Dict[str, Any],
+        playlist_config: dict[str, Any],
         parent_playlist: Any,
-        inherited_main_conditions: Set[str],
-        inherited_negative_conditions: Set[str],
+        inherited_main_conditions: set[str],
+        inherited_negative_conditions: set[str],
     ) -> PlaylistCreationResult:
         """
         Create a folder-type playlist by processing linked configuration.
@@ -469,7 +469,7 @@ class PlaylistManager:
         # Load linked configuration and process it with the folder as parent
         link_path = Path(self.config.playlist_data_path) / link
         try:
-            with open(link_path, "r", encoding="utf-8") as f:
+            with open(link_path, encoding="utf-8") as f:
                 linked_config_data = json.load(f)
 
             linked_results = []
@@ -529,7 +529,7 @@ class PlaylistManager:
                 error_message=f"Failed to process linked config {link}: {e}",
             )
 
-    def _resolve_base_playlists(self, category_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _resolve_base_playlists(self, category_data: dict[str, Any]) -> list[dict[str, Any]]:
         """
         Resolve base playlists from a referenced base file.
 
@@ -549,9 +549,9 @@ class PlaylistManager:
 
         base_path = Path(self.config.playlist_data_path) / base_ref
         try:
-            with open(base_path, "r", encoding="utf-8") as f:
+            with open(base_path, encoding="utf-8") as f:
                 base_data = json.load(f)
-            playlists: List[Dict[str, Any]] = base_data.get("data", {}).get("playlists", [])
+            playlists: list[dict[str, Any]] = base_data.get("data", {}).get("playlists", [])
             logger.debug(f"Loaded {len(playlists)} base playlists from: {base_ref}")
             return playlists
         except FileNotFoundError:
@@ -566,10 +566,10 @@ class PlaylistManager:
 
     def _build_smart_list(
         self,
-        playlist_config: Dict[str, Any],
-        main_conditions: Set[str],
-        negative_conditions: Set[str],
-    ) -> Optional[SmartList]:
+        playlist_config: dict[str, Any],
+        main_conditions: set[str],
+        negative_conditions: set[str],
+    ) -> SmartList | None:
         """
         Build SmartList object from playlist configuration.
 
@@ -639,7 +639,12 @@ class PlaylistManager:
                 log_error(logger, f"Tag not found: {tag_name}")
                 return False
 
-            smart_list.add_condition(Property.MYTAG, operator, left_bitshift(int(tag.ID)))
+            # pyrekordbox annotates value_left as str; MYTAG takes the bit-shifted int as is.
+            smart_list.add_condition(
+                Property.MYTAG,
+                operator,
+                left_bitshift(int(tag.ID)),  # ty: ignore[invalid-argument-type]
+            )
 
             logger.debug(f"Added tag condition: {tag_name} ({operator.name})")
             return True
@@ -648,7 +653,7 @@ class PlaylistManager:
             log_exception(logger, e, f"adding tag condition {tag_name}")
             return False
 
-    def _add_date_condition(self, smart_list: SmartList, date_config: Dict[str, Any]) -> bool:
+    def _add_date_condition(self, smart_list: SmartList, date_config: dict[str, Any]) -> bool:
         """
         Add a date created condition to smart list.
 
@@ -683,8 +688,8 @@ class PlaylistManager:
             return False
 
     def find_existing_root_folders(
-        self, config_file: Optional[Union[str, Path]] = None
-    ) -> List[Dict[str, Any]]:
+        self, config_file: str | Path | None = None
+    ) -> list[dict[str, Any]]:
         """
         Find root folders from config file(s) that already exist in the database.
 
@@ -711,12 +716,12 @@ class PlaylistManager:
             files_to_scan = sorted(playlist_dir.glob("*.json"))
 
         # Extract parent names from each file
-        seen_parents: Set[str] = set()
+        seen_parents: set[str] = set()
         for json_file in files_to_scan:
             if json_file.name.startswith(".") or json_file.name.startswith("_"):
                 continue
             try:
-                with open(json_file, "r", encoding="utf-8") as f:
+                with open(json_file, encoding="utf-8") as f:
                     config_data = json.load(f)
 
                 data = config_data.get("data", [])
@@ -765,7 +770,7 @@ class PlaylistManager:
             log_success(logger, f"Deleted '{name}' and {deleted - 1} child playlists")
         return deleted
 
-    def get_created_playlists(self) -> List[str]:
+    def get_created_playlists(self) -> list[str]:
         """Get list of playlists created in this session."""
         return self._created_playlists.copy()
 
@@ -773,7 +778,7 @@ class PlaylistManager:
         """Clear the list of created playlists."""
         self._created_playlists.clear()
 
-    def _load_file_order(self, directory: Path) -> Optional[Dict[str, Any]]:
+    def _load_file_order(self, directory: Path) -> dict[str, Any] | None:
         """
         Load file ordering configuration from _order.json.
 
@@ -788,7 +793,7 @@ class PlaylistManager:
             return None
 
         try:
-            with open(order_file, "r", encoding="utf-8") as f:
+            with open(order_file, encoding="utf-8") as f:
                 order_config = json.load(f)
             logger.debug(f"Loaded file ordering from: {order_file}")
             return order_config
@@ -797,8 +802,8 @@ class PlaylistManager:
             return None
 
     def _sort_files_by_order(
-        self, json_files: List[Path], order_config: Optional[Dict[str, Any]]
-    ) -> List[Path]:
+        self, json_files: list[Path], order_config: dict[str, Any] | None
+    ) -> list[Path]:
         """
         Sort JSON files according to _order.json configuration.
 
@@ -830,8 +835,8 @@ class PlaylistManager:
         return first_files + middle_files + last_files
 
     def create_playlists_from_directory(
-        self, directory: Union[str, Path]
-    ) -> List[PlaylistCreationResult]:
+        self, directory: str | Path
+    ) -> list[PlaylistCreationResult]:
         """
         Create playlists from all JSON files in a directory.
 
@@ -850,7 +855,8 @@ class PlaylistManager:
             raise PlaylistCreationError(f"Directory not found: {dir_path}")
 
         json_files = [
-            f for f in dir_path.glob("*.json")
+            f
+            for f in dir_path.glob("*.json")
             if not f.name.startswith(".") and not f.name.startswith("_")
         ]
         if not json_files:
@@ -872,7 +878,7 @@ class PlaylistManager:
                 all_results.extend(file_results)
 
                 # Count how many root categories this file contributed
-                with open(json_file, "r", encoding="utf-8") as f:
+                with open(json_file, encoding="utf-8") as f:
                     file_data = json.load(f)
                 category_count = len(file_data.get("data", []))
                 global_sequence += max(category_count, 1)

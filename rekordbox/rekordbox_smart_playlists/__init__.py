@@ -9,9 +9,9 @@ __version__ = "1.0.0"
 __author__ = "Your Name"
 __email__ = "your.email@example.com"
 
+from .core.backup_manager import BackupManager
 from .core.database import RekordboxDatabase
 from .core.playlist_manager import PlaylistManager
-from .core.backup_manager import BackupManager
 
 __all__ = [
     "RekordboxDatabase",

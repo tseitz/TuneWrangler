@@ -5,23 +5,23 @@ Provides comprehensive backup and restore functionality with proper error handli
 validation, and safety features.
 """
 
+import json
 import shutil
 import zipfile
-from pathlib import Path
-from typing import Optional, List, Dict, Any, Union
-from datetime import datetime
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
+from ..utils.file_utils import (
+    temporary_directory,
+)
 from ..utils.logging import (
     get_logger,
-    log_success,
     log_error,
     log_exception,
+    log_success,
     log_warning,
-)
-from ..utils.file_utils import (
-    ensure_directory,
-    temporary_directory,
 )
 from .config import Config
 
@@ -46,6 +46,21 @@ class BackupValidationError(BackupError):
     pass
 
 
+BACKUP_CREATED_BY = "rekordbox-smart-playlists"
+
+
+def _is_own_backup(path: Path) -> bool:
+    """True only for zips this tool wrote; cleanup must never delete anything else."""
+    try:
+        with zipfile.ZipFile(path) as zf:
+            names = [n for n in zf.namelist() if n.endswith("backup_metadata.json")]
+            if not names:
+                return False
+            return json.loads(zf.read(names[0])).get("created_by") == BACKUP_CREATED_BY
+    except (zipfile.BadZipFile, OSError, ValueError):
+        return False
+
+
 @dataclass
 class BackupInfo:
     """Information about a backup file."""
@@ -56,7 +71,7 @@ class BackupInfo:
     size_mb: float
     created: datetime
     created_str: str
-    is_valid: Optional[bool] = None
+    is_valid: bool | None = None
 
     @classmethod
     def from_path(cls, backup_path: Path) -> "BackupInfo":
@@ -89,16 +104,11 @@ class BackupManager:
             config: Configuration object with backup settings
         """
         self.config = config
-        self.backup_base = Path(config.backup_base_path)
+        self.backup_base = config.require_backup_dir()
         self.pioneer_app_support = Path(config.pioneer_app_support)
         self.pioneer_library = Path(config.pioneer_library)
 
-        # Ensure backup directory exists
-        ensure_directory(self.backup_base)
-
-    def create_backup(
-        self, backup_name: Optional[str] = None, validate: bool = True
-    ) -> Optional[str]:
+    def create_backup(self, backup_name: str | None = None, validate: bool = True) -> str | None:
         """
         Create a comprehensive backup of Rekordbox database and configuration.
 
@@ -180,14 +190,13 @@ class BackupManager:
                     f"Application Support directory not found: {self.pioneer_app_support}",
                 )
 
-            # Backup Library directory
-            if self.pioneer_library.exists():
-                library_backup = backup_dir / "Library"
-                logger.info("Backing up Library directory...")
-                shutil.copytree(self.pioneer_library, library_backup)
-                log_success(logger, "Library backed up")
-            else:
-                log_warning(logger, f"Library directory not found: {self.pioneer_library}")
+            # The Library directory holds master.db; a backup without it is no backup.
+            if not self.pioneer_library.is_dir():
+                raise FileNotFoundError(f"Library directory not found: {self.pioneer_library}")
+            library_backup = backup_dir / "Library"
+            logger.info("Backing up Library directory...")
+            shutil.copytree(self.pioneer_library, library_backup)
+            log_success(logger, "Library backed up")
 
             # Create backup metadata
             self._create_backup_metadata(backup_dir, backup_name)
@@ -210,7 +219,7 @@ class BackupManager:
             metadata = {
                 "backup_name": backup_name,
                 "created": datetime.now().isoformat(),
-                "created_by": "rekordbox-smart-playlists",
+                "created_by": BACKUP_CREATED_BY,
                 "version": "1.0.0",
                 "source_paths": {
                     "pioneer_app_support": str(self.pioneer_app_support),
@@ -223,8 +232,6 @@ class BackupManager:
             }
 
             metadata_file = backup_dir / "backup_metadata.json"
-            import json
-
             with open(metadata_file, "w") as f:
                 json.dump(metadata, f, indent=2)
 
@@ -245,7 +252,7 @@ class BackupManager:
     def _cleanup_old_backups(self) -> None:
         """Clean up old backups based on max_backups setting."""
         try:
-            backups = self.list_backups()
+            backups = [b for b in self.list_backups() if _is_own_backup(b.path)]
             if len(backups) <= self.config.max_backups:
                 return
 
@@ -267,9 +274,7 @@ class BackupManager:
         except Exception as e:
             log_exception(logger, e, "cleaning up old backups")
 
-    def restore_backup(
-        self, backup_path: Union[str, Path], create_safety_backup: bool = True
-    ) -> bool:
+    def restore_backup(self, backup_path: str | Path, create_safety_backup: bool = True) -> bool:
         """
         Restore Rekordbox database from backup.
 
@@ -300,7 +305,8 @@ class BackupManager:
                 if safety_backup:
                     log_success(logger, f"Safety backup created: {safety_backup}")
                 else:
-                    log_warning(logger, "Failed to create safety backup, continuing anyway")
+                    log_error(logger, "Failed to create safety backup, aborting restore")
+                    return False
 
             # Extract and restore
             with temporary_directory(prefix="rekordbox_restore_") as temp_dir:
@@ -314,7 +320,7 @@ class BackupManager:
             log_exception(logger, e, "restoring backup")
             return False
 
-    def _create_safety_backup(self) -> Optional[str]:
+    def _create_safety_backup(self) -> str | None:
         """Create a safety backup before restore operation."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safety_name = f"safety_backup_before_restore_{timestamp}"
@@ -365,7 +371,7 @@ class BackupManager:
             shutil.copytree(library_backup, self.pioneer_library)
             log_success(logger, "Library restored")
 
-    def validate_backup(self, backup_path: Union[str, Path]) -> bool:
+    def validate_backup(self, backup_path: str | Path) -> bool:
         """
         Validate backup file integrity and contents.
 
@@ -418,7 +424,7 @@ class BackupManager:
             log_exception(logger, e, f"validating backup {backup_file}")
             return False
 
-    def list_backups(self) -> List[BackupInfo]:
+    def list_backups(self) -> list[BackupInfo]:
         """
         List all available backups.
 
@@ -449,7 +455,7 @@ class BackupManager:
         backups.sort(key=lambda x: x.created, reverse=True)
         return backups
 
-    def get_backup_info(self, backup_path: Union[str, Path]) -> Optional[BackupInfo]:
+    def get_backup_info(self, backup_path: str | Path) -> BackupInfo | None:
         """
         Get detailed information about a specific backup.
 
@@ -471,7 +477,7 @@ class BackupManager:
             log_exception(logger, e, f"getting backup info for {backup_file}")
             return None
 
-    def delete_backup(self, backup_path: Union[str, Path]) -> bool:
+    def delete_backup(self, backup_path: str | Path) -> bool:
         """
         Delete a backup file.
 
@@ -495,7 +501,7 @@ class BackupManager:
             log_exception(logger, e, f"deleting backup {backup_file}")
             return False
 
-    def get_backup_summary(self) -> Dict[str, Any]:
+    def get_backup_summary(self) -> dict[str, Any]:
         """
         Get summary of all backups.
 
@@ -539,36 +545,6 @@ class BackupManager:
             print(f"Oldest backup: {summary['oldest_backup'].created_str}")
 
         if summary["backups"]:
-            print(f"\nRecent backups:")
+            print("\nRecent backups:")
             for i, backup in enumerate(summary["backups"][:5], 1):
                 print(f"  {i}. {backup.name} ({backup.size_mb:.1f} MB) - {backup.created_str}")
-
-
-# Convenience functions for backward compatibility
-def create_backup(
-    config: Optional[Config] = None, backup_name: Optional[str] = None
-) -> Optional[str]:
-    """Create a backup using default configuration."""
-    if config is None:
-        config = Config()
-
-    manager = BackupManager(config)
-    return manager.create_backup(backup_name)
-
-
-def restore_backup(backup_path: str, config: Optional[Config] = None) -> bool:
-    """Restore from backup using default configuration."""
-    if config is None:
-        config = Config()
-
-    manager = BackupManager(config)
-    return manager.restore_backup(backup_path)
-
-
-def list_backups(config: Optional[Config] = None) -> List[BackupInfo]:
-    """List backups using default configuration."""
-    if config is None:
-        config = Config()
-
-    manager = BackupManager(config)
-    return manager.list_backups()

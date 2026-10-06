@@ -1,7 +1,7 @@
 # Playlist & Tag Glossary
 
 The authoritative "what does each playlist/tag mean and why does it exist" reference.
-Structure/counts live in the [architecture spec](superpowers/specs/2026-07-07-playlist-architecture-design.md);
+Structure and counts live in `playlist-data/` (`deno task rb:audit` prints them);
 this doc is about **meaning and intent**, so future sessions don't have to re-ask.
 
 **DJ:** Tegan, aka **Dane Dubz**. Plays a genre-diverse bass/underground library across

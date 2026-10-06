@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .core.config import DEFAULT_PLAYLIST_DATA_PATH
+
 # Contexts expected to resolve to an identical structural shape. This module is
 # the acceptance oracle for later tasks, so any drift between these contexts
 # (differing shapes, or an expected file gone missing) is a structural
@@ -59,7 +61,7 @@ class AuditResult:
 
 def _load(path: Path) -> dict[str, Any]:
     """Read and parse a JSON file. Raises on malformed or unreadable input."""
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -203,7 +205,10 @@ def _check_uniformity(sigs: dict[str, tuple], errors: list[str]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
-    directory = Path(argv[0]) if argv else Path("playlist-data")
+    directory = Path(argv[0]) if argv else Path(DEFAULT_PLAYLIST_DATA_PATH)
+    if not _context_files(directory):
+        print(f"No playlist contexts found in {directory}")
+        return 1
 
     total = 0
     errors: list[str] = []

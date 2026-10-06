@@ -1,22 +1,44 @@
 """
 Configuration management for Rekordbox Smart Playlists.
 
-Provides centralized configuration handling with support for:
-- Environment variables
-- Configuration files (JSON/TOML)
-- Command-line overrides
-- Default values
+Settings come from TUNEWRANGLER_RB_* environment variables (the repo-root .env is loaded),
+then command-line overrides.
 """
 
-import os
-import json
-import toml
-from pathlib import Path
-from typing import Dict, Any, Optional, Union
-from dataclasses import dataclass, field
 import logging
+import os
+from dataclasses import dataclass, field, replace
+from pathlib import Path
+from typing import Any
+
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
+
+PACKAGE_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = PACKAGE_ROOT.parent
+DEFAULT_PLAYLIST_DATA_PATH = str(PACKAGE_ROOT / "playlist-data")
+
+load_dotenv(REPO_ROOT / ".env")
+
+BACKUP_PATH_ENV = "TUNEWRANGLER_RB_BACKUP_PATH"
+
+_ENV_MAPPING = {
+    "TUNEWRANGLER_RB_PLAYLIST_DATA_PATH": "playlist_data_path",
+    BACKUP_PATH_ENV: "backup_base_path",
+    "TUNEWRANGLER_RB_PARENT_PLAYLIST": "default_parent_playlist",
+    "TUNEWRANGLER_RB_DRY_RUN": "dry_run",
+    "TUNEWRANGLER_RB_VERBOSE": "verbose",
+    "TUNEWRANGLER_RB_LOG_LEVEL": "log_level",
+    "TUNEWRANGLER_RB_LOG_FILE": "log_file",
+}
+_BOOL_KEYS = {"dry_run", "verbose"}
+_TRUE_WORDS = {"true", "1", "yes", "on"}
+_FALSE_WORDS = {"false", "0", "no", "off"}
+
+
+class ConfigurationError(Exception):
+    """A required setting is missing or unusable."""
 
 
 @dataclass
@@ -24,13 +46,8 @@ class Config:
     """Configuration class with default values and validation."""
 
     # Paths
-    playlist_data_path: str = field(default_factory=lambda: "playlist-data")
-    backup_base_path: str = field(
-        default_factory=lambda: os.path.expanduser(
-            "~/Library/CloudStorage/GoogleDrive-tdseitz10@gmail.com/My Drive/DJ/Rekordbox DB Backup"
-        )
-    )
-    pioneer_install_dir: str = field(default_factory=lambda: "/Applications/rekordbox 6")
+    playlist_data_path: str = DEFAULT_PLAYLIST_DATA_PATH
+    backup_base_path: str | None = None
 
     # Database paths (auto-detected based on OS)
     pioneer_app_support: str = field(
@@ -55,108 +72,41 @@ class Config:
 
     # Logging
     log_level: str = "INFO"
-    log_file: Optional[str] = None
-
-    @classmethod
-    def from_file(cls, config_path: Union[str, Path]) -> "Config":
-        """Load configuration from a file (JSON or TOML)."""
-        config_path = Path(config_path)
-
-        if not config_path.exists():
-            logger.warning(f"Configuration file not found: {config_path}")
-            return cls()
-
-        try:
-            if config_path.suffix.lower() == ".json":
-                with open(config_path, "r") as f:
-                    config_data = json.load(f)
-            elif config_path.suffix.lower() == ".toml":
-                config_data = toml.load(config_path)
-            else:
-                logger.error(f"Unsupported configuration file format: {config_path.suffix}")
-                return cls()
-
-            return cls.from_dict(config_data)
-
-        except (json.JSONDecodeError, toml.TomlDecodeError) as e:
-            logger.error(f"Error parsing configuration file {config_path}: {e}")
-            return cls()
-        except Exception as e:
-            logger.error(f"Error loading configuration file {config_path}: {e}")
-            return cls()
-
-    @classmethod
-    def from_dict(cls, config_data: Dict[str, Any]) -> "Config":
-        """Create Config instance from dictionary."""
-        # Create instance with defaults
-        config = cls()
-
-        # Update with provided values
-        for key, value in config_data.items():
-            if hasattr(config, key):
-                setattr(config, key, value)
-            else:
-                logger.warning(f"Unknown configuration key: {key}")
-
-        return config
+    log_file: str | None = None
 
     @classmethod
     def from_env(cls) -> "Config":
-        """Load configuration from environment variables."""
-        config = cls()
+        """Build configuration from TUNEWRANGLER_RB_* environment variables."""
+        values: dict[str, Any] = {}
+        for env_var, key in _ENV_MAPPING.items():
+            raw = os.getenv(env_var, "").strip()
+            if not raw:
+                continue
+            if key in _BOOL_KEYS:
+                if raw.lower() not in _TRUE_WORDS | _FALSE_WORDS:
+                    raise ConfigurationError(f"{env_var} must be true or false, got {raw!r}")
+                values[key] = raw.lower() in _TRUE_WORDS
+            elif key == "playlist_data_path":
+                values[key] = str(Path(raw).expanduser())
+            else:
+                values[key] = raw
+        return cls(**values)
 
-        env_mapping = {
-            "REKORDBOX_PLAYLIST_DATA_PATH": "playlist_data_path",
-            "REKORDBOX_BACKUP_PATH": "backup_base_path",
-            "REKORDBOX_PIONEER_INSTALL": "pioneer_install_dir",
-            "REKORDBOX_DRY_RUN": "dry_run",
-            "REKORDBOX_VERBOSE": "verbose",
-            "REKORDBOX_LOG_LEVEL": "log_level",
-            "REKORDBOX_LOG_FILE": "log_file",
-        }
-
-        for env_var, config_key in env_mapping.items():
-            value = os.getenv(env_var)
-            if value is not None:
-                # Convert string values to appropriate types
-                if config_key in [
-                    "dry_run",
-                    "verbose",
-                    "auto_backup",
-                    "backup_before_changes",
-                ]:
-                    bool_value = value.lower() in ("true", "1", "yes", "on")
-                    setattr(config, config_key, bool_value)
-                elif config_key in ["max_backups", "progress_interval"]:
-                    try:
-                        int_value = int(value)
-                        setattr(config, config_key, int_value)
-                    except ValueError:
-                        logger.warning(f"Invalid integer value for {env_var}: {value}")
-                        continue
-                else:
-                    setattr(config, config_key, value)
-
-        return config
-
-    def merge_with(self, other: "Config") -> "Config":
-        """Merge this configuration with another, giving priority to the other."""
-        merged_data = {}
-
-        # Start with this config's values
-        for field_name in self.__dataclass_fields__:
-            merged_data[field_name] = getattr(self, field_name)
-
-        # Override with other config's non-default values
-        for field_name in other.__dataclass_fields__:
-            other_value = getattr(other, field_name)
-            default_value = self.__dataclass_fields__[field_name].default
-
-            # If other has a non-default value, use it
-            if other_value != default_value:
-                merged_data[field_name] = other_value
-
-        return Config.from_dict(merged_data)
+    def require_backup_dir(self) -> Path:
+        """Return the backup directory, refusing an unset or missing one."""
+        if not self.backup_base_path:
+            raise ConfigurationError(
+                f"{BACKUP_PATH_ENV} is not set. Point it at a folder used only for these "
+                "backups: old backups in it are deleted beyond the newest max_backups."
+            )
+        path = Path(self.backup_base_path).expanduser()
+        if not path.is_absolute():
+            raise ConfigurationError(f"{BACKUP_PATH_ENV} must be an absolute path: {path}")
+        if not path.is_dir():
+            raise ConfigurationError(
+                f"{BACKUP_PATH_ENV} does not exist or is not a directory: {path}"
+            )
+        return path
 
     def validate(self) -> bool:
         """Validate configuration values."""
@@ -190,7 +140,7 @@ class Config:
 
         return is_valid
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary."""
         result = {}
         for field_name in self.__dataclass_fields__:
@@ -199,30 +149,6 @@ class Config:
                 value = list(value)  # Convert sets to lists for serialization
             result[field_name] = value
         return result
-
-    def save_to_file(self, config_path: Union[str, Path]) -> bool:
-        """Save configuration to file."""
-        config_path = Path(config_path)
-
-        try:
-            config_data = self.to_dict()
-
-            if config_path.suffix.lower() == ".json":
-                with open(config_path, "w") as f:
-                    json.dump(config_data, f, indent=2)
-            elif config_path.suffix.lower() == ".toml":
-                with open(config_path, "w") as f:
-                    toml.dump(config_data, f)
-            else:
-                logger.error(f"Unsupported configuration file format: {config_path.suffix}")
-                return False
-
-            logger.info(f"Configuration saved to: {config_path}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Error saving configuration to {config_path}: {e}")
-            return False
 
     def __str__(self) -> str:
         """String representation of configuration."""
@@ -233,62 +159,11 @@ class Config:
         return "\n".join(lines)
 
 
-def load_config(
-    config_file: Optional[Union[str, Path]] = None, use_env: bool = True, **overrides
-) -> Config:
-    """
-    Load configuration from multiple sources with precedence:
-    1. Command-line overrides (highest priority)
-    2. Configuration file
-    3. Environment variables
-    4. Defaults (lowest priority)
-    """
-    # Start with defaults
-    config = Config()
+def load_config(**overrides: Any) -> Config:
+    """Load configuration from the environment, then apply command-line overrides."""
+    config = replace(Config.from_env(), **overrides)
 
-    # Apply environment variables
-    if use_env:
-        env_config = Config.from_env()
-        config = config.merge_with(env_config)
-
-    # Apply configuration file
-    if config_file:
-        file_config = Config.from_file(config_file)
-        config = config.merge_with(file_config)
-
-    # Apply command-line overrides
-    if overrides:
-        override_config = Config.from_dict(overrides)
-        config = config.merge_with(override_config)
-
-    # Validate final configuration
     if not config.validate():
         logger.warning("Configuration validation failed, some features may not work correctly")
 
     return config
-
-
-def get_default_config_paths() -> list[Path]:
-    """Get list of default configuration file locations to search."""
-    return [
-        Path.cwd() / "config.json",
-        Path.cwd() / "config.toml",
-        Path.cwd() / ".rekordbox-config.json",
-        Path.cwd() / ".rekordbox-config.toml",
-        Path.home() / ".config" / "rekordbox-smart-playlists" / "config.json",
-        Path.home() / ".config" / "rekordbox-smart-playlists" / "config.toml",
-    ]
-
-
-def find_config_file() -> Optional[Path]:
-    """Find the first existing configuration file in default locations."""
-    for config_path in get_default_config_paths():
-        if config_path.exists():
-            return config_path
-    return None
-
-
-if __name__ == "__main__":
-    # Example usage and testing
-    config = load_config()
-    print(config)

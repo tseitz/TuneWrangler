@@ -1,10 +1,4 @@
-sqlcipher3
-venv
 __pycache__
-lib
-*.egg-info/
-.eggs/
-# Test coverage artifacts
 .coverage
 coverage.xml
 htmlcov/

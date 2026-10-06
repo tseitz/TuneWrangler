@@ -5,9 +5,9 @@ Provides a clean interface to the Rekordbox database with proper error handling,
 logging, and connection management.
 """
 
-from typing import Optional, List, Any, Union
-from pathlib import Path
 from contextlib import contextmanager
+from pathlib import Path
+from typing import Any
 
 from pyrekordbox import Rekordbox6Database
 from pyrekordbox.db6.smartlist import SmartList
@@ -41,7 +41,7 @@ class RekordboxDatabase:
     Wrapper around pyrekordbox database with enhanced error handling and logging.
     """
 
-    def __init__(self, config: Optional[Config] = None):
+    def __init__(self, config: Config | None = None):
         """
         Initialize database connection.
 
@@ -52,9 +52,9 @@ class RekordboxDatabase:
             DatabaseConnectionError: If database connection fails
         """
         self.config = config or Config()
-        self._db: Optional[Rekordbox6Database] = None
+        self._db: Rekordbox6Database | None = None
         self._is_connected = False
-        self._content_cache: Optional[dict] = None
+        self._content_cache: dict | None = None
 
         self._connect()
 
@@ -116,7 +116,7 @@ class RekordboxDatabase:
             raise DatabaseError(f"Failed to rollback changes: {e}") from e
 
     # Content operations
-    def get_content(self, **filters: Any) -> List[Any]:
+    def get_content(self, **filters: Any) -> list[Any]:
         """
         Get content items with optional filters.
 
@@ -142,7 +142,7 @@ class RekordboxDatabase:
             log_exception(logger, e, f"querying content with filters {filters}")
             raise DatabaseQueryError(f"Failed to query content: {e}") from e
 
-    def get_content_by_id(self, content_id: int) -> Optional[Any]:
+    def get_content_by_id(self, content_id: int) -> Any | None:
         """
         Get content item by ID.
 
@@ -186,7 +186,7 @@ class RekordboxDatabase:
         """Clear the pre-loaded content cache to free memory."""
         self._content_cache = None
 
-    def find_content_by_filename(self, filename: str) -> Optional[Any]:
+    def find_content_by_filename(self, filename: str) -> Any | None:
         """
         Find content by filename with fallback strategies.
 
@@ -242,8 +242,7 @@ class RekordboxDatabase:
                                     and content.Title
                                 ):
                                     if (
-                                        content.ArtistName.lower().strip()
-                                        == artist_name.lower()
+                                        content.ArtistName.lower().strip() == artist_name.lower()
                                         and content.Title.lower().strip() == title.lower()
                                     ):
                                         return content
@@ -256,7 +255,7 @@ class RekordboxDatabase:
             return None
 
     # Playlist operations
-    def get_playlists(self, **filters: Any) -> List[Any]:
+    def get_playlists(self, **filters: Any) -> list[Any]:
         """
         Get playlists with optional filters.
 
@@ -279,7 +278,7 @@ class RekordboxDatabase:
             log_exception(logger, e, f"querying playlists with filters {filters}")
             raise DatabaseQueryError(f"Failed to query playlists: {e}") from e
 
-    def get_playlist_by_name(self, name: str, parent_id: Optional[str] = None) -> Optional[Any]:
+    def get_playlist_by_name(self, name: str, parent_id: str | None = None) -> Any | None:
         """
         Get playlist by name with optional parent filter.
 
@@ -302,8 +301,8 @@ class RekordboxDatabase:
             return None
 
     def create_playlist_folder(
-        self, name: str, parent: Optional[Any] = None, sequence: Optional[int] = None
-    ) -> Optional[Any]:
+        self, name: str, parent: Any | None = None, sequence: int | None = None
+    ) -> Any | None:
         """
         Create a playlist folder.
 
@@ -318,7 +317,8 @@ class RekordboxDatabase:
         self.ensure_connected()
         assert self._db is not None  # ensured by ensure_connected()
         try:
-            folder = self._db.create_playlist_folder(name, parent, sequence)
+            # pyrekordbox annotates parent/seq as non-optional but defaults both to None.
+            folder = self._db.create_playlist_folder(name, parent, sequence)  # ty: ignore[invalid-argument-type]
             logger.info(f"Created playlist folder: {name}")
             return folder
 
@@ -330,9 +330,9 @@ class RekordboxDatabase:
         self,
         name: str,
         smart_list: SmartList,
-        parent: Optional[Any] = None,
-        sequence: Optional[int] = None,
-    ) -> Optional[Any]:
+        parent: Any | None = None,
+        sequence: int | None = None,
+    ) -> Any | None:
         """
         Create a smart playlist.
 
@@ -349,7 +349,10 @@ class RekordboxDatabase:
         assert self._db is not None  # ensured by ensure_connected()
         try:
             playlist = self._db.create_smart_playlist(
-                name, smart_list=smart_list, parent=parent, seq=sequence
+                name,
+                smart_list=smart_list,
+                parent=parent,  # ty: ignore[invalid-argument-type]
+                seq=sequence,  # ty: ignore[invalid-argument-type]
             )
             log_success(logger, f"Created smart playlist: {name}")
             return playlist
@@ -358,7 +361,7 @@ class RekordboxDatabase:
             log_exception(logger, e, f"creating smart playlist {name}")
             return None
 
-    def playlist_exists(self, name: str, parent_id: Optional[str] = None) -> bool:
+    def playlist_exists(self, name: str, parent_id: str | None = None) -> bool:
         """
         Check if playlist exists.
 
@@ -371,7 +374,7 @@ class RekordboxDatabase:
         """
         return self.get_playlist_by_name(name, parent_id) is not None
 
-    def get_children_playlists(self, parent_id: str) -> List[Any]:
+    def get_children_playlists(self, parent_id: str) -> list[Any]:
         """
         Get all direct child playlists/folders of a parent.
 
@@ -451,7 +454,7 @@ class RekordboxDatabase:
         return count
 
     # Tag operations
-    def get_tags(self, **filters: Any) -> List[Any]:
+    def get_tags(self, **filters: Any) -> list[Any]:
         """
         Get tags with optional filters.
 
@@ -474,7 +477,7 @@ class RekordboxDatabase:
             log_exception(logger, e, f"querying tags with filters {filters}")
             raise DatabaseQueryError(f"Failed to query tags: {e}") from e
 
-    def get_tag_by_name(self, name: str) -> Optional[Any]:
+    def get_tag_by_name(self, name: str) -> Any | None:
         """
         Get tag by name.
 
@@ -490,7 +493,7 @@ class RekordboxDatabase:
         except (DatabaseQueryError, IndexError):
             return None
 
-    def get_tag_by_id(self, tag_id: Union[str, int]) -> Optional[Any]:
+    def get_tag_by_id(self, tag_id: str | int) -> Any | None:
         """
         Get tag by ID.
 
@@ -507,7 +510,7 @@ class RekordboxDatabase:
             return None
 
     # Artist operations
-    def get_artists(self, **filters: Any) -> List[Any]:
+    def get_artists(self, **filters: Any) -> list[Any]:
         """Get artists with optional filters."""
         self.ensure_connected()
         assert self._db is not None  # ensured by ensure_connected()
@@ -521,7 +524,7 @@ class RekordboxDatabase:
             log_exception(logger, e, f"querying artists with filters {filters}")
             raise DatabaseQueryError(f"Failed to query artists: {e}") from e
 
-    def get_artist_by_name(self, name: str) -> Optional[Any]:
+    def get_artist_by_name(self, name: str) -> Any | None:
         """Get artist by name."""
         try:
             artists = self.get_artists(Name=name)
@@ -529,7 +532,7 @@ class RekordboxDatabase:
         except (DatabaseQueryError, IndexError):
             return None
 
-    def create_artist(self, name: str) -> Optional[Any]:
+    def create_artist(self, name: str) -> Any | None:
         """Create a new artist."""
         self.ensure_connected()
         assert self._db is not None  # ensured by ensure_connected()
@@ -542,7 +545,7 @@ class RekordboxDatabase:
             return None
 
     # Album operations
-    def get_albums(self, **filters: Any) -> List[Any]:
+    def get_albums(self, **filters: Any) -> list[Any]:
         """Get albums with optional filters."""
         self.ensure_connected()
         assert self._db is not None  # ensured by ensure_connected()
@@ -556,7 +559,7 @@ class RekordboxDatabase:
             log_exception(logger, e, f"querying albums with filters {filters}")
             raise DatabaseQueryError(f"Failed to query albums: {e}") from e
 
-    def get_album_by_name(self, name: str) -> Optional[Any]:
+    def get_album_by_name(self, name: str) -> Any | None:
         """Get album by name."""
         try:
             albums = self.get_albums(Name=name)
@@ -564,7 +567,7 @@ class RekordboxDatabase:
         except (DatabaseQueryError, IndexError):
             return None
 
-    def create_album(self, name: str) -> Optional[Any]:
+    def create_album(self, name: str) -> Any | None:
         """Create a new album."""
         self.ensure_connected()
         assert self._db is not None  # ensured by ensure_connected()
@@ -631,7 +634,7 @@ class RekordboxDatabase:
         try:
             yield self
             self.commit()
-        except Exception as e:
+        except Exception:
             self.rollback()
             raise
 

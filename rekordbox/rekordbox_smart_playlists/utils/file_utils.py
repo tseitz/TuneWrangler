@@ -2,18 +2,19 @@
 File utilities for safe file operations and path handling.
 """
 
+import logging
 import os
 import shutil
-from pathlib import Path
-from typing import Optional, Union, List, Callable, Any, Generator
-from contextlib import contextmanager
 import tempfile
-import logging
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-def ensure_directory(path: Union[str, Path], create: bool = True) -> Path:
+def ensure_directory(path: str | Path, create: bool = True) -> Path:
     """
     Ensure directory exists, optionally creating it.
 
@@ -48,7 +49,7 @@ def ensure_directory(path: Union[str, Path], create: bool = True) -> Path:
 
 def safe_file_operation(
     operation: Callable[[], Any],
-    backup_path: Optional[Union[str, Path]] = None,
+    backup_path: str | Path | None = None,
     description: str = "file operation",
 ) -> Any:
     """
@@ -73,9 +74,7 @@ def safe_file_operation(
         if backup_path:
             backup_source = Path(backup_path)
             if backup_source.exists():
-                temp_backup = backup_source.with_suffix(
-                    backup_source.suffix + ".backup"
-                )
+                temp_backup = backup_source.with_suffix(backup_source.suffix + ".backup")
                 shutil.copy2(backup_source, temp_backup)
                 backup_created = True
                 logger.debug(f"Created backup: {temp_backup}")
@@ -130,14 +129,10 @@ def temporary_directory(
                 shutil.rmtree(temp_dir)
                 logger.debug(f"Cleaned up temporary directory: {temp_dir}")
             except Exception as e:
-                logger.warning(
-                    f"Failed to clean up temporary directory {temp_dir}: {e}"
-                )
+                logger.warning(f"Failed to clean up temporary directory {temp_dir}: {e}")
 
 
-def safe_copy(
-    source: Union[str, Path], destination: Union[str, Path], overwrite: bool = False
-) -> bool:
+def safe_copy(source: str | Path, destination: str | Path, overwrite: bool = False) -> bool:
     """
     Safely copy a file with error handling.
 
@@ -180,9 +175,7 @@ def safe_copy(
         return False
 
 
-def safe_move(
-    source: Union[str, Path], destination: Union[str, Path], overwrite: bool = False
-) -> bool:
+def safe_move(source: str | Path, destination: str | Path, overwrite: bool = False) -> bool:
     """
     Safely move/rename a file with error handling.
 
@@ -221,9 +214,7 @@ def safe_move(
         return False
 
 
-def find_files(
-    directory: Union[str, Path], patterns: List[str], recursive: bool = True
-) -> List[Path]:
+def find_files(directory: str | Path, patterns: list[str], recursive: bool = True) -> list[Path]:
     """
     Find files matching patterns in a directory.
 
@@ -255,13 +246,11 @@ def find_files(
     unique_files = list(set(files))
     unique_files.sort()
 
-    logger.debug(
-        f"Found {len(unique_files)} files matching {patterns} in {directory_path}"
-    )
+    logger.debug(f"Found {len(unique_files)} files matching {patterns} in {directory_path}")
     return unique_files
 
 
-def get_file_size(path: Union[str, Path]) -> Optional[int]:
+def get_file_size(path: str | Path) -> int | None:
     """
     Get file size in bytes.
 
@@ -303,7 +292,7 @@ def format_file_size(size_bytes: int) -> str:
     return f"{size:.1f} {size_names[i]}"
 
 
-def cleanup_empty_directories(root_path: Union[str, Path]) -> int:
+def cleanup_empty_directories(root_path: str | Path) -> int:
     """
     Remove empty directories recursively.
 

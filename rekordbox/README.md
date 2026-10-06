@@ -1,12 +1,11 @@
-# Rekordbox Smart Playlist Tools
+# Rekordbox Smart Playlists
 
-A collection of Python tools for managing Rekordbox 6 databases, and smart playlists. Built for DJs who want to organize large, genre-diverse libraries and generate smart playlists from simple JSON configurations.
+Python tools, part of TuneWrangler, that generate Rekordbox smart playlists from JSON configurations and back up the Rekordbox database. Commands run from the TuneWrangler repo root via `deno task rb`.
 
 ## What This Project Does
 
 - **Create Smart Playlists**: Generate complex Rekordbox smart playlists from JSON configuration files
 - **Backup & Restore**: Safely backup and restore your Rekordbox database
-- **Manage Playlists**: Copy, modify, and organize your Rekordbox playlists programmatically
 
 ## Playlist Organization Methodology
 
@@ -110,61 +109,23 @@ Across all playlists, the 1-5 star rating represents **energy level**, not quali
 
 On any CDJ, you can sort a playlist by Rating to instantly separate warmup tracks from peak-time bangers.
 
-## Quick Start
-
-### Prerequisites
-
-1. **Python 3.8+** installed
-2. **Rekordbox 6** installed and configured
-3. **macOS** (scripts are designed for macOS file paths)
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/yourusername/rekordbox-smart-playlist.git
-   cd rekordbox-smart-playlist
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   pip install pyrekordbox
-   ```
-
-3. **Verify your Rekordbox database location:**
-   ```bash
-   # Default location:
-   # ~/Library/Pioneer/rekordbox6/master.db
-   ```
-
 ## Usage
 
-### CLI Commands
+Requires macOS, Rekordbox installed, and `uv`. The database is
+`~/Library/Pioneer/rekordbox/master.db`. Close Rekordbox before any command that writes. Pass
+arguments right after the task name, with no `--`.
 
-**Create all playlists (dry run first):**
 ```bash
-rekordbox-smart-playlists --dry-run --verbose playlist create --all
+deno task rb --dry-run -v playlist create --all   # preview, no writes
+deno task rb --dry-run playlist create --file daytime.json
+deno task rb playlist create --all                # backs up master.db, then writes
+deno task rb playlist validate --all
+deno task rb playlist list
+deno task rb backup create                        # also: list, restore, validate, delete, cleanup
+deno task rb:audit                                # offline structure check, no database
 ```
 
-**Create playlists from a specific file:**
-```bash
-rekordbox-smart-playlists --dry-run playlist create --file daytime.json
-```
-
-**Create playlists for real (commits to database):**
-```bash
-rekordbox-smart-playlists playlist create --all
-```
-
-**Validate configuration files:**
-```bash
-rekordbox-smart-playlists playlist validate --all
-```
-
-**List existing playlists:**
-```bash
-rekordbox-smart-playlists playlist list
-```
+Global flags (`--dry-run`, `-v`, `-q`, `--log-file`) go before the subcommand.
 
 ## JSON Configuration Format
 
@@ -194,7 +155,6 @@ playlist-data/
   rotation.json            # Root: The Rotation
   missy.json               # Root: Missy
   b2b.json                 # Root: B2B
-  old/                     # Archived previous playlist definitions
 ```
 
 ### Situation File (Root Level)
@@ -284,24 +244,15 @@ The base file defines playlists that are shared across all textures. It uses a d
 
 ## Configuration
 
-### Environment Variables
+Environment variables only, loaded from the repo-root `.env` (see `.env.example`). There is no
+config file.
 
-```bash
-export REKORDBOX_BACKUP_PATH="/path/to/backups"
-export REKORDBOX_DRY_RUN="true"
-```
-
-### Configuration File
-
-Create a `config.json` or `config.toml`:
-
-```json
-{
-  "playlist_data_path": "playlist-data",
-  "dry_run": true,
-  "backup_before_changes": true
-}
-```
+| Variable | Meaning |
+|---|---|
+| `TUNEWRANGLER_RB_BACKUP_PATH` | Required for any backup. Must be an existing absolute folder. Only the newest 10 backups this tool wrote are kept; other files are left alone. |
+| `TUNEWRANGLER_RB_PLAYLIST_DATA_PATH` | Playlist JSON folder. Default `rekordbox/playlist-data`. |
+| `TUNEWRANGLER_RB_PARENT_PLAYLIST` | Folder generated playlists go under. Default `DaneDubz`. |
+| `TUNEWRANGLER_RB_DRY_RUN`, `_VERBOSE`, `_LOG_LEVEL`, `_LOG_FILE` | Defaults for the matching CLI flags. |
 
 ## Safety Features
 
@@ -319,46 +270,9 @@ Create a `config.json` or `config.toml`:
 
 ## Troubleshooting
 
-### pyrekordbox Installation Issues
-
-```bash
-# 1. Install the sqlcipher C library (macOS with Homebrew)
-brew install sqlcipher
-
-# 2. Install the Python bindings -- pip should find the Homebrew sqlcipher automatically
-SQLCIPHER_PATH=$(brew --prefix sqlcipher)
-C_INCLUDE_PATH="$SQLCIPHER_PATH/include" LIBRARY_PATH="$SQLCIPHER_PATH/lib" pip install sqlcipher3
-
-# 3. Install pyrekordbox
-pip install pyrekordbox
-```
-
-If `pip install sqlcipher3` fails, you can fall back to building from source:
-
-```bash
-git clone https://github.com/coleifer/sqlcipher3
-cd sqlcipher3
-SQLCIPHER_PATH=$(brew --prefix sqlcipher)
-C_INCLUDE_PATH="$SQLCIPHER_PATH/include" LIBRARY_PATH="$SQLCIPHER_PATH/lib" python setup.py build
-C_INCLUDE_PATH="$SQLCIPHER_PATH/include" LIBRARY_PATH="$SQLCIPHER_PATH/lib" python setup.py install
-cd ..
-```
-
-### Database Connection Errors
-
-- Ensure Rekordbox is **closed** before running any commands
-- Check database location: `~/Library/Pioneer/rekordbox6/master.db`
-- Verify read/write permissions to the database file
-
-### Debugging
-
-```bash
-# Verbose dry run of a single file
-rekordbox-smart-playlists --dry-run --verbose playlist create --file daytime.json
-
-# Validate all configs
-rekordbox-smart-playlists playlist validate --all
-```
+- Close Rekordbox before running any write command.
+- Check the database exists at `~/Library/Pioneer/rekordbox/master.db` and is readable and writable.
+- Debug one file: `deno task rb --dry-run -v playlist create --file daytime.json`.
 
 ## Acknowledgments
 

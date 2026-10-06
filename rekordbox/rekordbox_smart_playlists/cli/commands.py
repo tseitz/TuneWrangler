@@ -8,11 +8,11 @@ import argparse
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from ..utils.logging import get_logger, log_success, log_error, log_exception
-from ..core.config import Config
-from ..core.database import RekordboxDatabase, DatabaseError
-from ..core.playlist_manager import PlaylistManager, ExistingPlaylistStrategy
 from ..core.backup_manager import BackupManager
+from ..core.config import Config, ConfigurationError
+from ..core.database import DatabaseError, RekordboxDatabase
+from ..core.playlist_manager import ExistingPlaylistStrategy, PlaylistManager
+from ..utils.logging import get_logger, log_error, log_exception, log_success
 
 logger = get_logger(__name__)
 
@@ -80,7 +80,10 @@ class PlaylistCommand(BaseCommand):
             "--existing",
             choices=["overwrite", "skip", "prompt"],
             default=None,
-            help="How to handle existing playlists: overwrite, skip, or prompt for each (default: prompt interactively at start)",
+            help=(
+                "How to handle existing playlists: overwrite, skip, or prompt for each "
+                "(default: prompt interactively at start)"
+            ),
         )
 
         # List playlists
@@ -111,11 +114,6 @@ class PlaylistCommand(BaseCommand):
             logger.error("Playlist action is required")
             return False
 
-        if args.playlist_action == "create":
-            if args.file and not Path("playlist-data", args.file).exists():
-                logger.error(f"Playlist file not found: {args.file}")
-                return False
-
         return True
 
     def execute(self, args: argparse.Namespace) -> int:
@@ -130,6 +128,9 @@ class PlaylistCommand(BaseCommand):
             else:
                 logger.error(f"Unknown playlist action: {args.playlist_action}")
                 return 1
+        except ConfigurationError as e:
+            log_error(logger, str(e))
+            return 1
         except Exception as e:
             log_exception(logger, e, f"playlist {args.playlist_action}")
             return 1
@@ -137,6 +138,14 @@ class PlaylistCommand(BaseCommand):
     def _create_playlists(self, args: argparse.Namespace) -> int:
         """Create playlists from configuration files."""
         logger.info("Creating playlists...")
+
+        if args.file:
+            config_file = Path(args.file)
+            if not config_file.is_absolute():
+                config_file = Path(self.config.playlist_data_path) / config_file
+            if not config_file.is_file():
+                log_error(logger, f"Playlist file not found: {config_file}")
+                return 1
 
         # Create backup if requested and not in dry run mode
         if not args.skip_backup and not self.config.dry_run and self.config.backup_before_changes:
@@ -156,7 +165,10 @@ class PlaylistCommand(BaseCommand):
                 if args.existing:
                     strategy = ExistingPlaylistStrategy(args.existing)
                 elif self.config.dry_run:
-                    print("[DRY RUN] Would prompt for existing playlist strategy. Defaulting to skip.\n")
+                    print(
+                        "[DRY RUN] Would prompt for existing playlist strategy. "
+                        "Defaulting to skip.\n"
+                    )
                     strategy = ExistingPlaylistStrategy.SKIP_ALL
                 else:
                     print("\nHow would you like to handle existing playlists?")
@@ -181,7 +193,11 @@ class PlaylistCommand(BaseCommand):
                 if existing_roots:
                     print(f"Found {len(existing_roots)} existing root folder(s):")
                     for root in existing_roots:
-                        child_str = f"{root['child_count']} child playlist(s)" if root['child_count'] else "empty"
+                        child_str = (
+                            f"{root['child_count']} child playlist(s)"
+                            if root["child_count"]
+                            else "empty"
+                        )
                         print(f"  - {root['name']} ({child_str})")
                     print()
 
@@ -189,36 +205,34 @@ class PlaylistCommand(BaseCommand):
                         print("[DRY RUN] Would handle existing folders based on strategy.\n")
                     elif strategy == ExistingPlaylistStrategy.OVERWRITE_ALL:
                         for root in existing_roots:
-                            deleted = playlist_manager.delete_root_folder(root['playlist'])
+                            deleted = playlist_manager.delete_root_folder(root["playlist"])
                             print(f"  Deleted '{root['name']}' ({deleted} playlist(s)).")
                         print()
                     elif strategy == ExistingPlaylistStrategy.SKIP_ALL:
                         for root in existing_roots:
-                            playlist_manager._skip_parents.add(root['name'])
+                            playlist_manager._skip_parents.add(root["name"])
                             print(f"  Skipping '{root['name']}'.")
                         print()
                     else:
                         # PROMPT_EACH
                         for root in existing_roots:
-                            child_count = root['child_count']
-                            child_str = f"{child_count} child playlist(s)" if child_count else "empty"
+                            child_count = root["child_count"]
+                            child_str = (
+                                f"{child_count} child playlist(s)" if child_count else "empty"
+                            )
                             response = input(
-                                f"'{root['name']}' already exists ({child_str}). Overwrite or skip? (o/S): "
+                                f"'{root['name']}' already exists ({child_str}). "
+                                "Overwrite or skip? (o/S): "
                             )
                             if response.lower() in ["o", "overwrite"]:
-                                deleted = playlist_manager.delete_root_folder(root['playlist'])
+                                deleted = playlist_manager.delete_root_folder(root["playlist"])
                                 print(f"  Deleted '{root['name']}' ({deleted} playlist(s)).")
                             else:
-                                playlist_manager._skip_parents.add(root['name'])
+                                playlist_manager._skip_parents.add(root["name"])
                                 print(f"  Skipping '{root['name']}'.")
                         print()
 
                 if args.file:
-                    # Create from specific file
-                    config_file = Path(args.file)
-                    if not config_file.is_absolute():
-                        config_file = Path(self.config.playlist_data_path) / config_file
-
                     results = playlist_manager.create_playlists_from_file(config_file)
                 else:
                     # Create from all files
@@ -236,19 +250,19 @@ class PlaylistCommand(BaseCommand):
                 created = [r for r in successful if not r.skipped]
                 skipped = [r for r in successful if r.skipped]
 
-                print(f"\nPlaylist Creation Summary:")
+                print("\nPlaylist Creation Summary:")
                 print(f"Created: {len(created)}")
                 print(f"Skipped: {len(skipped)}")
                 print(f"Failed: {len(failed)}")
 
                 if skipped:
-                    print(f"\nSkipped playlists:")
+                    print("\nSkipped playlists:")
                     for result in skipped:
                         reason = result.skip_reason or "Already exists"
                         print(f"  - {result.playlist_name}: {reason}")
 
                 if failed:
-                    print(f"\nFailed playlists:")
+                    print("\nFailed playlists:")
                     for result in failed:
                         print(f"  - {result.playlist_name}: {result.error_message}")
 
@@ -298,8 +312,9 @@ class PlaylistCommand(BaseCommand):
 
     def _validate_configurations(self, args: argparse.Namespace) -> int:
         """Validate playlist configuration files."""
-        from ..utils.validation import validate_playlist_config
         import json
+
+        from ..utils.validation import validate_playlist_config
 
         files_to_validate = []
 
@@ -311,17 +326,19 @@ class PlaylistCommand(BaseCommand):
         else:
             # Validate all JSON files
             playlist_dir = Path(self.config.playlist_data_path)
-            files_to_validate = list(playlist_dir.glob("*.json"))
+            files_to_validate = [
+                f for f in sorted(playlist_dir.glob("*.json")) if not f.name.startswith((".", "_"))
+            ]
 
         if not files_to_validate:
-            logger.warning("No configuration files found to validate")
-            return 0
+            log_error(logger, f"No configuration files found in {self.config.playlist_data_path}")
+            return 1
 
         all_valid = True
 
         for config_file in files_to_validate:
             try:
-                with open(config_file, "r") as f:
+                with open(config_file) as f:
                     config_data = json.load(f)
 
                 is_valid, errors = validate_playlist_config(config_data)
@@ -338,6 +355,7 @@ class PlaylistCommand(BaseCommand):
                 log_error(logger, f"Error validating {config_file.name}: {e}")
                 all_valid = False
 
+        logger.info(f"Validated {len(files_to_validate)} configuration files")
         return 0 if all_valid else 1
 
 
@@ -441,6 +459,9 @@ class BackupCommand(BaseCommand):
                 logger.error(f"Unknown backup action: {args.backup_action}")
                 return 1
 
+        except ConfigurationError as e:
+            log_error(logger, str(e))
+            return 1
         except Exception as e:
             log_exception(logger, e, f"backup {args.backup_action}")
             return 1
@@ -566,7 +587,7 @@ class BackupCommand(BaseCommand):
             print(f"  - {backup.name} ({backup.created_str})")
 
         if not self.config.dry_run:
-            response = input(f"\nProceed with deletion? (y/N): ")
+            response = input("\nProceed with deletion? (y/N): ")
             if response.lower() not in ["y", "yes"]:
                 logger.info("Cleanup cancelled")
                 return 0

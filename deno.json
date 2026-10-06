@@ -28,6 +28,13 @@
     "py:check": "uv run --project soundcloud_dl ty check soundcloud_dl/soundcloud_dl",
     "py:lint": "uv run --project soundcloud_dl ruff check soundcloud_dl/soundcloud_dl",
     "py:fmt": "uv run --project soundcloud_dl ruff format soundcloud_dl/soundcloud_dl",
-    "py:fmt:check": "uv run --project soundcloud_dl ruff format --check soundcloud_dl/soundcloud_dl"
+    "py:fmt:check": "uv run --project soundcloud_dl ruff format --check soundcloud_dl/soundcloud_dl",
+    "rb": "uv run --project rekordbox rsp",
+    "rb:audit": "uv run --project rekordbox python -m rekordbox_smart_playlists.audit",
+    "rb:test": "uv run --project rekordbox pytest rekordbox/tests/",
+    "rb:check": "uv run --project rekordbox ty check rekordbox/rekordbox_smart_playlists",
+    "rb:lint": "uv run --project rekordbox ruff check rekordbox/rekordbox_smart_playlists",
+    "rb:fmt": "uv run --project rekordbox ruff format rekordbox/rekordbox_smart_playlists",
+    "rb:fmt:check": "uv run --project rekordbox ruff format --check rekordbox/rekordbox_smart_playlists"
   }
 }

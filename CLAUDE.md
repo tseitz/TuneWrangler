@@ -4,10 +4,11 @@ Guidance for Claude Code working in this repository.
 
 ## Project Overview
 
-TuneWrangler is a music file management tool with two components:
+TuneWrangler is a music file management tool with three components:
 
 1. **Main tool** (Deno/TypeScript, `src/`): CLI that renames downloaded music files into a normalized `artist - album - title` format, manages playlists, converts formats, and analyzes a DJ collection.
 2. **soundcloud_dl** (Python/uv, `soundcloud_dl/`): Automates SoundCloud free-download gates using Playwright + CDP attach. Pulls track URLs from the SoundCloud API, then drives a real Chrome instance through per-host gate handlers.
+3. **rekordbox** (Python/uv, `rekordbox/`): Generates Rekordbox smart playlists from JSON in `rekordbox/playlist-data/` and writes them into `master.db`, with backup/restore. See `rekordbox/README.md` for the playlist methodology.
 
 ## Commands
 
@@ -47,6 +48,28 @@ deno task py:fmt:check        # ruff format --check
 ```
 
 The wrappers expand to `uv run --project soundcloud_dl <cmd>` — see `deno.json`.
+
+### rekordbox (Python)
+
+Same wrapper rule as above. Args go straight after the task name: `deno task rb playlist list`,
+never `deno task rb -- ...` (the literal `--` reaches argparse and breaks it). Close Rekordbox
+before anything that writes.
+
+```bash
+deno task rb --dry-run playlist create --all   # preview; no backup, no DB write
+deno task rb playlist create --all             # backs up master.db, then writes
+deno task rb playlist create --file daytime.json
+deno task rb playlist list                     # also: validate --all | --file F
+deno task rb backup create                     # also: list, restore, validate, delete, cleanup
+deno task rb:audit            # offline check of playlist-data structure (no DB)
+deno task rb:test             # pytest
+deno task rb:check            # ty type-check
+deno task rb:lint             # ruff lint
+deno task rb:fmt              # ruff format (writes)
+deno task rb:fmt:check        # ruff format --check
+```
+
+Global flags go before the subcommand: `--dry-run`, `-v`, `-q`, `--log-file`.
 
 ## Rename workflow (the important one)
 
@@ -128,6 +151,22 @@ When changing `parser.ts`, run `deno task test` and inspect the corpus output fo
 - **`playlist_prune.py`** — `deno task py --prune-playlist [--apply] [--allow-bulk]` removes tracks from `TUNEWRANGLER_SC_PLAYLIST_URL` once proven collected: a manifest `apply` entry links the track's URL to its approved name, and that name (any extension) is in `TUNEWRANGLER_DJMUSIC_PATH`. Dry run by default; backs up the full track list to `logs/soundcloud_dl/playlist_backups/` before changing anything; refuses to empty the playlist or remove >20 tracks / 25% without `--allow-bulk`. Runs as the playlist **owner** (`--authorize-owner`, token in `logs/soundcloud_dl/owner_token.json`) — a different account from the bot token everything else uses.
 - **`comment_guard.py`** — `keep_one_comment()`: after a gate run, deletes extra copies of the bot's own comment on a track (a gate rerun posts its comment box again on every attempt), keeping the lowest comment id. Only deletes a comment whose text matches the *current* `TUNEWRANGLER_SC_COMMENT` — one posted under an older value is left alone. `--dedupe-comments [--apply]` (`dedupe_comments.py`) sweeps every track ever processed the same way; dry run by default.
 
+### Python (`rekordbox/`)
+
+- **`playlist-data/`** — JSON playlist definitions: situation files at the root, texture files and
+  `_base.json` under `helpers/`. `_`-prefixed files are inheritance bases, not playlists.
+- **`core/playlist_manager.py`** — Reads the JSON, expands `base`/`link`, builds the playlist tree
+  under the parent playlist (`TUNEWRANGLER_RB_PARENT_PLAYLIST`) via pyrekordbox. `core/database.py`
+  wraps `~/Library/Pioneer/rekordbox/master.db`; nothing commits until the whole run succeeds.
+- **`core/backup_manager.py`** — Zips the Pioneer library into `TUNEWRANGLER_RB_BACKUP_PATH` before
+  every write (`playlist create` unless `--skip-backup` or `--dry-run`). Keeps the newest 10 of its
+  own backups (marked inside each zip) and deletes older ones; other zips there are left alone.
+- **`core/config.py`** — Env-only (`TUNEWRANGLER_RB_*`, repo-root `.env`); no config file. CLI
+  flags override env. An unset, blank or missing backup folder raises `ConfigurationError`.
+- **`audit.py`** — `deno task rb:audit`: offline structure check of `playlist-data/` (leaf counts
+  per context). The test suite pins its totals, so adding a genre means updating `tests/test_audit.py`.
+- **`cli/`** — argparse entry (`rsp`): `playlist` and `backup` subcommands.
+
 ## Logs and state
 
 All generated content lives under `logs/` (gitignored). Don't reintroduce a top-level `output/` directory — analysis CSVs go under `logs/tunewrangler/analysis/`.
@@ -156,8 +195,8 @@ logs/
 ## Conventions
 
 - **Runtimes**: Deno 2.6.9, Python 3.12, FFmpeg 7.1.1 (managed via `.mise.toml`).
-- **Env vars**: Main tool uses `TUNEWRANGLER_*_PATH`; soundcloud_dl uses `TUNEWRANGLER_SC_*`. soundcloud_dl always loads repo-root `.env` via its own config loader; on the Deno side only `rM`, `cli`, and `./tunewrangler` load it (via `--env-file`, needed for `--judge`'s `TYPESAFE_API_KEY`) — the other Deno tasks read only real environment variables. Template lives at `.env.example` (root).
-- **Python tooling**: uv, ruff (line-length 100, select ALL minus D/COM812/ISC001), ty.
+- **Env vars**: Main tool uses `TUNEWRANGLER_*_PATH`; soundcloud_dl uses `TUNEWRANGLER_SC_*`; rekordbox uses `TUNEWRANGLER_RB_*` (via the repo-root `.env`). soundcloud_dl always loads repo-root `.env` via its own config loader; on the Deno side only `rM`, `cli`, and `./tunewrangler` load it (via `--env-file`, needed for `--judge`'s `TYPESAFE_API_KEY`) — the other Deno tasks read only real environment variables. Template lives at `.env.example` (root).
+- **Python tooling**: uv, ruff (line-length 100, select ALL minus D/COM812/ISC001), ty. `rekordbox/` uses a lenient ruff select (E,F,I,UP,B) for now; tighten later.
 - **Markdown**: markdownlint enforced (`.markdownlint.json`). Lines under 100 chars; blank lines around code blocks and headers.
 - **Commits**: Conventional (`feat:`, `fix:`, `refactor:`, etc.). **Land directly on `main`** — solo project, no feature branches unless explicitly requested.
 - **Testing**: `deno task test` for the main tool (unit + regression corpus). `pytest` for soundcloud_dl. New rename-pipeline changes should add a corpus entry rather than handwritten tests where possible.

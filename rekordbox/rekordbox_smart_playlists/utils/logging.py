@@ -10,12 +10,13 @@ Provides consistent logging configuration across all modules with:
 
 import logging
 import sys
-from pathlib import Path
-from typing import Optional, Dict, Any, Type
 from datetime import datetime
+from pathlib import Path
+from types import TracebackType
+from typing import Any
+
 import colorama
 from colorama import Fore, Style
-from types import TracebackType
 
 # Initialize colorama for cross-platform colored output
 colorama.init(autoreset=True)
@@ -46,27 +47,23 @@ class ColoredFormatter(logging.Formatter):
 class ProgressLogger:
     """Helper class for logging progress with consistent formatting."""
 
-    def __init__(
-        self, logger: logging.Logger, total: int, description: str = "Processing"
-    ):
+    def __init__(self, logger: logging.Logger, total: int, description: str = "Processing"):
         self.logger = logger
         self.total = total
         self.description = description
         self.current = 0
         self.start_time = datetime.now()
 
-    def update(self, increment: int = 1, message: Optional[str] = None) -> None:
+    def update(self, increment: int = 1, message: str | None = None) -> None:
         """Update progress and optionally log a message."""
         self.current += increment
 
         if message:
             percentage = (self.current / self.total) * 100 if self.total > 0 else 0
             elapsed = datetime.now() - self.start_time
-            self.logger.info(
-                f"[{percentage:5.1f}%] {self.description}: {message} ({elapsed})"
-            )
+            self.logger.info(f"[{percentage:5.1f}%] {self.description}: {message} ({elapsed})")
 
-    def finish(self, message: Optional[str] = None) -> None:
+    def finish(self, message: str | None = None) -> None:
         """Log completion message."""
         elapsed = datetime.now() - self.start_time
         final_message = message or f"{self.description} completed"
@@ -75,9 +72,9 @@ class ProgressLogger:
 
 def setup_logging(
     level: str = "INFO",
-    log_file: Optional[str] = None,
+    log_file: str | None = None,
     console: bool = True,
-    format_string: Optional[str] = None,
+    format_string: str | None = None,
     include_timestamp: bool = True,
 ) -> logging.Logger:
     """
@@ -141,17 +138,13 @@ def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)
 
 
-def log_function_call(
-    func_name: str, args: Dict[str, Any], logger: logging.Logger
-) -> None:
+def log_function_call(func_name: str, args: dict[str, Any], logger: logging.Logger) -> None:
     """Log a function call with its arguments."""
     args_str = ", ".join(f"{k}={v}" for k, v in args.items())
     logger.debug(f"Calling {func_name}({args_str})")
 
 
-def log_exception(
-    logger: logging.Logger, exception: Exception, context: str = ""
-) -> None:
+def log_exception(logger: logging.Logger, exception: Exception, context: str = "") -> None:
     """Log an exception with context information."""
     context_str = f" in {context}" if context else ""
     logger.error(
@@ -216,32 +209,28 @@ class LoggingContext:
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         if self.original_level is not None:
             logging.getLogger().setLevel(self.original_level)
 
 
-def create_progress_logger(
-    total: int, description: str = "Processing"
-) -> ProgressLogger:
+def create_progress_logger(total: int, description: str = "Processing") -> ProgressLogger:
     """Create a progress logger instance."""
     logger = get_logger("progress")
     return ProgressLogger(logger, total, description)
 
 
 # Convenience functions for common logging patterns
-def setup_basic_logging(
-    verbose: bool = False, log_file: Optional[str] = None
-) -> logging.Logger:
+def setup_basic_logging(verbose: bool = False, log_file: str | None = None) -> logging.Logger:
     """Set up basic logging configuration based on verbosity."""
     level = "DEBUG" if verbose else "INFO"
     return setup_logging(level=level, log_file=log_file)
 
 
-def setup_quiet_logging(log_file: Optional[str] = None) -> logging.Logger:
+def setup_quiet_logging(log_file: str | None = None) -> logging.Logger:
     """Set up quiet logging (warnings and errors only)."""
     return setup_logging(level="WARNING", log_file=log_file, console=True)
 
@@ -265,5 +254,5 @@ if __name__ == "__main__":
     # Test progress logger
     progress = create_progress_logger(10, "Test Progress")
     for i in range(10):
-        progress.update(message=f"Processing item {i+1}")
+        progress.update(message=f"Processing item {i + 1}")
     progress.finish("All items processed")

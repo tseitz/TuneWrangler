@@ -2,21 +2,21 @@
 Validation utilities for configuration, file paths, and data structures.
 """
 
+import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, Tuple
-import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 def validate_file_path(
-    path: Union[str, Path],
+    path: str | Path,
     must_exist: bool = True,
     must_be_file: bool = True,
     must_be_readable: bool = True,
-) -> Tuple[bool, str]:
+) -> tuple[bool, str]:
     """
     Validate a file path with various checks.
 
@@ -49,8 +49,8 @@ def validate_file_path(
 
 
 def validate_directory_path(
-    path: Union[str, Path], must_exist: bool = True, must_be_writable: bool = False
-) -> Tuple[bool, str]:
+    path: str | Path, must_exist: bool = True, must_be_writable: bool = False
+) -> tuple[bool, str]:
     """
     Validate a directory path.
 
@@ -84,10 +84,10 @@ def validate_directory_path(
 
 
 def validate_json_config(
-    config_data: Dict[str, Any],
-    required_fields: Optional[List[str]] = None,
-    schema: Optional[Dict[str, Any]] = None,
-) -> Tuple[bool, List[str]]:
+    config_data: dict[str, Any],
+    required_fields: list[str] | None = None,
+    schema: dict[str, Any] | None = None,
+) -> tuple[bool, list[str]]:
     """
     Validate JSON configuration data.
 
@@ -120,13 +120,14 @@ def validate_json_config(
                 value = config_data[field]
                 if not isinstance(value, expected_type):
                     errors.append(
-                        f"Field '{field}' should be type {expected_type.__name__}, got {type(value).__name__}"
+                        f"Field '{field}' should be type {expected_type.__name__}, "
+                        f"got {type(value).__name__}"
                     )
 
     return len(errors) == 0, errors
 
 
-def validate_playlist_config(playlist_data: Dict[str, Any]) -> Tuple[bool, List[str]]:
+def validate_playlist_config(playlist_data: dict[str, Any]) -> tuple[bool, list[str]]:
     """
     Validate playlist configuration data structure.
 
@@ -166,7 +167,7 @@ def validate_playlist_config(playlist_data: Dict[str, Any]) -> Tuple[bool, List[
     return len(errors) == 0, errors
 
 
-def validate_playlist_category(category: Dict[str, Any], index: int) -> List[str]:
+def validate_playlist_category(category: dict[str, Any], index: int) -> list[str]:
     """
     Validate a single playlist category.
 
@@ -223,7 +224,7 @@ def validate_playlist_category(category: Dict[str, Any], index: int) -> List[str
     return errors
 
 
-def validate_playlist_item(playlist: Dict[str, Any], prefix: str) -> List[str]:
+def validate_playlist_item(playlist: dict[str, Any], prefix: str) -> list[str]:
     """
     Validate a single playlist item.
 
@@ -304,8 +305,8 @@ def validate_playlist_item(playlist: Dict[str, Any], prefix: str) -> List[str]:
 
 
 def validate_filename_format(
-    filename: str, expected_patterns: Optional[List[str]] = None
-) -> Tuple[bool, str]:
+    filename: str, expected_patterns: list[str] | None = None
+) -> tuple[bool, str]:
     """
     Validate filename format against expected patterns.
 
@@ -334,8 +335,8 @@ def validate_filename_format(
 
 
 def validate_audio_file_extensions(
-    filename: str, allowed_extensions: Optional[List[str]] = None
-) -> Tuple[bool, str]:
+    filename: str, allowed_extensions: list[str] | None = None
+) -> tuple[bool, str]:
     """
     Validate that filename has an allowed audio file extension.
 

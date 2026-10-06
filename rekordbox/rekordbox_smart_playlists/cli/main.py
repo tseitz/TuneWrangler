@@ -4,14 +4,12 @@ Main CLI interface for Rekordbox Smart Playlists.
 Provides a unified command-line interface for all playlist management operations.
 """
 
-import sys
 import argparse
-from pathlib import Path
-from typing import Optional, List
+import sys
 
-from ..utils.logging import setup_logging, get_logger
-from ..core.config import Config, load_config, find_config_file
-from .commands import PlaylistCommand, BackupCommand
+from ..core.config import Config, load_config
+from ..utils.logging import get_logger, setup_logging
+from .commands import BackupCommand, PlaylistCommand
 
 logger = get_logger(__name__)
 
@@ -36,10 +34,6 @@ Examples:
     )
 
     # Global options
-    parser.add_argument(
-        "--config", "-c", type=str, help="Path to configuration file (JSON or TOML)"
-    )
-
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
 
     parser.add_argument(
@@ -87,19 +81,6 @@ def load_configuration(args: argparse.Namespace) -> Config:
     Returns:
         Loaded configuration object
     """
-    # Determine config file path
-    config_file = None
-    if args.config:
-        config_file = Path(args.config)
-        if not config_file.exists():
-            logger.error(f"Configuration file not found: {config_file}")
-            sys.exit(1)
-    else:
-        # Try to find default config file
-        config_file = find_config_file()
-        if config_file:
-            logger.info(f"Using configuration file: {config_file}")
-
     # Create command-line overrides
     overrides = {}
     if hasattr(args, "dry_run") and args.dry_run:
@@ -113,7 +94,7 @@ def load_configuration(args: argparse.Namespace) -> Config:
         overrides["log_file"] = args.log_file
 
     # Load configuration
-    config = load_config(config_file=config_file, **overrides)
+    config = load_config(**overrides)
 
     return config
 
@@ -152,7 +133,7 @@ def validate_args(args: argparse.Namespace) -> bool:
     return True
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """
     Main entry point for the CLI.
 
@@ -182,7 +163,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             return 1
 
         # Log startup information
-        logger.info(f"Starting Rekordbox Smart Playlists CLI")
+        logger.info("Starting Rekordbox Smart Playlists CLI")
         logger.debug(f"Command: {args.command}")
         logger.debug(f"Dry run: {config.dry_run}")
 

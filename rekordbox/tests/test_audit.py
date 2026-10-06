@@ -6,7 +6,6 @@ import pytest
 from rekordbox_smart_playlists.audit import (
     AUGMENTABLE_SUBTREES,
     UNIFORM_CONTEXTS,
-    Leaf,
     _context_files,
     _signature,
     main,
