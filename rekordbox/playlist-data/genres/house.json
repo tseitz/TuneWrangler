@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "parent": "House",
+      "mainConditions": [
+        "House"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "playlists": [
+        {
+          "name": "All",
+          "operator": 1,
+          "contains": []
+        }
+      ]
+    }
+  ]
+}

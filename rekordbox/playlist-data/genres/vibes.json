@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "parent": "Vibes",
+      "mainConditions": [
+        "Vibes"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "playlists": [
+        {
+          "name": "All",
+          "operator": 1,
+          "contains": []
+        }
+      ]
+    }
+  ]
+}

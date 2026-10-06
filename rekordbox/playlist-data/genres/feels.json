@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "parent": "Feels",
+      "mainConditions": [
+        "Feels"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "playlists": [
+        {
+          "name": "All",
+          "operator": 1,
+          "contains": []
+        }
+      ]
+    }
+  ]
+}

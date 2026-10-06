@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "parent": "Beats",
+      "mainConditions": [
+        "Beats"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "playlists": [
+        {
+          "name": "All",
+          "operator": 1,
+          "contains": []
+        }
+      ]
+    }
+  ]
+}

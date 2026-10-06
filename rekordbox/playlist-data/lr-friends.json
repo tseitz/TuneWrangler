@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "parent": "LR Friends",
+      "mainConditions": [
+        "LR Friends"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "base": "helpers/_texture-singles.json",
+      "playlists": []
+    }
+  ]
+}

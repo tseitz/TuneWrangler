@@ -1,0 +1,13 @@
+{
+  "data": [
+    {
+      "parent": "My Set",
+      "mainConditions": ["My Set"],
+      "playlists": [
+        { "name": "All", "operator": 1, "contains": [] },
+        { "name": "Genre", "operator": 1, "playlistType": "folder", "link": "helpers/lens-genre.json" },
+        { "name": "Texture", "operator": 1, "playlistType": "folder", "link": "helpers/lens-texture.json" }
+      ]
+    }
+  ]
+}

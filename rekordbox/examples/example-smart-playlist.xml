@@ -1,0 +1,38 @@
+<NODE Id="-392414503" LogicalOperator="1" AutomaticUpdate="0"
+  ><CONDITION PropertyName="myTag" Operator="8" ValueUnit="" ValueLeft="1433056989" ValueRight="" /><CONDITION
+    PropertyName="myTag"
+    Operator="9"
+    ValueUnit=""
+    ValueLeft="-863817275"
+    ValueRight="" /><CONDITION
+    PropertyName="myTag"
+    Operator="9"
+    ValueUnit=""
+    ValueLeft="-1831956291"
+    ValueRight="" /><CONDITION
+    PropertyName="myTag"
+    Operator="9"
+    ValueUnit=""
+    ValueLeft="-1426427717"
+    ValueRight="" /><CONDITION
+    PropertyName="myTag"
+    Operator="9"
+    ValueUnit=""
+    ValueLeft="-1694660693"
+    ValueRight="" /><CONDITION
+    PropertyName="myTag"
+    Operator="9"
+    ValueUnit=""
+    ValueLeft="743522363"
+    ValueRight="" /><CONDITION
+    PropertyName="myTag"
+    Operator="9"
+    ValueUnit=""
+    ValueLeft="-1422281396"
+    ValueRight="" /><CONDITION
+    PropertyName="myTag"
+    Operator="9"
+    ValueUnit=""
+    ValueLeft="-1780879497"
+    ValueRight="" /><CONDITION PropertyName="myTag" Operator="9" ValueUnit="" ValueLeft="-2122620727" ValueRight=""
+/></NODE>

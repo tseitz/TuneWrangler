@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "parent": "Trippin",
+      "mainConditions": [
+        "Trippin"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "base": "helpers/_texture-singles.json",
+      "playlists": []
+    }
+  ]
+}

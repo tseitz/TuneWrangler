@@ -1,0 +1,11 @@
+{
+  "data": [
+    {
+      "parent": "Clean",
+      "mainConditions": [],
+      "negativeConditions": ["Dirty"],
+      "base": "helpers/_texture-singles.json",
+      "playlists": []
+    }
+  ]
+}

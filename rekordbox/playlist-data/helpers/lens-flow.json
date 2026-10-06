@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "parent": "Flow",
+      "mainConditions": [],
+      "playlists": [
+        { "name": "Openers", "operator": 1, "contains": ["Openers"] },
+        { "name": "Beginning", "operator": 1, "contains": ["Beginning"] },
+        { "name": "Middle", "operator": 1, "contains": ["Middle"] },
+        { "name": "End", "operator": 1, "contains": ["End"] },
+        { "name": "Closers", "operator": 1, "contains": ["Closers"] }
+      ]
+    }
+  ]
+}

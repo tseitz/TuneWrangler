@@ -1,0 +1,50 @@
+{
+  "data": [
+    {
+      "parent": "Ketamine Music",
+      "mainConditions": [
+        "Ketamine Music"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "playlists": [
+        {
+          "name": "All",
+          "operator": 1,
+          "contains": []
+        },
+        {
+          "name": "Flow",
+          "operator": 1,
+          "playlistType": "folder",
+          "link": "helpers/lens-flow.json"
+        },
+        {
+          "name": "Genre",
+          "operator": 1,
+          "playlistType": "folder",
+          "link": "helpers/lens-genre.json"
+        },
+        {
+          "name": "Texture",
+          "operator": 1,
+          "playlistType": "folder",
+          "link": "helpers/lens-texture.json"
+        },
+        {
+          "name": "My Set",
+          "operator": 1,
+          "playlistType": "folder",
+          "link": "helpers/caliber-my-set.json"
+        },
+        {
+          "name": "The Rotation",
+          "operator": 1,
+          "playlistType": "folder",
+          "link": "helpers/caliber-rotation.json"
+        }
+      ]
+    }
+  ]
+}

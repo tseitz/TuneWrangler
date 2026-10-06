@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "parent": "Dubstep",
+      "mainConditions": [
+        "Dubstep"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "playlists": [
+        {
+          "name": "All",
+          "operator": 1,
+          "contains": []
+        }
+      ]
+    }
+  ]
+}

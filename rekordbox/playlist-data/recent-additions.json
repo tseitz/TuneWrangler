@@ -1,0 +1,33 @@
+{
+  "data": [
+    {
+      "parent": "Recent Additions",
+      "mainConditions": [],
+      "negativeConditions": ["Archive"],
+      "playlists": [
+        {
+          "name": "Last 30 Days",
+          "operator": 1,
+          "dateCreated": { "time_period": 30, "time_unit": "day", "operator": "IN_LAST" }
+        },
+        {
+          "name": "Last 30 Days Rotation",
+          "operator": 1,
+          "contains": ["The Rotation"],
+          "dateCreated": { "time_period": 30, "time_unit": "day", "operator": "IN_LAST" }
+        },
+        {
+          "name": "Last 60 Days",
+          "operator": 1,
+          "dateCreated": { "time_period": 60, "time_unit": "day", "operator": "IN_LAST" }
+        },
+        {
+          "name": "Last 60 Days Rotation",
+          "operator": 1,
+          "contains": ["The Rotation"],
+          "dateCreated": { "time_period": 60, "time_unit": "day", "operator": "IN_LAST" }
+        }
+      ]
+    }
+  ]
+}

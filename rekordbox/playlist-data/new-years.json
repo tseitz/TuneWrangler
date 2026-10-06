@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "parent": "New Years",
+      "mainConditions": [
+        "New Years"
+      ],
+      "negativeConditions": [
+        "Archive"
+      ],
+      "base": "helpers/_texture-singles.json",
+      "playlists": []
+    }
+  ]
+}
