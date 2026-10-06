@@ -6,12 +6,15 @@ validation, and safety features.
 """
 
 import json
+import os
 import shutil
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from pyrekordbox.utils import get_rekordbox_agent_pid, get_rekordbox_pid
 
 from ..utils.file_utils import (
     temporary_directory,
@@ -47,18 +50,29 @@ class BackupValidationError(BackupError):
 
 
 BACKUP_CREATED_BY = "rekordbox-smart-playlists"
+MASTER_DB = "Library/rekordbox/master.db"
 
 
 def _is_own_backup(path: Path) -> bool:
-    """True only for zips this tool wrote; cleanup must never delete anything else."""
+    """True only for zips this tool wrote; nothing else is ever listed, cleaned or deleted."""
     try:
         with zipfile.ZipFile(path) as zf:
-            names = [n for n in zf.namelist() if n.endswith("backup_metadata.json")]
+            names = [n for n in zf.namelist() if n.endswith("_content/backup_metadata.json")]
             if not names:
                 return False
             return json.loads(zf.read(names[0])).get("created_by") == BACKUP_CREATED_BY
     except (zipfile.BadZipFile, OSError, ValueError):
         return False
+
+
+def _assert_rekordbox_closed() -> None:
+    """A copy of master.db taken while Rekordbox has it open can be inconsistent."""
+    if get_rekordbox_pid() or get_rekordbox_agent_pid():
+        raise BackupError("Rekordbox is running. Close it before backing up or restoring.")
+
+
+def _log_leftover(function, path, exc) -> None:
+    log_error(logger, f"Could not remove {path} ({exc}); delete it by hand.")
 
 
 @dataclass
@@ -108,7 +122,9 @@ class BackupManager:
         self.pioneer_app_support = Path(config.pioneer_app_support)
         self.pioneer_library = Path(config.pioneer_library)
 
-    def create_backup(self, backup_name: str | None = None, validate: bool = True) -> str | None:
+    def create_backup(
+        self, backup_name: str | None = None, validate: bool = True, cleanup: bool = True
+    ) -> str | None:
         """
         Create a comprehensive backup of Rekordbox database and configuration.
 
@@ -119,7 +135,10 @@ class BackupManager:
         Returns:
             Path to created backup file, or None if failed
         """
+        partial_path: Path | None = None
         try:
+            _assert_rekordbox_closed()
+
             # Generate backup name with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             if backup_name is None:
@@ -137,24 +156,24 @@ class BackupManager:
                 if not backup_success:
                     return None
 
-                # Create compressed archive
+                # Written under a hidden name and renamed into place, so a crash mid-write
+                # never leaves a half-written zip that looks like a backup.
                 archive_path = self.backup_base / f"{backup_name}.zip"
-                self._create_archive(temp_dir, archive_path)
+                partial_path = self.backup_base / f".{backup_name}.partial.zip"
+                self._create_archive(temp_dir, partial_path)
 
-                # Validate backup if requested
-                if validate:
-                    if not self.validate_backup(archive_path):
-                        log_error(logger, f"Backup validation failed: {archive_path}")
-                        archive_path.unlink()  # Remove invalid backup
-                        return None
+                if validate and not self.validate_backup(partial_path):
+                    log_error(logger, f"Backup validation failed: {archive_path}")
+                    partial_path.unlink()
+                    return None
+                os.replace(partial_path, archive_path)
 
                 # Log success
                 size_mb = archive_path.stat().st_size / (1024 * 1024)
                 log_success(logger, f"Backup created successfully: {archive_path}")
                 logger.info(f"Backup size: {size_mb:.1f} MB")
 
-                # Cleanup old backups if configured
-                if self.config.max_backups > 0:
+                if cleanup and self.config.max_backups > 0:
                     self._cleanup_old_backups()
 
                 return str(archive_path)
@@ -162,6 +181,9 @@ class BackupManager:
         except Exception as e:
             log_exception(logger, e, "creating backup")
             return None
+        finally:
+            if partial_path is not None:
+                partial_path.unlink(missing_ok=True)
 
     def _create_backup_structure(self, temp_dir: Path, backup_name: str) -> bool:
         """
@@ -236,7 +258,7 @@ class BackupManager:
                 json.dump(metadata, f, indent=2)
 
         except Exception as e:
-            log_exception(logger, e, "creating backup metadata")
+            raise BackupError(f"Could not write backup metadata: {e}") from e
 
     def _create_archive(self, source_dir: Path, archive_path: Path) -> None:
         """
@@ -247,12 +269,12 @@ class BackupManager:
             archive_path: Path for output archive
         """
         logger.info("Creating compressed archive...")
-        shutil.make_archive(str(archive_path).replace(".zip", ""), "zip", source_dir)
+        shutil.make_archive(str(archive_path.with_suffix("")), "zip", source_dir)
 
     def _cleanup_old_backups(self) -> None:
         """Clean up old backups based on max_backups setting."""
         try:
-            backups = [b for b in self.list_backups() if _is_own_backup(b.path)]
+            backups = self.list_backups()
             if len(backups) <= self.config.max_backups:
                 return
 
@@ -294,7 +316,9 @@ class BackupManager:
         logger.info(f"Restoring from backup: {backup_file.name}")
 
         try:
-            # Validate backup first
+            _assert_rekordbox_closed()
+            self._assert_restore_preconditions()
+
             if not self.validate_backup(backup_file):
                 log_error(logger, "Backup validation failed, aborting restore")
                 return False
@@ -324,7 +348,8 @@ class BackupManager:
         """Create a safety backup before restore operation."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safety_name = f"safety_backup_before_restore_{timestamp}"
-        return self.create_backup(safety_name, validate=False)
+        # No cleanup: it could delete the very backup being restored.
+        return self.create_backup(safety_name, validate=True, cleanup=False)
 
     def _extract_backup(self, backup_file: Path, extract_dir: Path) -> None:
         """
@@ -339,6 +364,25 @@ class BackupManager:
         with zipfile.ZipFile(backup_file, "r") as zip_ref:
             zip_ref.extractall(extract_dir)
 
+    def _restore_targets(self) -> list[Path]:
+        return [self.pioneer_library, self.pioneer_app_support]
+
+    def _assert_restore_preconditions(self) -> None:
+        """Refuse a restore whose swap could strand data or act on the wrong folder."""
+        for target in self._restore_targets():
+            if target.is_symlink():
+                raise BackupError(f"{target} is a symlink; restore would replace the link")
+            leftovers = [
+                p
+                for marker in ("restoring", "pre-restore", "failed")
+                for p in target.parent.glob(f"{target.name}.{marker}-*")
+            ]
+            if leftovers:
+                listed = ", ".join(str(p) for p in leftovers)
+                raise BackupError(
+                    f"An earlier restore did not finish; inspect and remove these first: {listed}"
+                )
+
     def _restore_from_extracted(self, extract_dir: Path) -> None:
         """
         Restore files from extracted backup directory.
@@ -346,30 +390,83 @@ class BackupManager:
         Args:
             extract_dir: Directory containing extracted backup
         """
-        # Find backup content directory
-        content_dirs = [d for d in extract_dir.iterdir() if d.is_dir() and "content" in d.name]
-        if not content_dirs:
-            raise BackupError("Backup content directory not found")
-
+        content_dirs = [
+            d for d in extract_dir.iterdir() if d.is_dir() and d.name.endswith("_content")
+        ]
+        if len(content_dirs) != 1:
+            raise BackupError(
+                f"Expected one *_content folder in the backup, found {len(content_dirs)}"
+            )
         backup_content = content_dirs[0]
 
-        # Restore Application Support
-        app_support_backup = backup_content / "Application Support"
-        if app_support_backup.exists():
-            logger.info("Restoring Application Support directory...")
-            if self.pioneer_app_support.exists():
-                shutil.rmtree(self.pioneer_app_support)
-            shutil.copytree(app_support_backup, self.pioneer_app_support)
-            log_success(logger, "Application Support restored")
+        pairs = [(backup_content / "Library", self.pioneer_library)]
+        if (backup_content / "Application Support").exists():
+            pairs.append((backup_content / "Application Support", self.pioneer_app_support))
+        elif self.pioneer_app_support.exists():
+            raise BackupError(
+                "Backup has no Application Support folder; restoring only the Library would "
+                "pair it with newer settings"
+            )
 
-        # Restore Library
-        library_backup = backup_content / "Library"
-        if library_backup.exists():
-            logger.info("Restoring Library directory...")
-            if self.pioneer_library.exists():
-                shutil.rmtree(self.pioneer_library)
-            shutil.copytree(library_backup, self.pioneer_library)
-            log_success(logger, "Library restored")
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        staged = self._stage(pairs, stamp)
+
+        _assert_rekordbox_closed()  # staging can take minutes; check again before touching live
+        swapped: list[tuple[Path, Path | None]] = []
+        try:
+            for staging, target in staged:
+                previous = target.with_name(f"{target.name}.pre-restore-{stamp}")
+                moved = target.exists()
+                if moved:
+                    target.rename(previous)
+                # Recorded before the second rename, so a failure there still rolls back.
+                swapped.append((target, previous if moved else None))
+                staging.rename(target)
+        except BaseException:
+            self._roll_back(swapped, stamp)
+            for staging, _ in staged:
+                if staging.exists():
+                    shutil.rmtree(staging, onexc=_log_leftover)
+            raise
+
+        for target, previous in swapped:
+            if previous is not None:
+                shutil.rmtree(previous, onexc=_log_leftover)
+            log_success(logger, f"Restored {target}")
+
+    def _stage(self, pairs: list[tuple[Path, Path]], stamp: str) -> list[tuple[Path, Path]]:
+        """Copy each backup folder beside its live target; a failure touches nothing live."""
+        staged: list[tuple[Path, Path]] = []
+        try:
+            for source, target in pairs:
+                staging = target.with_name(f"{target.name}.restoring-{stamp}")
+                logger.info(f"Staging {target}...")
+                staged.append((staging, target))
+                shutil.copytree(source, staging)
+        except BaseException:
+            for staging, _ in staged:
+                if staging.exists():
+                    shutil.rmtree(staging, onexc=_log_leftover)
+            raise
+        return staged
+
+    def _roll_back(self, swapped: list[tuple[Path, Path | None]], stamp: str) -> None:
+        """Put each original folder back. Nothing is deleted here, only renamed."""
+        for target, previous in reversed(swapped):
+            try:
+                failed = target.with_name(f"{target.name}.failed-{stamp}")
+                if target.exists():
+                    target.rename(failed)
+                if previous is not None:
+                    previous.rename(target)
+                if failed.exists():
+                    shutil.rmtree(failed, onexc=_log_leftover)
+            except Exception as e:
+                log_error(
+                    logger,
+                    f"Could not put {target} back ({e}). Your data is in {previous}; "
+                    f"rename it to {target} by hand.",
+                )
 
     def validate_backup(self, backup_path: str | Path) -> bool:
         """
@@ -396,23 +493,15 @@ class BackupManager:
                     log_error(logger, f"Corrupted files in backup: {bad_files}")
                     return False
 
-                # Check for required directories
                 file_list = zip_ref.namelist()
-                has_app_support = any("Application Support" in name for name in file_list)
-                has_library = any("Library" in name for name in file_list)
-
-                if not (has_app_support or has_library):
-                    log_error(logger, "Backup missing required directories")
+                master = [n for n in file_list if n.endswith(f"_content/{MASTER_DB}")]
+                if len(master) != 1 or zip_ref.getinfo(master[0]).file_size == 0:
+                    log_error(logger, f"Backup has no usable {MASTER_DB}")
                     return False
 
-                # Test extraction of a few files
-                test_files = [f for f in file_list if not f.endswith("/")][:5]
-                for test_file in test_files:
-                    try:
-                        zip_ref.read(test_file)
-                    except Exception as e:
-                        log_error(logger, f"Failed to read {test_file}: {e}")
-                        return False
+            if not _is_own_backup(backup_file):
+                log_error(logger, "Backup has no rekordbox-smart-playlists metadata")
+                return False
 
             logger.debug(f"Backup validation passed: {backup_file}")
             return True
@@ -434,14 +523,11 @@ class BackupManager:
         if not self.backup_base.exists():
             return []
 
-        # Look for both standard and custom backup names
-        backup_files = list(self.backup_base.glob("rekordbox_backup_*.zip"))
-        backup_files.extend(self.backup_base.glob("*backup*.zip"))
-        backup_files.extend(self.backup_base.glob("before_*.zip"))
-        backup_files.extend(self.backup_base.glob("safety_*.zip"))
-
-        # Remove duplicates while preserving order
-        backup_files = list(dict.fromkeys(backup_files))
+        backup_files = [
+            f
+            for f in self.backup_base.glob("*.zip")
+            if not f.name.startswith(".") and _is_own_backup(f)
+        ]
         backups = []
 
         for backup_file in backup_files:
@@ -491,6 +577,13 @@ class BackupManager:
 
         if not backup_file.exists():
             log_error(logger, f"Backup file not found: {backup_file}")
+            return False
+
+        if backup_file.resolve().parent != self.backup_base.resolve():
+            log_error(logger, f"Refusing to delete a file outside {self.backup_base}")
+            return False
+        if not _is_own_backup(backup_file):
+            log_error(logger, f"Refusing to delete a file this tool did not write: {backup_file}")
             return False
 
         try:

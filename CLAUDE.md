@@ -161,6 +161,10 @@ When changing `parser.ts`, run `deno task test` and inspect the corpus output fo
 - **`core/backup_manager.py`** — Zips the Pioneer library into `TUNEWRANGLER_RB_BACKUP_PATH` before
   every write (`playlist create` unless `--skip-backup` or `--dry-run`). Keeps the newest 10 of its
   own backups (marked inside each zip) and deletes older ones; other zips there are left alone.
+  Only its own zips (metadata marker) are listed, restored or deleted. Backup and restore refuse
+  while Rekordbox (or `rekordboxAgent`) runs. Restore takes a validated safety backup, stages the
+  copy beside the live folders, then swaps by rename and renames the originals back on any
+  failure. It refuses a symlinked folder or leftover `*.restoring-*`/`*.pre-restore-*` folders.
 - **`core/config.py`** — Env-only (`TUNEWRANGLER_RB_*`, repo-root `.env`); no config file. CLI
   flags override env. An unset, blank or missing backup folder raises `ConfigurationError`.
 - **`audit.py`** — `deno task rb:audit`: offline structure check of `playlist-data/` (leaf counts
