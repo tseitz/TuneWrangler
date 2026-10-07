@@ -153,8 +153,10 @@ When changing `parser.ts`, run `deno task test` and inspect the corpus output fo
 
 ### Python (`rekordbox/`)
 
-- **`playlist-data/`** — JSON playlist definitions: situation files at the root, texture files and
-  `_base.json` under `helpers/`. `_`-prefixed files are inheritance bases, not playlists.
+- **`playlist-data/`** — JSON playlist definitions: one root file per folder (tag plus `Archive`
+  exclusion); every lane root inherits `All` plus the lane list from
+  `helpers/_lanes.json`, and a lane under `minTracks` matching tracks is skipped.
+  `_`-prefixed files are inheritance bases, not playlists.
 - **`core/playlist_manager.py`** — Reads the JSON, expands `base`/`link`, builds the playlist tree
   under the parent playlist (`TUNEWRANGLER_RB_PARENT_PLAYLIST`) via pyrekordbox. `core/database.py`
   wraps `~/Library/Pioneer/rekordbox/master.db`; nothing commits until the whole run succeeds.

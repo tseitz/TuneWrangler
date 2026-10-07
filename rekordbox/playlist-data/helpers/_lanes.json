@@ -1,0 +1,35 @@
+{
+  "data": {
+    "playlists": [
+      { "name": "All", "operator": 1, "contains": [] },
+      { "name": "House", "operator": 1, "contains": ["House"], "minTracks": 10 },
+      { "name": "UKG", "operator": 1, "contains": ["UKG"], "minTracks": 10 },
+      { "name": "Dub Deep", "operator": 1, "contains": ["Dub"], "doesNotContain": ["GROOVY", "HEAVY"], "minTracks": 10 },
+      { "name": "Dub Groovy", "operator": 1, "contains": ["Dub", "GROOVY"], "minTracks": 10 },
+      { "name": "Dub Vocals", "operator": 1, "contains": ["Dub", "VOCALS"], "minTracks": 10 },
+      { "name": "Dub Weird", "operator": 1, "contains": ["Dub", "WEIRD"], "minTracks": 10 },
+      { "name": "Dub Trippy", "operator": 1, "contains": ["Dub Trippy/Interesting"], "minTracks": 10 },
+      { "name": "Dub Organic", "operator": 1, "contains": ["Dub", "ORGANIC"], "minTracks": 10 },
+      { "name": "Dub Heavy", "operator": 1, "contains": ["Dub", "HEAVY"], "minTracks": 10 },
+      { "name": "Dub Wobblers", "operator": 1, "contains": ["Dub Wobblers"], "minTracks": 10 },
+      { "name": "Dub Sound System", "operator": 1, "contains": ["Dub Sound System"], "minTracks": 10 },
+      { "name": "Dub Reggae", "operator": 1, "contains": ["Dub Reggae"], "minTracks": 10 },
+      { "name": "Weird", "operator": 1, "contains": ["WEIRD"], "doesNotContain": ["Dub", "Dubstep", "Riddim", "DnB", "Jungle", "House", "UKG", "Beats", "Vibes", "Feels"], "minTracks": 10 },
+      { "name": "Dubstep Heavy", "operator": 1, "contains": ["Dubstep", "HEAVY"], "minTracks": 10 },
+      { "name": "Dubstep Weird", "operator": 1, "contains": ["Dubstep", "WEIRD"], "minTracks": 10 },
+      { "name": "Riddim", "operator": 1, "contains": ["Riddim"], "minTracks": 10 },
+      { "name": "Halftime", "operator": 1, "contains": ["Halftime"], "minTracks": 10 },
+      { "name": "Jungle", "operator": 1, "contains": ["Jungle"], "minTracks": 10 },
+      { "name": "DnB", "operator": 1, "contains": ["DnB"], "minTracks": 10 },
+      { "name": "DnB Rollers", "operator": 1, "contains": ["DnB Rollers"], "minTracks": 10 },
+      { "name": "DnB Liquid", "operator": 1, "contains": ["DnB Liquid"], "minTracks": 10 },
+      { "name": "DnB Jump Up", "operator": 1, "contains": ["DnB Jump Up"], "minTracks": 10 },
+      { "name": "DnB Dancefloor", "operator": 1, "contains": ["DnB Dancefloor"], "minTracks": 10 },
+      { "name": "Feels", "operator": 1, "contains": ["Feels"], "minTracks": 10 },
+      { "name": "Beats", "operator": 1, "contains": ["Beats"], "minTracks": 10 },
+      { "name": "Vibes", "operator": 1, "contains": ["Vibes"], "minTracks": 10 },
+      { "name": "Weapons", "operator": 1, "contains": ["Weapons"], "minTracks": 10 },
+      { "name": "Party Hits", "operator": 1, "contains": ["Party Hits"], "minTracks": 10 }
+    ]
+  }
+}

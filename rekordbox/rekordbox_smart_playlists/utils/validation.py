@@ -150,7 +150,12 @@ def validate_playlist_config(playlist_data: dict[str, Any]) -> tuple[bool, list[
     if isinstance(data, dict):
         # Base file format: {"data": {"playlists": [...]}}
         if "playlists" in data:
-            return True, []
+            playlists = data["playlists"]
+            if not isinstance(playlists, list):
+                return False, ["'playlists' must be a list"]
+            for j, playlist in enumerate(playlists):
+                errors.extend(validate_playlist_item(playlist, f"playlists[{j}]"))
+            return len(errors) == 0, errors
         else:
             errors.append("Dict-style 'data' must contain a 'playlists' field")
             return False, errors
@@ -203,6 +208,8 @@ def validate_playlist_category(category: dict[str, Any], index: int) -> list[str
             for j, condition in enumerate(category["mainConditions"]):
                 if not isinstance(condition, str):
                     errors.append(f"{prefix}: 'mainConditions[{j}]' must be a string")
+
+    errors.extend(_validate_min_tracks(category, prefix))
 
     if "negativeConditions" in category:
         if not isinstance(category["negativeConditions"], list):
@@ -267,6 +274,11 @@ def validate_playlist_item(playlist: dict[str, Any], prefix: str) -> list[str]:
                     if not isinstance(item, str):
                         errors.append(f"{prefix}: '{field}[{i}]' must be a string")
 
+    if playlist.get("doesNotContain") and playlist.get("operator") != 1:
+        errors.append(f"{prefix}: 'doesNotContain' needs operator 1 (ALL)")
+
+    errors.extend(_validate_min_tracks(playlist, prefix))
+
     # Validate rating field
     if "rating" in playlist:
         rating = playlist["rating"]
@@ -302,6 +314,15 @@ def validate_playlist_item(playlist: dict[str, Any], prefix: str) -> list[str]:
                     errors.append(f"{prefix}.dateCreated: 'time_unit' must be one of {valid_units}")
 
     return errors
+
+
+def _validate_min_tracks(item: dict[str, Any], prefix: str) -> list[str]:
+    value = item.get("minTracks")
+    if value is None:
+        return []
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        return [f"{prefix}: 'minTracks' must be a non-negative integer"]
+    return []
 
 
 def validate_filename_format(

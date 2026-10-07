@@ -1,0 +1,18 @@
+{
+  "data": [
+    {
+      "parent": "Gigs",
+      "mainConditions": [],
+      "negativeConditions": ["Archive"],
+      "playlists": [
+        { "name": "Frankys Beach", "operator": 1, "contains": ["Frankys Beach"] },
+        { "name": "Frankys After", "operator": 1, "contains": ["Frankys After"] },
+        { "name": "LR Friends", "operator": 1, "contains": ["LR Friends"] },
+        { "name": "New Years", "operator": 1, "contains": ["New Years"] },
+        { "name": "Halloween", "operator": 1, "contains": ["Halloween"] },
+        { "name": "SHADES", "operator": 1, "contains": ["SHADES"] },
+        { "name": "Trippin", "operator": 1, "contains": ["Trippin"] }
+      ]
+    }
+  ]
+}

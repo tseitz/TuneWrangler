@@ -2,55 +2,10 @@
   "data": [
     {
       "parent": "Pool Party",
-      "mainConditions": [
-        "Pool Party"
-      ],
-      "negativeConditions": [
-        "Archive"
-      ],
-      "playlists": [
-        {
-          "name": "All",
-          "operator": 1,
-          "contains": []
-        },
-        {
-          "name": "Flow",
-          "operator": 1,
-          "playlistType": "folder",
-          "link": "helpers/lens-flow.json"
-        },
-        {
-          "name": "Genre",
-          "operator": 1,
-          "playlistType": "folder",
-          "link": "helpers/lens-genre.json"
-        },
-        {
-          "name": "Texture",
-          "operator": 1,
-          "playlistType": "folder",
-          "link": "helpers/lens-texture.json"
-        },
-        {
-          "name": "Clean",
-          "operator": 1,
-          "playlistType": "folder",
-          "link": "helpers/lens-clean.json"
-        },
-        {
-          "name": "My Set",
-          "operator": 1,
-          "playlistType": "folder",
-          "link": "helpers/caliber-my-set.json"
-        },
-        {
-          "name": "The Rotation",
-          "operator": 1,
-          "playlistType": "folder",
-          "link": "helpers/caliber-rotation.json"
-        }
-      ]
+      "mainConditions": ["Pool Party"],
+      "negativeConditions": ["Archive"],
+      "base": "helpers/_lanes.json",
+      "playlists": []
     }
   ]
 }

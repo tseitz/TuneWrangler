@@ -186,8 +186,15 @@ class PlaylistCommand(BaseCommand):
 
                 playlist_manager.existing_strategy = strategy
 
-                # Check for existing root folders and handle based on strategy
                 config_file_arg = args.file if args.file else None
+                preflight_errors = playlist_manager.preflight(config_file_arg)
+                if preflight_errors:
+                    log_error(logger, "Pre-flight failed; nothing was changed:")
+                    for error in preflight_errors:
+                        print(f"  - {error}")
+                    return 1
+
+                # Check for existing root folders and handle based on strategy
                 existing_roots = playlist_manager.find_existing_root_folders(config_file_arg)
 
                 if existing_roots:
@@ -240,13 +247,14 @@ class PlaylistCommand(BaseCommand):
                         self.config.playlist_data_path
                     )
 
-                # Commit changes if not in dry run mode
-                if not self.config.dry_run:
-                    db.commit()
-
-                # Print summary
                 successful = [r for r in results if r.success]
                 failed = [r for r in results if not r.success]
+
+                if failed:
+                    db.rollback()
+                elif not self.config.dry_run:
+                    db.commit()
+
                 created = [r for r in successful if not r.skipped]
                 skipped = [r for r in successful if r.skipped]
 
@@ -265,6 +273,7 @@ class PlaylistCommand(BaseCommand):
                     print("\nFailed playlists:")
                     for result in failed:
                         print(f"  - {result.playlist_name}: {result.error_message}")
+                    print("\nRolled back: nothing was changed.")
 
                 return 0 if not failed else 1
 

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from pyrekordbox import Rekordbox6Database
+from pyrekordbox.db6 import tables
 from pyrekordbox.db6.smartlist import SmartList
 
 from ..utils.logging import get_logger, log_exception, log_success
@@ -34,6 +35,15 @@ class DatabaseQueryError(DatabaseError):
     """Raised when database query fails."""
 
     pass
+
+
+class RegularPlaylistInTreeError(DatabaseError):
+    """Raised instead of deleting a tree that holds a hand-made (regular) playlist."""
+
+    pass
+
+
+REGULAR_PLAYLIST_ATTRIBUTE = 0
 
 
 class RekordboxDatabase:
@@ -389,52 +399,63 @@ class RekordboxDatabase:
         except DatabaseQueryError:
             return []
 
-    def delete_playlist(self, playlist: Any) -> bool:
+    def delete_playlist(self, playlist: Any) -> None:
         """
-        Delete a single playlist from the database.
+        Delete a playlist, or a folder with everything under it.
 
-        Args:
-            playlist: Playlist object to delete
+        Goes through pyrekordbox so masterPlaylists6.xml and sibling ``Seq`` stay in step.
 
-        Returns:
-            True if deleted successfully, False otherwise
+        Raises:
+            RegularPlaylistInTreeError: The tree holds a regular playlist; nothing is deleted.
+            DatabaseError: The delete itself failed.
         """
         self.ensure_connected()
         assert self._db is not None
+        regular = self.find_regular_playlists(playlist)
+        if regular:
+            raise RegularPlaylistInTreeError(
+                f"Refusing to delete '{playlist.Name}': it holds regular playlist(s) "
+                f"{', '.join(regular)}"
+            )
         try:
-            self._db.delete(playlist)
-            logger.debug(f"Deleted playlist: {playlist.Name} (ID: {playlist.ID})")
-            return True
+            self._db.delete_playlist(playlist)
         except Exception as e:
             log_exception(logger, e, f"deleting playlist {playlist.Name}")
-            return False
+            raise DatabaseError(f"Failed to delete playlist '{playlist.Name}': {e}") from e
+        logger.debug(f"Deleted playlist: {playlist.Name} (ID: {playlist.ID})")
 
     def delete_playlist_recursive(self, playlist: Any) -> int:
         """
-        Recursively delete a playlist folder and all its contents.
-
-        Walks the tree depth-first, deleting children before parents.
-
-        Args:
-            playlist: Playlist folder object to delete
+        Delete a playlist folder and all its contents.
 
         Returns:
             Total number of playlists/folders deleted
         """
-        deleted_count = 0
+        total = self.count_playlist_children_recursive(playlist) + 1
+        self.delete_playlist(playlist)
+        return total
 
-        # Get all direct children
-        children = self.get_children_playlists(playlist.ID)
+    def find_regular_playlists(self, playlist: Any) -> list[str]:
+        """Names of regular (track-list) playlists in this tree, including itself."""
+        found = [playlist.Name] if playlist.Attribute == REGULAR_PLAYLIST_ATTRIBUTE else []
+        for child in self.get_playlists(ParentID=playlist.ID):
+            found.extend(self.find_regular_playlists(child))
+        return found
 
-        for child in children:
-            # Recurse into sub-folders
-            deleted_count += self.delete_playlist_recursive(child)
-
-        # Delete this playlist/folder itself
-        if self.delete_playlist(playlist):
-            deleted_count += 1
-
-        return deleted_count
+    def count_smart_list(self, smart_list: SmartList) -> int:
+        """Number of live tracks a smart list matches."""
+        self.ensure_connected()
+        assert self._db is not None
+        try:
+            return (
+                self._db.query(tables.DjmdContent)
+                .filter(smart_list.filter_clause())
+                .filter(tables.DjmdContent.rb_local_deleted == 0)
+                .count()
+            )
+        except Exception as e:
+            log_exception(logger, e, "counting smart list matches")
+            raise DatabaseQueryError(f"Failed to count smart list: {e}") from e
 
     def count_playlist_children_recursive(self, playlist: Any) -> int:
         """

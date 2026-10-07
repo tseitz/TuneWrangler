@@ -19,6 +19,7 @@ from pyrekordbox.db6.smartlist import (
     left_bitshift,
 )
 
+from ..audit import resolve_context
 from ..utils.logging import (
     create_progress_logger,
     get_logger,
@@ -31,6 +32,8 @@ from .config import Config
 from .database import RekordboxDatabase
 
 logger = get_logger(__name__)
+
+TAG_CATEGORY_ATTRIBUTE = 1
 
 
 class ExistingPlaylistStrategy(Enum):
@@ -88,16 +91,66 @@ class PlaylistManager:
         self._created_playlists: list[str] = []
         self._skip_parents: set[str] = set()
         self._tag_cache: dict[str, Any] = {}
+        self._duplicate_tag_names: set[str] = set()
         self._load_tag_cache()
 
     def _load_tag_cache(self) -> None:
-        """Load all tags into memory for fast lookup during playlist creation."""
-        try:
-            all_tags = self.db.get_tags()
-            self._tag_cache = {tag.Name: tag for tag in all_tags}
-            logger.info(f"Loaded {len(self._tag_cache)} tags into cache")
-        except Exception as e:
-            log_exception(logger, e, "loading tag cache")
+        """Load tag rows (not category rows) for lookup by name."""
+        for tag in self.db.get_tags():
+            if tag.Attribute == TAG_CATEGORY_ATTRIBUTE or not tag.Name:
+                continue
+            if tag.Name in self._tag_cache:
+                self._duplicate_tag_names.add(tag.Name)
+            self._tag_cache[tag.Name] = tag
+        logger.info(f"Loaded {len(self._tag_cache)} tags into cache")
+
+    def context_files(self, config_file: str | Path | None = None) -> list[Path]:
+        """Top-level config files a run will process."""
+        if config_file:
+            path = Path(config_file)
+            if not path.is_absolute():
+                path = Path(self.config.playlist_data_path) / path
+            return [path]
+        return [
+            f
+            for f in Path(self.config.playlist_data_path).glob("*.json")
+            if not f.name.startswith((".", "_"))
+        ]
+
+    def preflight(self, config_file: str | Path | None = None) -> list[str]:
+        """
+        Every problem that would make a run build the wrong tree, found before anything is
+        deleted: invalid JSON (base and linked files included), missing files, and tag names
+        that don't resolve to exactly one tag.
+        """
+        data_dir = Path(self.config.playlist_data_path)
+        errors: list[str] = []
+
+        for path in sorted(data_dir.rglob("*.json")):
+            if path.name == "_order.json":
+                continue
+            try:
+                with open(path, encoding="utf-8") as f:
+                    loaded = json.load(f)
+            except (OSError, json.JSONDecodeError) as e:
+                errors.append(f"{path.relative_to(data_dir)}: {e}")
+                continue
+            _, file_errors = validate_playlist_config(loaded)
+            errors.extend(f"{path.relative_to(data_dir)}: {err}" for err in file_errors)
+
+        tag_names: set[str] = set()
+        for path in self.context_files(config_file):
+            result = resolve_context(path, data_dir)
+            errors.extend(f"{path.name}: {err}" for err in result.errors)
+            for leaf in result.leaves:
+                tag_names |= leaf.conditions | leaf.negatives
+
+        for name in sorted(tag_names):
+            if name not in self._tag_cache:
+                errors.append(f"Tag not found: {name}")
+            elif name in self._duplicate_tag_names:
+                errors.append(f"Tag name matches more than one tag: {name}")
+        return errors
 
     def create_playlists_from_file(
         self, config_file: str | Path, start_sequence: int | None = None
@@ -229,6 +282,7 @@ class PlaylistManager:
                     parent_playlist,
                     main_conditions,
                     negative_conditions,
+                    category_min_tracks=category_data.get("minTracks"),
                 )
                 results.append(result)
 
@@ -301,6 +355,7 @@ class PlaylistManager:
         parent_playlist: Any,
         main_conditions: set[str],
         negative_conditions: set[str],
+        category_min_tracks: int | None = None,
     ) -> PlaylistCreationResult:
         """
         Create a single smart playlist.
@@ -357,7 +412,21 @@ class PlaylistManager:
         playlist_type = playlist_config.get("playlistType")
         if playlist_type == "folder":
             return self._create_folder_playlist(
-                playlist_config, parent_playlist, main_conditions, negative_conditions
+                playlist_config,
+                parent_playlist,
+                main_conditions,
+                negative_conditions,
+                category_min_tracks,
+            )
+
+        parent_name = getattr(parent_playlist, "Name", "Unknown")
+        contains = set(playlist_config.get("contains", []))
+        if contains and contains <= main_conditions and not playlist_config.get("doesNotContain"):
+            return PlaylistCreationResult(
+                success=True,
+                playlist_name=playlist_name,
+                skipped=True,
+                skip_reason=f"{parent_name}: same tracks as All",
             )
 
         # Create smart list with conditions
@@ -368,6 +437,19 @@ class PlaylistManager:
                 playlist_name=playlist_name,
                 error_message="Failed to build smart list conditions",
             )
+
+        min_tracks = playlist_config.get("minTracks")
+        if min_tracks is not None and category_min_tracks is not None:
+            min_tracks = category_min_tracks
+        if min_tracks:
+            track_count = self.db.count_smart_list(smart_list)
+            if track_count < min_tracks:
+                return PlaylistCreationResult(
+                    success=True,
+                    playlist_name=playlist_name,
+                    skipped=True,
+                    skip_reason=f"{parent_name}: {track_count} tracks < minTracks {min_tracks}",
+                )
 
         # Create the playlist
         created_playlist = self.db.create_smart_playlist(playlist_name, smart_list, parent_playlist)
@@ -392,6 +474,7 @@ class PlaylistManager:
         parent_playlist: Any,
         inherited_main_conditions: set[str],
         inherited_negative_conditions: set[str],
+        category_min_tracks: int | None = None,
     ) -> PlaylistCreationResult:
         """
         Create a folder-type playlist by processing linked configuration.
@@ -502,6 +585,7 @@ class PlaylistManager:
                         folder_playlist,
                         final_main_conditions,
                         final_negative_conditions,
+                        category_min_tracks=category_min_tracks,
                     )
                     linked_results.append(result)
 
@@ -594,7 +678,8 @@ class PlaylistManager:
 
             for condition in all_conditions:
                 if not self._add_tag_condition(smart_list, condition, Operator.CONTAINS):
-                    logger.warning(f"Failed to add condition: {condition}")
+                    log_error(logger, f"Failed to add condition: {condition}")
+                    return None
 
             # Add negative conditions (only for ALL operator)
             if logical_operator == LogicalOperator.ALL:
@@ -603,7 +688,8 @@ class PlaylistManager:
 
                 for condition in all_negative:
                     if not self._add_tag_condition(smart_list, condition, Operator.NOT_CONTAINS):
-                        logger.warning(f"Failed to add negative condition: {condition}")
+                        log_error(logger, f"Failed to add negative condition: {condition}")
+                        return None
 
             # Add rating condition
             rating = playlist_config.get("rating")

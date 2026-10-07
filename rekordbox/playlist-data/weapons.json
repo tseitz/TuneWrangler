@@ -1,10 +1,11 @@
 {
   "data": [
     {
-      "parent": "Silent Disco",
-      "mainConditions": ["Silent Disco"],
+      "parent": "Weapons",
+      "mainConditions": ["Weapons"],
       "negativeConditions": ["Archive"],
       "base": "helpers/_lanes.json",
+      "minTracks": 1,
       "playlists": []
     }
   ]

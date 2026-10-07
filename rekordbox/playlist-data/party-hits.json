@@ -2,13 +2,10 @@
   "data": [
     {
       "parent": "Party Hits",
-      "mainConditions": [
-        "Party Hits"
-      ],
-      "negativeConditions": [
-        "Archive"
-      ],
-      "base": "helpers/_texture-singles.json",
+      "mainConditions": ["Party Hits"],
+      "negativeConditions": ["Archive"],
+      "base": "helpers/_lanes.json",
+      "minTracks": 1,
       "playlists": []
     }
   ]

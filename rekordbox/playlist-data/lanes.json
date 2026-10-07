@@ -1,8 +1,8 @@
 {
   "data": [
     {
-      "parent": "Silent Disco",
-      "mainConditions": ["Silent Disco"],
+      "parent": "Lanes",
+      "mainConditions": [],
       "negativeConditions": ["Archive"],
       "base": "helpers/_lanes.json",
       "playlists": []

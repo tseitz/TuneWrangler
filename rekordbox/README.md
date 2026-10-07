@@ -9,105 +9,71 @@ Python tools, part of TuneWrangler, that generate Rekordbox smart playlists from
 
 ## Playlist Organization Methodology
 
-This project implements a **Situation-first, Texture-second** playlist architecture designed for DJs who play across multiple genres and need to find the right track quickly -- whether on a laptop with full Rekordbox filtering or on a CDJ/XDJ with only folder navigation.
+The tree is **Root -> Lane**, built to find a track fast on a laptop or on an XDJ/CDJ with only
+folder navigation. Playlists are disposable output; the My Tags on tracks are the source of truth.
+No tag is ever written, renamed or deleted by this tool.
 
-### The Problem
-
-Organizing a diverse library by genre first (Dub, DnB, House, etc.) leads to an explosion of playlists. If you have 10 genres and 15 attributes (energy levels, openers, closers, styles), you end up with 150+ playlists. Scrolling through deep folder trees on a CDJ mid-set is slow and stressful.
-
-### The Solution: Three-Layer Hierarchy
-
-```
-Situation  ->  Sonic Texture  ->  Genre / Cross-Texture
-```
-
-#### Layer 1: Situation (When are you playing?)
-
-The top-level folders answer "what kind of set is this?" Each situation is a Rekordbox tag that you apply to tracks. Every track can belong to multiple situations.
-
-| Situation | Description |
-|---|---|
-| Daytime | Outdoor festivals, day parties |
-| Nighttime | Club sets, evening events |
-| Late Night | Dark rooms, 2am+ |
-| Sunrise | Morning sets, comedown |
-| Afterparty | Low-key, intimate |
-| Chillin | Background music, lounge |
-| Silent Disco | Headphone sets |
-| Morningtime Vibes | Warm, easy listening |
-| Pool Party | Fun, upbeat, crowd-friendly |
-
-Additional root playlists like **My Set**, **The Rotation**, **Missy**, and **B2B** follow the same pattern for gig-specific or collaborative prep.
-
-#### Layer 2: Sonic Texture (What does it sound like?)
-
-Inside each situation, tracks are organized by *how they sound*, not what genre they are. This creates a consistent mental model across all situations -- "Playlist 2 is always for heads-down hypnotic music" regardless of whether you're playing Dub or DnB.
-
-| Texture | Tag | Description |
-|---|---|---|
-| GROOVY (The Pocket) | Swing, shuffle, broken beats, syncopation |
-| DEEP (The Head) | Minimal, spacious, dark, hypnotic |
-| HEAVY (The Face) | Aggressive, distorted, high energy, "bass face" |
-| ORGANIC (The Soul) | Melodic, warm, emotional, acoustic samples |
-| WEIRD (The Brain) | Experimental, psychedelic, unexpected |
-| VOCALS | Lyrical focus, rap, grime, vocal-led |
-| PALATE CLEANSER | Transitions, palette shifts, breathers |
-
-#### Layer 3: Genre & Cross-Texture (Drill down)
-
-Inside each texture, you get two types of sub-playlists:
-
-1. **Genre playlists** (inherited from `_base.json`): All, Beats, DnB, Dub, Feels, House, Jungle, Riddim, UKG, Vibes, etc.
-2. **Cross-texture playlists** (flat, single tag): DEEP, GROOVY, HEAVY, etc. -- for finding tracks that live at the intersection of two textures.
-
-### Navigation Example
-
-```
+```text
 Daytime
-  -> DEEP (The Head)                    [Daytime + DEEP]
-       -> All                           [Daytime + DEEP -- all genres]
-       -> Dub                           [Daytime + DEEP + Dub]
-       -> DnB                           [Daytime + DEEP + DnB]
-       -> House                         [Daytime + DEEP + House]
-       -> ...
-       -> GROOVY                        [Daytime + DEEP + GROOVY]
-       -> HEAVY                         [Daytime + DEEP + HEAVY]
-       -> ...
-       -> PALATE CLEANSER               [Daytime + DEEP + PALATE CLEANSER]
-            -> All                      [Daytime + DEEP + PALATE CLEANSER]
-            -> Dub                      [Daytime + DEEP + PALATE CLEANSER + Dub]
-            -> ...
+  All              [Daytime]
+  House            [Daytime + House]
+  Dub Groovy       [Daytime + Dub + GROOVY]
+  Weapons          [Daytime + Weapons]
+  ...
 ```
 
-### How Conditions Stack
+### Roots
 
-Every playlist's filter is the **AND** of all tags from every level of the hierarchy:
+A root is one JSON file and one folder. Its tag (`mainConditions`) is ANDed into every playlist
+under it, and `Archive` is always excluded. `_order.json` sets the folder order.
 
-- **Situation** tag (e.g., `Daytime`) -- from the root JSON's `mainConditions`
-- **Texture** tag (e.g., `DEEP (The Head)`) -- from the helper JSON's `mainConditions`
-- **Genre/Cross-texture** tag (e.g., `Dub`) -- from the individual playlist's `contains`
+- **Situations**: Daytime, Pool Party, Morningtime Vibes, Sunrise, Chillin, Nighttime, Late Night,
+  Ketamine Music, Silent Disco, Crispy Speakers, Missy.
+- **Tiers**: My Set and The Rotation. These are roots, not nested inside situations.
+- **Lanes**: a root with no tag, so its lanes span the whole library.
+- **Weapons and Party Hits** are a lane in every root *and* a root of their own. The root form
+  gives `Weapons -> Dub Groovy`, for pulling weapons inside a lane on an XDJ-RR. Their roots set
+  `minTracks: 1`, since a couple of songs is fine there.
+- **Gigs**: one flat folder with a smart playlist per gig tag (tag, not Archive), no lanes.
+- **Recent Additions** and **Go Through** are organization utilities, kept as they are.
 
-This means a track must be tagged with **all three** to appear in `Daytime -> DEEP -> Dub`.
+### Lanes
 
-### Hardware Considerations
+Every lane root is `All` plus the same lane list, defined once in `helpers/_lanes.json`. A lane
+is a smart playlist over existing tags (CONTAINS, plus NOT CONTAINS for a few). Order follows
+tempo, with the mixed-tempo catch-alls last. Tempo itself is not encoded: sort by BPM on the deck.
 
-This structure is optimized for both laptop and standalone hardware:
+- Genre lanes: House, UKG, Riddim, Halftime, Jungle, DnB, Feels, Beats, Vibes.
+- Sub-genre lanes: Dub Deep, Dub Groovy, Dub Vocals, Dub Weird, Dub Trippy, Dub Organic, Dub
+  Heavy, Dub Wobblers, Dub Sound System, Dub Reggae, Dubstep Heavy, Dubstep Weird, DnB Rollers,
+  DnB Liquid, DnB Jump Up, DnB Dancefloor.
+- Weird (the WEIRD texture outside every named genre), Weapons, Party Hits.
 
-- **Laptop (Rekordbox)**: Use the Track Filter panel and My Tag combinations for ad-hoc filtering beyond the playlist structure.
-- **CDJ-3000**: Use the Track Filter to combine ratings and sorting within any playlist.
-- **XDJ-RR / CDJ-2000NXS2**: Rely on the folder structure for navigation. Sort by Rating (energy) or Date Added within any playlist. The structure is kept shallow (3 levels max) to minimize scrolling.
+Textures (GROOVY, DEEP, HEAVY, ORGANIC, WEIRD, VOCALS, PALATE CLEANSER) are tags that combine
+with a genre inside a lane name, for example Dub + GROOVY. Dub Deep is Dub without GROOVY or HEAVY.
+Dub Trippy is separate from Dub Weird because a smart list cannot express Dub AND (WEIRD OR
+Trippy).
+
+### Skipped lanes (`minTracks`)
+
+A lane is only created when it has at least `minTracks` matching tracks (Archive excluded) in
+that root; the lanes in `_lanes.json` use 10. `All` is always created. A root-level `minTracks`
+overrides the lane's. A lane whose tag is the root's own tag (Weapons inside Weapons) is skipped
+as a duplicate of `All`. Small roots come out nearly flat and grow lanes as tracks get tagged.
+
+The skip matters because the tree is capped by what an XDJ-RR export can hold. The audit counts
+the upper bound; the real total depends on the library.
+
+### Hardware
+
+- **Laptop**: use the Track Filter and My Tag combinations for anything beyond the tree.
+- **CDJ-3000**: use the Track Filter to combine ratings and sorting within a playlist.
+- **XDJ-RR / CDJ-2000NXS2**: rely on the folders. Sort by Rating (energy) or Date Added.
 
 ### Ratings as Energy
 
-Across all playlists, the 1-5 star rating represents **energy level**, not quality:
-
-- 1 star: Low energy, warmup, ambient
-- 2 stars: Building, chill but moving
-- 3 stars: Cruising, mid-energy
-- 4 stars: Peak time, driving
-- 5 stars: Maximum energy, headliner moment
-
-On any CDJ, you can sort a playlist by Rating to instantly separate warmup tracks from peak-time bangers.
+The 1-5 star rating is **energy**, not quality: 1 warmup or ambient, 2 building, 3 cruising,
+4 peak time, 5 maximum energy. Sort a playlist by Rating to separate warmup from peak.
 
 ## Usage
 
@@ -129,37 +95,11 @@ Global flags (`--dry-run`, `-v`, `-q`, `--log-file`) go before the subcommand.
 
 ## JSON Configuration Format
 
-### Project Structure
+### Root File
 
-```
-playlist-data/
-  helpers/
-    _base.json             # Shared genre playlists (inherited by all textures)
-    groovy.json            # GROOVY texture definition
-    deep.json              # DEEP texture definition
-    heavy.json             # HEAVY texture definition
-    organic.json           # ORGANIC texture definition
-    weird.json             # WEIRD texture definition
-    vocal.json             # VOCALS texture definition
-    palate_cleanser.json   # PALATE CLEANSER texture definition
-  daytime.json             # Situation: Daytime
-  nighttime.json           # Situation: Nighttime
-  late-night.json          # Situation: Late Night
-  sunrise.json             # Situation: Sunrise
-  afterparty.json          # Situation: Afterparty
-  chillin.json             # Situation: Chillin
-  silent-disco.json        # Situation: Silent Disco
-  morningtime-vibes.json   # Situation: Morningtime Vibes
-  pool-party.json          # Situation: Pool Party
-  my-set.json              # Root: My Set
-  rotation.json            # Root: The Rotation
-  missy.json               # Root: Missy
-  b2b.json                 # Root: B2B
-```
-
-### Situation File (Root Level)
-
-Each situation file defines a top-level folder that links to the shared texture helpers. The `mainConditions` tag filters everything below it.
+One file per root in `playlist-data/`. `All` and the lanes come from the shared base, so
+`playlists` stays empty (it is still required). `helpers/_lanes.json` uses the dict-style `data`
+(not an array) because it is only inherited.
 
 ```json
 {
@@ -168,61 +108,22 @@ Each situation file defines a top-level folder that links to the shared texture 
       "parent": "Daytime",
       "mainConditions": ["Daytime"],
       "negativeConditions": ["Archive"],
-      "playlists": [
-        { "name": "GROOVY (The Pocket)", "operator": 1, "playlistType": "folder", "link": "helpers/groovy.json" },
-        { "name": "DEEP (The Head)", "operator": 1, "playlistType": "folder", "link": "helpers/deep.json" },
-        { "name": "HEAVY (The Face)", "operator": 1, "playlistType": "folder", "link": "helpers/heavy.json" },
-        { "name": "ORGANIC (The Soul)", "operator": 1, "playlistType": "folder", "link": "helpers/organic.json" },
-        { "name": "WEIRD (The Brain)", "operator": 1, "playlistType": "folder", "link": "helpers/weird.json" },
-        { "name": "VOCALS", "operator": 1, "playlistType": "folder", "link": "helpers/vocal.json" },
-        { "name": "PALATE CLEANSER", "operator": 1, "playlistType": "folder", "link": "helpers/palate_cleanser.json" }
-      ]
+      "base": "helpers/_lanes.json",
+      "playlists": []
     }
   ]
 }
 ```
 
-### Texture File (Helper)
-
-Each texture file uses the `base` field to inherit shared genre playlists from `_base.json`, then adds cross-texture flat playlists. This keeps the JSON DRY -- genres are defined once.
+A lane in the base:
 
 ```json
-{
-  "data": [
-    {
-      "parent": "GROOVY (The Pocket)",
-      "mainConditions": ["GROOVY (The Pocket)"],
-      "negativeConditions": ["Archive"],
-      "base": "helpers/_base.json",
-      "playlists": [
-        { "name": "DEEP", "operator": 1, "contains": ["DEEP (The Head)"] },
-        { "name": "HEAVY", "operator": 1, "contains": ["HEAVY (The Face)"] },
-        { "name": "ORGANIC", "operator": 1, "contains": ["ORGANIC (The Soul)"] },
-        { "name": "VOCALS", "operator": 1, "contains": ["VOCALS"] },
-        { "name": "WEIRD", "operator": 1, "contains": ["WEIRD (The Brain)"] },
-        { "name": "PALATE CLEANSER", "operator": 1, "playlistType": "folder", "link": "helpers/palate_cleanser.json" }
-      ]
-    }
-  ]
-}
+{ "name": "Dub Deep", "operator": 1, "contains": ["Dub"], "doesNotContain": ["GROOVY", "HEAVY"],
+  "minTracks": 10 }
 ```
 
-### Base File
-
-The base file defines playlists that are shared across all textures. It uses a dict-style `data` field (not an array) since it's only used for inheritance.
-
-```json
-{
-  "data": {
-    "playlists": [
-      { "name": "All", "operator": 1, "contains": [] },
-      { "name": "Beats", "operator": 1, "contains": ["Beats"] },
-      { "name": "DnB", "operator": 1, "contains": ["DnB"] },
-      { "name": "Dub", "operator": 1, "contains": ["Dub"] }
-    ]
-  }
-}
-```
+`operator` must be the integer `1`. Anything else makes the list ANY and drops every exclusion.
+Files starting with `_` are inheritance bases, not playlists.
 
 ### JSON Field Reference
 
@@ -232,6 +133,7 @@ The base file defines playlists that are shared across all textures. It uses a d
 | `mainConditions` | string[] | Tags ANDed into every playlist in this category |
 | `negativeConditions` | string[] | Tags excluded (NOT CONTAINS) from every playlist |
 | `base` | string | Path to a base JSON file whose playlists are prepended (relative to `playlist-data/`) |
+| `minTracks` | int | Replaces `minTracks` on lanes that set one; others never skip |
 | `playlists` | object[] | Array of playlist definitions |
 | `playlists[].name` | string | Playlist name in Rekordbox |
 | `playlists[].operator` | int | `1` = ALL (AND), `2` = ANY (OR), `5` = Rating range |
@@ -240,6 +142,7 @@ The base file defines playlists that are shared across all textures. It uses a d
 | `playlists[].rating` | string[] | Rating range `["min", "max"]` (e.g., `["4", "5"]`) |
 | `playlists[].playlistType` | string | Set to `"folder"` to create a folder linking to another JSON |
 | `playlists[].link` | string | Path to linked JSON file (relative to `playlist-data/`) |
+| `playlists[].minTracks` | int | Skip this playlist when fewer tracks match |
 | `playlists[].dateCreated` | object | Date filter with `time_period`, `time_unit`, `operator` |
 
 ## Configuration
@@ -256,10 +159,21 @@ config file.
 
 ## Safety Features
 
-- **Automatic Backups**: Creates backups before making changes
-- **Dry Run Mode**: Preview all changes with `--dry-run` before committing
-- **Transaction Support**: Database operations are wrapped in transactions -- nothing is committed until all playlists are created successfully
-- **Validation**: Run `playlist validate --all` to check your JSON files for errors before creating playlists
+- **Backup first**: `playlist create` backs up the Rekordbox library before writing.
+- **Dry run**: `--dry-run` runs the whole create path without committing.
+- **Pre-flight**: before anything is deleted, every config is checked. Invalid JSON, a missing
+  base or link file, or a tag name that does not exist or matches more than one tag stops the
+  run with nothing changed.
+- **All or nothing**: if any playlist fails, the whole run rolls back and nothing is committed.
+- **Overwrite guard**: overwriting refuses to delete a folder that contains a regular
+  (hand-made, non-smart) playlist.
+- **Validation**: `playlist validate --all` checks the JSON files without a database.
+
+## Recovery
+
+Regenerate the playlists with `playlist create --all --existing overwrite`. Do not restore a
+backup for this: restore rolls back every tag added since the backup was taken. Restore only
+when the database itself is damaged.
 
 ## Important Notes
 

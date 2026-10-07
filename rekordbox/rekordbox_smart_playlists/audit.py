@@ -15,32 +15,31 @@ from typing import Any
 
 from .core.config import DEFAULT_PLAYLIST_DATA_PATH
 
-# Contexts expected to resolve to an identical structural shape. This module is
-# the acceptance oracle for later tasks, so any drift between these contexts
-# (differing shapes, or an expected file gone missing) is a structural
-# regression that must fail the audit.
+# The lane roots: contexts expected to resolve to an identical structural shape.
+# This module is the acceptance oracle for later tasks, so any drift between them
+# (differing shapes, or an expected file gone missing) is a structural regression
+# that must fail the audit.
 UNIFORM_CONTEXTS: tuple[str, ...] = (
     "daytime",
     "nighttime",
     "late-night",
     "sunrise",
     "chillin",
-    "afterparty",
     "morningtime-vibes",
     "pool-party",
     "crispy-speakers",
     "missy",
-    "b2b",
     "silent-disco",
-    "frankys-beach",
     "ketamine-music",
-    "frankys-after",
+    "my-set",
+    "the-rotation",
+    "weapons",
+    "party-hits",
+    "lanes",
 )
 
-# Top-level folders that MAY optionally augment a context (e.g. a Clean/ view on
-# kid-friendly contexts) without breaking the uniform-core guarantee. Leaves under
-# these are excluded when comparing contexts for structural uniformity.
-AUGMENTABLE_SUBTREES: tuple[str, ...] = ("Clean",)
+# Context files whose leaves are not expected to exclude Archive.
+ARCHIVE_EXEMPT_CONTEXTS: frozenset[str] = frozenset({"go-through.json"})
 
 
 @dataclass(frozen=True)
@@ -127,11 +126,31 @@ def _process_category(
             for sub in categories:
                 _process_category(sub, base_dir, main, neg, child_path, out)
         else:
+            if pl.get("operator", 1) != 1:
+                out.errors.append(
+                    f"Playlist '{pl.get('name', '')}' has operator {pl['operator']!r}, "
+                    f"expected 1 (in {'/'.join(folder_path)})"
+                )
             conditions = main | set(pl.get("contains", []))
             negatives = neg | set(pl.get("doesNotContain", []))
             out.leaves.append(
                 Leaf(folder_path, pl.get("name", ""), frozenset(conditions), frozenset(negatives))
             )
+
+
+def _check_leaves(context_file: str, out: AuditResult) -> None:
+    """Record leaves missing the Archive exclusion and same-name leaves in one folder."""
+    seen: set[tuple[tuple[str, ...], str]] = set()
+    reported: set[tuple[tuple[str, ...], str]] = set()
+    for leaf in out.leaves:
+        where = "/".join(leaf.path)
+        if "Archive" not in leaf.negatives and context_file not in ARCHIVE_EXEMPT_CONTEXTS:
+            out.errors.append(f"Leaf '{leaf.name}' lacks Archive exclusion (in {where})")
+        key = (leaf.path, leaf.name)
+        if key in seen and key not in reported:
+            out.errors.append(f"Duplicate leaf '{leaf.name}' (in {where})")
+            reported.add(key)
+        seen.add(key)
 
 
 def resolve_context(path: Path, base_dir: Path) -> AuditResult:
@@ -149,6 +168,7 @@ def resolve_context(path: Path, base_dir: Path) -> AuditResult:
     for cat in categories:
         parent = cat.get("parent", "")
         _process_category(cat, base_dir, frozenset(), frozenset(), (parent,), out)
+    _check_leaves(path.name, out)
     return out
 
 
@@ -163,19 +183,9 @@ def _context_files(directory: Path) -> list[Path]:
     )
 
 
-def _signature(leaves: list[Leaf], ignore: tuple[str, ...] = ()) -> tuple:
-    """Structural fingerprint ignoring the root context name (path[0]).
-
-    Leaves whose first sub-folder is in ``ignore`` are dropped, so optional
-    augmentations (see ``AUGMENTABLE_SUBTREES``) don't count against uniformity.
-    """
-    return tuple(
-        sorted(
-            (leaf.path[1:], leaf.name)
-            for leaf in leaves
-            if not (len(leaf.path) > 1 and leaf.path[1] in ignore)
-        )
-    )
+def _signature(leaves: list[Leaf]) -> tuple:
+    """Structural fingerprint ignoring the root context name (path[0])."""
+    return tuple(sorted((leaf.path[1:], leaf.name) for leaf in leaves))
 
 
 def _check_uniformity(sigs: dict[str, tuple], errors: list[str]) -> None:
@@ -217,7 +227,7 @@ def main(argv: list[str] | None = None) -> int:
         res = resolve_context(f, directory)
         total += len(res.leaves)
         errors.extend(res.errors)
-        sigs[f.stem] = _signature(res.leaves, ignore=AUGMENTABLE_SUBTREES)
+        sigs[f.stem] = _signature(res.leaves)
         print(f"{f.name:28s} {len(res.leaves):5d} leaves")
 
     print("-" * 36)
