@@ -489,7 +489,7 @@ def test_uniform_contexts_share_identical_core():
     sigs = {}
     for stem in UNIFORM_CONTEXTS:
         res = resolve_context(PLAYLIST_DATA / f"{stem}.json", PLAYLIST_DATA)
-        assert len(res.leaves) == 29, f"{stem} has {len(res.leaves)} leaves, expected 29"
+        assert len(res.leaves) == 30, f"{stem} has {len(res.leaves)} leaves, expected 30"
         sigs[stem] = _signature(res.leaves)
     assert len(set(sigs.values())) == 1, "lane roots do not share an identical core"
 
@@ -499,6 +499,6 @@ def test_library_total_is_within_expected_range():
     total = sum(
         len(resolve_context(f, PLAYLIST_DATA).leaves) for f in _context_files(PLAYLIST_DATA)
     )
-    # 16 lane roots * 29 + Gigs 7 + Recent Additions 4 + Go Through 3 = 478. Upper
+    # 16 lane roots * 30 + Gigs 7 + Recent Additions 4 + Go Through 3 = 494. Upper
     # bound: the audit can't see minTracks, which skips the redundant lane at runtime.
-    assert total == 478, f"unexpected library total: {total}"
+    assert total == 494, f"unexpected library total: {total}"

@@ -14,6 +14,7 @@
       { "name": "Dub Wobblers", "operator": 1, "contains": ["Dub Wobblers"], "minTracks": 10 },
       { "name": "Dub Sound System", "operator": 1, "contains": ["Dub Sound System"], "minTracks": 10 },
       { "name": "Dub Reggae", "operator": 1, "contains": ["Dub Reggae"], "minTracks": 10 },
+      { "name": "Experimental Bass", "operator": 1, "contains": ["Experimental Bass"], "minTracks": 10 },
       { "name": "Weird", "operator": 1, "contains": ["WEIRD"], "doesNotContain": ["Dub", "Dubstep", "Riddim", "DnB", "Jungle", "House", "UKG", "Beats", "Vibes", "Feels"], "minTracks": 10 },
       { "name": "Dubstep Heavy", "operator": 1, "contains": ["Dubstep", "HEAVY"], "minTracks": 10 },
       { "name": "Dubstep Weird", "operator": 1, "contains": ["Dubstep", "WEIRD"], "minTracks": 10 },
