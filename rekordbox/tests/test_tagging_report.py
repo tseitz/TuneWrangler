@@ -58,12 +58,24 @@ def test_positive_control_passes_aligned_and_fails_shuffled_classes():
     genre, labels, has = _aligned()
     styles = rp.top1_styles(genre, labels)
     results = rp.positive_control(styles, has)
-    assert all(lift > 2 for _, _, lift in results)
+    assert all(check == "lift" and value > 2 for _, _, check, value in results)
     rp.check_positive_control(results)
 
     shuffled = rp.top1_styles(genre, [labels[i] for i in [3, 2, 1, 0]])
     with pytest.raises(ev.ControlError, match="misaligned"):
         rp.check_positive_control(rp.positive_control(shuffled, has))
+
+
+def test_positive_control_uses_tag_share_when_a_style_dominates():
+    genre, labels, has = _aligned()
+    genre[:, 1] = 0.9
+    styles = rp.top1_styles(genre, labels)
+    results = rp.positive_control(styles, has)
+    assert results[0][2] == "share"
+    assert results[0][3] == 1.0
+    assert results[1][3] == 0.0
+    with pytest.raises(ev.ControlError, match="Dubstep"):
+        rp.check_positive_control(results)
 
 
 def test_cluster_group_is_seeded_and_lists_nearest():
@@ -105,6 +117,8 @@ def _lane_fixture():
         "tasks": np.array([t.name for t in tasks]),
         "scores": np.full((n, len(tasks)), -7.0, dtype=np.float32),
         "thresholds": np.full(len(tasks), 0.5),
+        "support": np.array([t.positives for t in tasks]),
+        "fingerprint": np.array(ev.pool_fingerprint(pool, vocab)),
     }
     return pool, x, untagged, x_new, vocab, oof
 
@@ -126,6 +140,17 @@ def test_lane_fit_rejects_oof_from_another_library():
     oof["tasks"] = np.array(["Nope"])
     with pytest.raises(rp.ReportInputError):
         rp.lane_fit(pool, x, untagged, x_new, vocab, oof)
+
+
+def test_stale_oof_is_rejected_when_tags_change():
+    pool, _, _, _, vocab, oof = _lane_fixture()
+    rp.check_oof_fresh(pool, vocab, oof)
+    changed = [_track(p.content_id, p.artist, frozenset({"House"})) for p in pool]
+    with pytest.raises(rp.ReportInputError, match="tags changed"):
+        rp.check_oof_fresh(changed, vocab, oof)
+    old = {k: v for k, v in oof.items() if k != "fingerprint"}
+    with pytest.raises(rp.ReportInputError, match="re-run evaluate"):
+        rp.check_oof_fresh(pool, vocab, old)
 
 
 def test_sub_tag_blank_for_untagged_unless_parent_clears_threshold():
@@ -189,7 +214,8 @@ def test_run_report_end_to_end_on_temp_dir(tmp_path, monkeypatch):
     rp.run_report(tracks, tmp_path, vocab, progress=lambda _: None)
     lines = (tmp_path / "tracks.csv").read_text().splitlines()
     assert lines[0].startswith("artist,title,bpm")
-    assert lines[1].split(",")[0] in {"new0", "new1"} and lines[1].endswith(",yes")
+    assert lines[0].endswith(",untagged,embedded")
+    assert lines[1].split(",")[0] in {"new0", "new1"} and lines[1].endswith(",yes,yes")
     assert "Drum n Bass (0.50)" in lines[1]
     assert "(c) Fuzzy tags" in (tmp_path / "crosstab.md").read_text()
 

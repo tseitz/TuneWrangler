@@ -3,7 +3,7 @@ import os
 import re
 import unicodedata
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +38,7 @@ SUB_PARENT = {
 }
 MODIFIERS = frozenset({"GROOVY", "HEAVY", "VOCALS", "WEIRD", "ORGANIC"})
 
+_BRACKET_FEAT = re.compile(r"[(\[]\s*(?:feat|ft)\.?\s+([^)\]]*)[)\]]")
 _ARTIST_SPLIT = re.compile(r"\s*,\s*|\s*&\s*|\s+x\s+|\s+feat\.?\s+|\s+ft\.?\s+")
 
 
@@ -52,6 +53,7 @@ class Track:
     bpm: float
     length: int
     tags: frozenset[str]
+    lead: str = ""
 
 
 def _fold(text: str) -> str:
@@ -62,11 +64,35 @@ def _fold(text: str) -> str:
 def split_artists(artist_name: str | None) -> list[str]:
     """Normalized artists in credit order, duplicates removed."""
     seen: dict[str, None] = {}
-    for part in _ARTIST_SPLIT.split(_fold(artist_name or "")):
+    folded = _BRACKET_FEAT.sub(r" feat \1", _fold(artist_name or ""))
+    for part in _ARTIST_SPLIT.split(folded):
         part = part.strip()
         if part:
             seen.setdefault(part)
     return list(seen)
+
+
+def artist_components(artist_sets: list[frozenset[str]]) -> list[str]:
+    """Group label per track: connected components of the graph joining co-credited artists, so
+    no artist's tracks land on both sides of a grouped split."""
+    parent: dict[str, str] = {}
+
+    def find(a: str) -> str:
+        parent.setdefault(a, a)
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+
+    for artists in artist_sets:
+        first, *rest = sorted(artists)
+        for other in rest:
+            parent[find(other)] = find(first)
+        find(first)
+    roots: dict[str, str] = {}
+    for a in sorted(parent):
+        roots.setdefault(find(a), a)
+    return [roots[find(min(artists))] for artists in artist_sets]
 
 
 def vocabulary(lanes_json: dict[str, Any]) -> frozenset[str]:
@@ -108,6 +134,11 @@ def load_library(
                 bpm=(row.BPM or 0) / 100,
                 length=int(row.Length or 0),
                 tags=names & vocab,
+                lead=group,
             )
         )
-    return sorted(tracks, key=lambda t: t.content_id)
+    labels = artist_components([t.artists for t in tracks])
+    return sorted(
+        (replace(t, group=g) for t, g in zip(tracks, labels, strict=True)),
+        key=lambda t: t.content_id,
+    )

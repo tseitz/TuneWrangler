@@ -42,20 +42,6 @@ def _row(id_, artist):
     )
 
 
-def test_group_split_keeps_artist_on_one_side_and_collabs_use_first_artist():
-    rows = []
-    for i in range(40):
-        rows.append(_row(i, f"Solo{i % 10}"))
-    rows.append(_row(100, "Solo3 & Other"))
-    rows.append(_row(101, "Solo3 feat. Someone"))
-    db = SimpleNamespace(get_content=lambda: rows)
-    tracks = lib.load_library(db, frozenset({"House"}), exists=lambda p: True)
-    groups = np.array([t.group for t in tracks])
-    assert {t.group for t in tracks if t.content_id in {"100", "101"}} == {"solo3"}
-    for _, train, test in ev.group_splits(groups):
-        assert not set(groups[train]) & set(groups[test])
-
-
 def _tags(spec):
     return [frozenset(s) for s in spec]
 
@@ -91,18 +77,48 @@ def _noise_problem(n=600, seed=1):
     return x, slots, tags, y
 
 
+def _solo_splits(slots):
+    lead = slots[:, 0]
+    return ev.group_splits(lead.astype(str), [frozenset({str(a)}) for a in lead])[0]
+
+
 def test_negative_control_passes_on_permuted_labels():
     x, slots, tags, y = _noise_problem()
-    ap, prev = ev.negative_control(x, slots, tags, y, 0, 150)
-    assert ev.control_passes(ap, prev)
+    aps, prev = ev.negative_control(x, slots, tags, y, 0, 150)
+    assert len(aps) == ev.PERMUTATIONS
+    assert ev.control_passes(aps, prev)
+
+
+def test_negative_control_passes_under_grouped_split():
+    x, slots, tags, y = _noise_problem()
+    aps, prev = ev.negative_control(x, slots, tags, y, 0, 150, grouped_splits=_solo_splits(slots))
+    assert ev.control_passes(aps, prev)
 
 
 def test_negative_control_fails_when_a_leak_is_injected():
     x, slots, tags, y = _noise_problem()
     perm = np.random.default_rng(ev.SEED).permutation(y)
     leaky = np.hstack([x, perm[:, None].astype(float)])
-    ap, prev = ev.negative_control(leaky, slots, tags, y, 0, 150)
-    assert not ev.control_passes(ap, prev)
+    aps, prev = ev.negative_control(leaky, slots, tags, y, 0, 150)
+    assert not ev.control_passes(aps, prev)
+
+
+def test_negative_control_sees_a_prior_that_leaks_the_rows_own_label(monkeypatch):
+    x, slots, tags, y = _noise_problem()
+    monkeypatch.setattr(
+        ev, "artist_prior", lambda slots, tags, in_train, rows, n_artists, **_: tags[rows]
+    )
+    aps, prev = ev.negative_control(x, slots, tags, y, 0, 150)
+    assert not ev.control_passes(aps, prev)
+    aps, prev = ev.negative_control(x, slots, tags, y, 0, 150, grouped_splits=_solo_splits(slots))
+    assert not ev.control_passes(aps, prev)
+
+
+def test_control_tolerance_scales_with_prevalence():
+    assert ev.control_passes([0.012] * 3, 0.01)
+    assert not ev.control_passes([0.04] * 3, 0.01)
+    assert ev.control_passes([0.3] * 3, 0.25)
+    assert not ev.control_passes([0.4] * 3, 0.25)
 
 
 def test_pool_guard_aborts_when_embeddings_missing():
@@ -115,3 +131,49 @@ def test_pool_guard_aborts_when_embeddings_missing():
     )
     with pytest.raises(ev.PoolGuardError, match="House: 10 -> 1"):
         ev.align_pool(pool, cache)
+
+
+def _web(n_solo=60):
+    lead = [f"s{i}" for i in range(n_solo)]
+    artists = [frozenset({a}) for a in lead]
+    for i in range(0, n_solo - 1, 2):
+        lead.append(f"s{i}")
+        artists.append(frozenset({f"s{i}", f"s{i + 1}"}))
+    for i in range(n_solo):
+        lead.append(f"hub{i % 3}")
+        artists.append(frozenset({f"hub{i % 3}", f"s{i}"}))
+    return np.array(lead), artists
+
+
+def test_purged_split_never_shares_an_artist_across_sides():
+    lead = np.array(["a", "a", "b", "b", "c", "d", "e", "f", "g", "h"])
+    artists = [frozenset(x) for x in ({"a"}, {"a", "b"}, {"b"}, {"b"}, {"c"}, {"d"}, {"e"}, {"f"}, {"g"}, {"h"})]
+    splits, stats = ev.group_splits(lead, artists)
+    for (_, tr, te), s in zip(splits, stats, strict=True):
+        assert not set().union(*(artists[i] for i in tr)) & set().union(*(artists[i] for i in te))
+        assert s["train_after"] == len(tr) <= s["train_before"]
+    assert any(s["train_after"] < s["train_before"] for s in stats)
+
+
+def test_purged_folds_stay_near_a_fifth_on_a_big_collab_web():
+    lead, artists = _web()
+    splits, stats = ev.group_splits(lead, artists)
+    for (_, tr, te), s in zip(splits, stats, strict=True):
+        assert 0.1 < len(te) / len(lead) < 0.3
+        assert not set().union(*(artists[i] for i in tr)) & set().union(*(artists[i] for i in te))
+    assert 0 < ev.purge_fraction(stats) < 1
+
+
+def test_prior_in_a_purged_fold_sees_only_purged_train_rows():
+    lead, artists = _web()
+    slots, n_artists = ev.artist_slots([ev_track(a) for a in artists])
+    tags = np.ones((len(lead), 1))
+    (_, tr, te), *_ = ev.group_splits(lead, artists)[0]
+    in_train = np.zeros(len(lead), dtype=bool)
+    in_train[tr] = True
+    prior = ev.artist_prior(slots, tags, in_train, te, n_artists)
+    assert (prior == 0).all()
+
+
+def ev_track(artists):
+    return lib.Track("x", "/m/x", "x", artists, "x", "t", 120.0, 1, frozenset())

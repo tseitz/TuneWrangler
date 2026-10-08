@@ -25,6 +25,8 @@ BPM_BIN = 5
 SEED = 0
 POSITIVE_CONTROLS = (("DnB", "Drum n Bass"), ("Dubstep", "Dubstep"))
 CONTROL_MIN_LIFT = 2.0
+CONTROL_MAX_SHARE = 0.4
+CONTROL_MIN_TAG_SHARE = 0.3
 
 
 class ReportInputError(Exception):
@@ -102,18 +104,31 @@ def style_lift(styles: np.ndarray, mask: np.ndarray, style: str) -> float:
 
 def positive_control(
     styles: np.ndarray, has: dict[str, np.ndarray]
-) -> list[tuple[str, str, float]]:
-    return [
-        (tag, style, style_lift(styles, has[tag], style) if tag in has else 0.0)
-        for tag, style in POSITIVE_CONTROLS
-    ]
+) -> list[tuple[str, str, str, float]]:
+    """(tag, style, check, value). Lift saturates when the style is a big share of the library,
+    so those fall back to the share of the tag's tracks that land in the style."""
+    out = []
+    for tag, style in POSITIVE_CONTROLS:
+        mask = has.get(tag)
+        if mask is None or not mask.any():
+            out.append((tag, style, "lift", 0.0))
+        elif float((styles == style).mean()) < CONTROL_MAX_SHARE:
+            out.append((tag, style, "lift", style_lift(styles, mask, style)))
+        else:
+            out.append((tag, style, "share", float((styles[mask] == style).mean())))
+    return out
 
 
-def check_positive_control(results: list[tuple[str, str, float]]) -> None:
-    bad = [f"{t} -> {s}: {lift:.2f}" for t, s, lift in results if lift <= CONTROL_MIN_LIFT]
+def control_ok(check: str, value: float) -> bool:
+    return value > CONTROL_MIN_LIFT if check == "lift" else value >= CONTROL_MIN_TAG_SHARE
+
+
+def check_positive_control(results: list[tuple[str, str, str, float]]) -> None:
+    bad = [f"{t} -> {s}: {c} {v:.2f}" for t, s, c, v in results if not control_ok(c, v)]
     if bad:
         raise ev.ControlError(
-            f"positive control failed (lift must exceed {CONTROL_MIN_LIFT}): {'; '.join(bad)}. "
+            f"positive control failed (lift must exceed {CONTROL_MIN_LIFT}, or the tag's share "
+            f"in the style reach {CONTROL_MIN_TAG_SHARE}): {'; '.join(bad)}. "
             "The genre class index is probably misaligned with its names."
         )
 
@@ -258,6 +273,7 @@ def tracks_rows(
     styles: list[list[tuple] | None],
     lane: list[str],
     untagged: list[bool],
+    embedded: list[bool],
 ) -> list[list[Any]]:
     rows = [
         [
@@ -268,8 +284,9 @@ def tracks_rows(
             _fmt_styles(s) if s else "",
             lf,
             "yes" if u else "",
+            "yes" if e else "no",
         ]
-        for t, s, lf, u in zip(tracks, styles, lane, untagged, strict=True)
+        for t, s, lf, u, e in zip(tracks, styles, lane, untagged, embedded, strict=True)
     ]
     return sorted(rows, key=lambda r: r[6] != "yes")
 
@@ -283,6 +300,7 @@ def write_tracks_csv(path: Path, rows: list[list[Any]]) -> None:
         "top_styles",
         "lane_fit",
         "untagged",
+        "embedded",
     ]
     with path.open("w", newline="") as handle:
         writer = csv.writer(handle)
@@ -299,7 +317,7 @@ def _table(header: list[str], rows: list[list[str]]) -> list[str]:
 
 
 def render_crosstab(
-    control: list[tuple[str, str, float]],
+    control: list[tuple[str, str, str, float]],
     by_tag: dict[str, list[tuple]],
     by_style: dict[str, list[tuple]],
     fuzzy: list[tuple[str, np.ndarray, list[str], Clustering | None]],
@@ -315,8 +333,8 @@ def render_crosstab(
         "",
     ]
     lines += [
-        f"- {t} tracks in {s}: lift {lift:.2f} ({'pass' if lift > CONTROL_MIN_LIFT else 'FAIL'})"
-        for t, s, lift in control
+        f"- {t} tracks in {s}: {c} {v:.2f} ({'pass' if control_ok(c, v) else 'FAIL'})"
+        for t, s, c, v in control
     ]
     lines += ["", "## (a) Styles per tag"]
     for tag, rows in by_tag.items():
@@ -372,6 +390,20 @@ def read_oof(directory: Path) -> dict[str, np.ndarray]:
         return {k: arrays[k] for k in arrays.files}
 
 
+def check_oof_fresh(pool: list[Track], vocab: frozenset[str], oof: dict[str, np.ndarray]) -> None:
+    tasks = ev.make_tasks([p.tags for p in pool], vocab)
+    support = [t.positives for t in tasks]
+    stored = oof.get("support")
+    fingerprint = oof.get("fingerprint")
+    if (
+        stored is None
+        or fingerprint is None
+        or [int(n) for n in stored] != support
+        or str(fingerprint) != ev.pool_fingerprint(pool, vocab)
+    ):
+        raise ReportInputError("tags changed since evaluate; re-run evaluate")
+
+
 def run_report(
     tracks: list[Track],
     directory: Path,
@@ -394,6 +426,7 @@ def run_report(
         raise ReportInputError(
             "embeddings changed since oof_scores.npz was written; re-run evaluate"
         )
+    check_oof_fresh(pool, vocab, oof)
     x_pool = ev.feature_matrix(pool, cache, pool_idx)
 
     fresh, fresh_idx = ev.usable([t for t in tracks if not t.tags], cache)
@@ -406,8 +439,8 @@ def run_report(
     pool_styles = top1_styles(cache.genre[pool_idx], labels)
     has = {tag: np.array([tag in t.tags for t in pool]) for tag in sorted(vocab)}
     control = positive_control(pool_styles, has)
-    for tag, style, lift in control:
-        progress(f"positive control: {tag} in {style} lift {lift:.2f}")
+    for tag, style, check, value in control:
+        progress(f"positive control: {tag} in {style} {check} {value:.2f}")
     check_positive_control(control)
 
     library_share = {s: float(c) / len(pool) for s, c in Counter(pool_styles.tolist()).items()}
@@ -446,6 +479,7 @@ def run_report(
         [*pool_top, *new_top, *([None] * len(bare))],
         [*lane, *([""] * len(bare))],
         [False] * len(pool) + [True] * (len(fresh) + len(bare)),
+        [True] * (len(pool) + len(fresh)) + [False] * len(bare),
     )
 
     directory.mkdir(parents=True, exist_ok=True)

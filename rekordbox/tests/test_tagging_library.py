@@ -1,3 +1,4 @@
+import json
 import os
 from types import SimpleNamespace
 
@@ -5,6 +6,7 @@ import numpy as np
 import pytest
 
 from rekordbox_smart_playlists.tagging import embed as emb
+from rekordbox_smart_playlists.tagging import evaluate as ev
 from rekordbox_smart_playlists.tagging import library as lib
 from rekordbox_smart_playlists.tagging import models
 
@@ -54,6 +56,9 @@ def test_vocabulary_drops_excluded_and_empty():
         ("A x B", ["a", "b"]),
         ("A feat. B", ["a", "b"]),
         ("A ft. B", ["a", "b"]),
+        ("A (feat. B)", ["a", "b"]),
+        ("A [ft. B & C]", ["a", "b", "c"]),
+        ("A feat B", ["a", "b"]),
         ("Max", ["max"]),
         ("", []),
         (None, []),
@@ -78,7 +83,7 @@ def test_load_library_filters_and_copies_fields():
     first, blank = tracks
     assert first.tags == {"House"}
     assert first.artists == {"zed", "amy"}
-    assert first.group == "zed"
+    assert first.group == "amy"
     assert first.bpm == 128.0
     assert blank.group == "__none__6"
     assert blank.artists == {"__none__6"}
@@ -116,6 +121,24 @@ def test_cache_skips_cached_then_invalidates_on_path_or_length(tmp_path):
     emb.run_embed([track(length=101)], reloaded, fake_embed(calls))
     emb.run_embed([track(length=101, path="/m/b.aiff")], reloaded, fake_embed(calls))
     assert len(calls) == 3
+
+
+def test_load_maps_rows_from_npz_ids_and_drops_unknown_entries(tmp_path):
+    cache = emb.EmbeddingCache(tmp_path, CLASSES)
+    emb.run_embed([track("1"), track("2")], cache, fake_embed([]))
+    cache.entries["2"].voice = 0.75
+    cache.save()
+    index = json.loads((tmp_path / "index.json").read_text())
+    index["tracks"]["1"]["row"], index["tracks"]["2"]["row"] = 1, 0
+    index["tracks"]["3"] = {"path": "/m/c.aiff", "length": 100, "row": 2}
+    index["tracks"]["4"] = {"path": "/m/d.aiff", "length": 100, "error": "boom"}
+    (tmp_path / "index.json").write_text(json.dumps(index))
+
+    reloaded = emb.EmbeddingCache(tmp_path, CLASSES)
+    assert reloaded.entries["2"].voice == 0.75
+    assert reloaded.entries["1"].voice == 0.25
+    assert "3" not in reloaded.entries
+    assert reloaded.entries["4"].error == "boom"
 
 
 def test_mtime_change_does_not_invalidate(tmp_path):
@@ -167,3 +190,26 @@ def test_model_hash_mismatch_fails_loudly(tmp_path):
     (tmp_path / models.GENRE_META.name).write_text("tampered")
     with pytest.raises(models.ModelIntegrityError):
         models.verify(tmp_path / models.GENRE_META.name, models.GENRE_META)
+
+
+def test_collab_joins_one_component_and_purged_splits_never_straddle_it():
+    rows = [row(i, artist=f"Solo{i % 10}", tags=["House"]) for i in range(40)]
+    rows += [
+        row(100, artist="Solo3 & Solo4", tags=["House"]),
+        row(101, artist="Solo4 feat. Someone", tags=["House"]),
+        row(102, artist="", tags=["House"]),
+        row(103, artist="", tags=["House"]),
+    ]
+    tracks = lib.load_library(FakeDb(rows), frozenset({"House"}), exists=lambda p: True)
+    by_id = {t.content_id: t for t in tracks}
+    joined = {t.group for t in tracks if t.artists & {"solo3", "solo4", "someone"}}
+    assert len(joined) == 1
+    assert by_id["102"].group != by_id["103"].group
+    groups = np.array([t.group for t in tracks])
+    leads = np.array([t.lead for t in tracks])
+    assert by_id["100"].lead == "solo3"
+    splits, _ = ev.group_splits(leads, [t.artists for t in tracks])
+    for _, train, test in splits:
+        trained = {a for i in train for a in tracks[i].artists}
+        tested = {a for i in test for a in tracks[i].artists}
+        assert not trained & tested

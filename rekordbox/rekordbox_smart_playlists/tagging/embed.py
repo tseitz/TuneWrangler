@@ -56,20 +56,26 @@ class EmbeddingCache:
         if not self.index_path.exists():
             return
         index = json.loads(self.index_path.read_text())["tracks"]
-        arrays = np.load(self.npz_path) if self.npz_path.exists() else None
-        if arrays is not None:
-            stored = [str(name) for name in arrays["class_names"]]
-            if stored != self.class_names:
-                raise ClassNameMismatchError("cached class names differ from the genre model's")
+        row_of: dict[str, int] = {}
+        effnet = genre = voice = np.empty(0)
+        if self.npz_path.exists():
+            with np.load(self.npz_path) as f:
+                stored = [str(name) for name in f["class_names"]]
+                if stored != self.class_names:
+                    raise ClassNameMismatchError("cached class names differ from the genre model's")
+                row_of = {str(cid): i for i, cid in enumerate(f["ids"])}
+                effnet, genre, voice = f["effnet"], f["genre"], f["voice"]
         for content_id, meta in index.items():
             entry = Entry(meta["path"], meta["length"], error=meta.get("error"))
             if entry.error is None:
-                if arrays is None:
+                if not self.npz_path.exists():
                     raise FileNotFoundError(f"{self.npz_path} is missing but the index needs it")
-                row = meta["row"]
-                entry.effnet = arrays["effnet"][row]
-                entry.genre = arrays["genre"][row]
-                entry.voice = float(arrays["voice"][row])
+                row = row_of.get(content_id)
+                if row is None:
+                    continue
+                entry.effnet = effnet[row]
+                entry.genre = genre[row]
+                entry.voice = float(voice[row])
             self.entries[content_id] = entry
 
     def is_fresh(self, track: Track, retry_failed: bool) -> bool:

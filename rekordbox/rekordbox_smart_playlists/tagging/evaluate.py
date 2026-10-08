@@ -1,8 +1,9 @@
+import hashlib
 import json
 import time
 import zipfile
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,9 @@ from .library import GENRES, MODIFIERS, SUB_PARENT, Track
 MIN_POSITIVES = 30
 PARENT_SHARE = 0.15
 MAX_MISSING = 0.02
-CONTROL_TOLERANCE = 0.05
+CONTROL_RATIO = 1.3
+CONTROL_MARGIN = 0.02
+PERMUTATIONS = 5
 MODELS = ("artist_prior", "audio", "combined")
 SPLITS = ("random", "grouped")
 MAX_ITER = 2000
@@ -99,6 +102,7 @@ class Cache:
     genre: np.ndarray
     voice: np.ndarray
     meta: dict[str, Any]
+    class_names: list[str] = field(default_factory=list)
 
 
 def load_cache(directory: Path, attempts: int = 8, wait: float = 2.0) -> Cache:
@@ -114,6 +118,7 @@ def load_cache(directory: Path, attempts: int = 8, wait: float = 2.0) -> Cache:
                     arrays["genre"],
                     arrays["voice"],
                     meta,
+                    [str(n) for n in arrays["class_names"]],
                 )
         except (OSError, ValueError, KeyError, EOFError, zipfile.BadZipFile) as exc:
             last = exc
@@ -222,9 +227,24 @@ def random_splits(y: np.ndarray) -> list[Split]:
     return [(i // FOLDS, tr, te) for i, (tr, te) in enumerate(cv.split(np.zeros(len(y)), y))]
 
 
-def group_splits(groups: np.ndarray) -> list[Split]:
+def group_splits(
+    groups: np.ndarray, artists: list[frozenset[str]]
+) -> tuple[list[Split], list[dict[str, int]]]:
+    """GroupKFold on the lead artist, then drop from each training set every track sharing any
+    credited artist with the test set, so a collab never bridges the two sides."""
     cv = GroupKFold(n_splits=FOLDS)
-    return [(0, tr, te) for tr, te in cv.split(np.zeros(len(groups)), groups=groups)]
+    splits: list[Split] = []
+    stats: list[dict[str, int]] = []
+    for tr, te in cv.split(np.zeros(len(groups)), groups=groups):
+        test_artists = frozenset().union(*(artists[i] for i in te))
+        kept = np.array([i for i in tr if not artists[i] & test_artists], dtype=int)
+        splits.append((0, kept, te))
+        stats.append({"test": len(te), "train_before": len(tr), "train_after": len(kept)})
+    return splits, stats
+
+
+def purge_fraction(stats: list[dict[str, int]]) -> float:
+    return float(np.mean([1 - f["train_after"] / f["train_before"] for f in stats]))
 
 
 def _fit_score(
@@ -329,16 +349,37 @@ def negative_control(
     n_artists: int,
     jobs: int = 1,
     seed: int = SEED,
-) -> tuple[float, float]:
-    """(AP, prevalence) of the combined model on permuted labels, one random repeat."""
-    y_perm = np.random.default_rng(seed).permutation(y)
-    splits = random_splits(y_perm)[:FOLDS]
-    oof, _ = _run_folds(jobs, x, slots, tags, y_perm, col, splits, n_artists, ("combined",))
-    return float(average_precision_score(y_perm, oof[0]["combined"])), float(y_perm.mean())
+    grouped_splits: list[Split] | None = None,
+    permutations: int = PERMUTATIONS,
+) -> tuple[list[float], float]:
+    """(AP per permutation, prevalence) of the combined model on permuted labels. The target
+    column of `tags` is permuted too, so a prior that leaks a row's own label shows up."""
+    rng = np.random.default_rng(seed)
+    aps = []
+    for _ in range(permutations):
+        y_perm = rng.permutation(y)
+        tags_perm = tags.copy()
+        tags_perm[:, col] = y_perm
+        splits = random_splits(y_perm)[:FOLDS] if grouped_splits is None else grouped_splits
+        oof, _ = _run_folds(
+            jobs, x, slots, tags_perm, y_perm, col, splits, n_artists, ("combined",)
+        )
+        aps.append(float(average_precision_score(y_perm, oof[0]["combined"])))
+    return aps, float(y.mean())
 
 
-def control_passes(ap: float, prevalence: float) -> bool:
-    return abs(ap - prevalence) <= CONTROL_TOLERANCE
+def control_passes(aps: list[float], prevalence: float) -> bool:
+    return float(np.mean(aps)) <= max(CONTROL_RATIO * prevalence, prevalence + CONTROL_MARGIN)
+
+
+def pool_fingerprint(pool: list[Track], vocab: frozenset[str]) -> str:
+    tag_names = sorted(vocab)
+    matrix = np.array([[t in p.tags for t in tag_names] for p in pool], dtype=np.uint8)
+    digest = hashlib.sha256()
+    digest.update("\0".join(p.content_id for p in pool).encode())
+    digest.update(b"\1" + "\0".join(tag_names).encode() + b"\1")
+    digest.update(matrix.tobytes())
+    return digest.hexdigest()
 
 
 def evaluate(
@@ -352,7 +393,17 @@ def evaluate(
     col_of = {t: i for i, t in enumerate(tag_names)}
     tag_matrix = np.array([[t in p.tags for t in tag_names] for p in pool], dtype=float)
     slots, n_artists = artist_slots(pool)
-    groups = np.array([p.group for p in pool])
+    groups = np.array([p.lead for p in pool])
+    pool_artists = [p.artists for p in pool]
+    grouped_cache: dict[str, list[Split]] = {}
+
+    def grouped(task: Task) -> list[Split]:
+        if task.name not in grouped_cache:
+            u = task.universe
+            grouped_cache[task.name] = group_splits(groups[u], [pool_artists[i] for i in u])[0]
+        return grouped_cache[task.name]
+
+    _, fold_stats = group_splits(groups, pool_artists)
     tasks = make_tasks([p.tags for p in pool], vocab)
     scorable = [t for t in tasks if not t.insufficient]
 
@@ -363,16 +414,31 @@ def evaluate(
     controls = []
     for task in (t for t in scorable if t.family == "genre"):
         xu, su, tu = view(task)
-        ap, prev = negative_control(xu, su, tu, task.y, col_of[task.tag], n_artists, jobs)
-        controls.append(
-            {"tag": task.name, "ap": ap, "prevalence": prev, "pass": control_passes(ap, prev)}
-        )
-        progress(f"negative control {task.name}: AP {ap:.3f} vs prevalence {prev:.3f}")
-    failed = [c["tag"] for c in controls if not c["pass"]]
+        for split_name, split_groups in (("random", None), ("grouped", grouped(task))):
+            aps, prev = negative_control(
+                xu, su, tu, task.y, col_of[task.tag], n_artists, jobs, grouped_splits=split_groups
+            )
+            mean, spread = float(np.mean(aps)), float(np.std(aps))
+            controls.append(
+                {
+                    "tag": task.name,
+                    "split": split_name,
+                    "mean_ap": mean,
+                    "std_ap": spread,
+                    "prevalence": prev,
+                    "pass": control_passes(aps, prev),
+                }
+            )
+            progress(
+                f"negative control {task.name} ({split_name}): mean AP {mean:.3f} "
+                f"+/- {spread:.3f} vs prevalence {prev:.3f}"
+            )
+    failed = [f"{c['tag']} ({c['split']})" for c in controls if not c["pass"]]
     if failed:
         raise ControlError(
             f"negative control failed for {failed}: permuted labels scored beyond "
-            f"prevalence +/-{CONTROL_TOLERANCE}; the folds or the artist prior leak"
+            f"max({CONTROL_RATIO} x prevalence, prevalence + {CONTROL_MARGIN}); "
+            "the folds or the artist prior leak"
         )
 
     scores_out = np.full((len(pool), len(tasks)), np.nan, dtype=np.float32)
@@ -400,7 +466,7 @@ def evaluate(
         col = col_of[task.tag]
         for split_name, splits in (
             ("random", random_splits(task.y)),
-            ("grouped", group_splits(groups[task.universe])),
+            ("grouped", grouped(task)),
         ):
             oof, bad = _run_folds(jobs, xu, su, tu, task.y, col, splits, n_artists)
             nonconverged += bad
@@ -419,6 +485,8 @@ def evaluate(
         "tasks": records,
         "controls": {"negative": controls},
         "nonconverged_fits": nonconverged,
+        "grouped_folds": fold_stats,
+        "mean_purge_fraction": purge_fraction(fold_stats),
         "config": {
             "folds": FOLDS,
             "repeats": REPEATS,
@@ -429,6 +497,8 @@ def evaluate(
         "_oof": {
             "ids": np.array([p.content_id for p in pool]),
             "tasks": np.array([t.name for t in tasks]),
+            "support": np.array([t.positives for t in tasks]),
+            "fingerprint": np.array(pool_fingerprint(pool, vocab)),
             "scores": scores_out,
             "thresholds": thresholds,
         },
@@ -440,15 +510,25 @@ def render_markdown(result: dict[str, Any], guard_report: str) -> str:
     cfg = result["config"]
     lines.append(
         f"Logistic regression, C={cfg['C']}, balanced; random split = {cfg['folds']}-fold x "
-        f"{cfg['repeats']} repeats, grouped = GroupKFold({cfg['folds']}) on first artist. "
-        f"AP is the mean over repeats; P/R at the max-F1 threshold of pooled out-of-fold scores. "
+        f"{cfg['repeats']} repeats, grouped = GroupKFold({cfg['folds']}) on lead "
+        f"artist with training tracks that share any credited artist with the test fold purged "
+        f"(mean purge {result['mean_purge_fraction']:.1%} of training, over the whole pool). "
+        f"AP is the mean over repeats. "
+        f"P/R are at the max-F1 threshold of the pooled out-of-fold scores, so they are "
+        f"optimistic: the threshold is chosen on the same scores it is measured on. "
         f"Non-converged fits: {result['nonconverged_fits']}."
     )
     lines += ["", "## Controls", ""]
+    for c in result["controls"]["positive"]:
+        lines.append(
+            f"- positive control {c['tag']} in {c['style']} ({c['check']}): {c['value']:.2f} "
+            f"({'pass' if c['pass'] else 'FAIL'})"
+        )
     for c in result["controls"]["negative"]:
         lines.append(
-            f"- negative control {c['tag']}: AP {c['ap']:.3f} vs prevalence "
-            f"{c['prevalence']:.3f} ({'pass' if c['pass'] else 'FAIL'})"
+            f"- negative control {c['tag']} ({c['split']}): mean AP {c['mean_ap']:.3f} "
+            f"+/- {c['std_ap']:.3f} vs prevalence {c['prevalence']:.3f} "
+            f"({'pass' if c['pass'] else 'FAIL'})"
         )
     titles = {
         "genre": "Genre tags",
@@ -492,6 +572,26 @@ def write_outputs(result: dict[str, Any], guard_report: str, directory: Path) ->
     (directory / "evaluation.md").write_text(render_markdown(result, guard_report))
 
 
+def run_positive_control(
+    pool: list[Track], cache: Cache, vocab: frozenset[str], progress: Callable[[str], None]
+) -> list[dict[str, Any]]:
+    from . import report  # report imports this module
+
+    kept, idx = usable(pool, cache)
+    labels = [report.style_label(n) for n in cache.class_names]
+    styles = report.top1_styles(cache.genre[idx], labels)
+    has = {tag: np.array([tag in t.tags for t in kept]) for tag in sorted(vocab)}
+    results = report.positive_control(styles, has)
+    out = [
+        {"tag": t, "style": s, "check": c, "value": v, "pass": report.control_ok(c, v)}
+        for t, s, c, v in results
+    ]
+    for r in out:
+        progress(f"positive control {r['tag']} in {r['style']} ({r['check']}): {r['value']:.2f}")
+    report.check_positive_control(results)
+    return out
+
+
 def run_evaluation(
     tracks: list[Track],
     directory: Path,
@@ -503,6 +603,8 @@ def run_evaluation(
     cache = load_cache(directory)
     kept, x, guard_report = align_pool(pool, cache)
     progress(guard_report)
+    positive = run_positive_control(kept, cache, vocab, progress)
     result = evaluate(kept, x, vocab, jobs, progress)
+    result["controls"]["positive"] = positive
     write_outputs(result, guard_report, directory)
     progress(f"wrote evaluation.md, evaluation.json, oof_scores.npz to {directory}")
