@@ -1,10 +1,13 @@
-from collections.abc import Callable
+from collections import Counter
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 
 import numpy as np
 
 from . import evaluate as ev
-from .library import GENRES, Track
+from . import manifest as mf
+from .library import GENRES, SUB_PARENT, Track
 
 EXPERIMENTAL_BASS = "Experimental Bass"
 HALFTIME = "Halftime"
@@ -24,6 +27,18 @@ LANE_EXTRAS = frozenset({EXPERIMENTAL_BASS})
 REVIEW_PRECISION = 0.5
 DEFAULT_APPLY_PRECISION = 0.8
 MIN_SUPPORT = 20
+LIQUID = "DnB Liquid"
+PARENT_OF_LIQUID = "DnB"
+HIPHOP_PREFIX = "Hip Hop"
+TOP_STYLES = 3
+NOTE = (
+    "est_precision assumes the track belongs to one of the lane genres; "
+    "Experimental Bass is measured against stand-in labels"
+)
+
+
+class SuggestInputError(RuntimeError):
+    pass
 
 
 @dataclass
@@ -145,3 +160,187 @@ def estimated_precision(
     rand = precision_curve(cal.pool_random, cal.pool_y)(cal.cand_random)
     grp = precision_curve(cal.pool_grouped, cal.pool_y)(cal.cand_grouped)
     return np.where(known, rand, grp)
+
+
+@dataclass
+class TagEstimate:
+    score: np.ndarray
+    est: np.ndarray
+    split: np.ndarray
+
+
+@dataclass
+class Stats:
+    candidates: int
+    dropped_no_suggestion: int
+    hiphop_downgrades: int
+
+
+def newest_first(tracks: Sequence[Track], limit: int | None) -> list[Track]:
+    ordered = sorted(
+        tracks,
+        key=lambda t: (t.added is None, -(t.added.timestamp() if t.added else 0), t.content_id),
+    )
+    return ordered[:limit]
+
+
+def tag_estimates(
+    cals: list[Calibrated], candidates: list[Track], pool_artists: frozenset[str]
+) -> dict[str, TagEstimate]:
+    known = np.array([bool(c.artists & pool_artists) for c in candidates], dtype=bool)
+    out: dict[str, TagEstimate] = {}
+    for cal in cals:
+        out[cal.tag] = TagEstimate(
+            np.where(known, cal.cand_random, cal.cand_grouped),
+            estimated_precision(cal, candidates, pool_artists),
+            np.where(known, "random", "grouped"),
+        )
+    liquid, parent = out.get(LIQUID), out.get(PARENT_OF_LIQUID)
+    if liquid and parent:
+        out[LIQUID] = TagEstimate(
+            liquid.score, liquid.est * parent.est, np.full(len(candidates), "product")
+        )
+    return out
+
+
+def top_styles(
+    cache: ev.Cache, rows: Sequence[int] | np.ndarray, n: int = TOP_STYLES
+) -> list[list[tuple[str, float]]]:
+    result = []
+    for r in rows:
+        probs = cache.genre[r]
+        best = np.argsort(-probs, kind="stable")[:n]
+        result.append([(cache.class_names[i], round(float(probs[i]), 3)) for i in best])
+    return result
+
+
+def _is_genre(tag: str) -> bool:
+    return tag in GENRES or tag in SUB_PARENT
+
+
+def _row(est: TagEstimate, i: int) -> tuple[float, float, str]:
+    return round(float(est.score[i]), 4), round(float(est.est[i]), 4), str(est.split[i])
+
+
+def _judge(
+    tag: str, est: TagEstimate, i: int, min_precision: float, is_hiphop: bool
+) -> mf.Suggestion | None:
+    score, e, split = _row(est, i)
+    if e < REVIEW_PRECISION:
+        return None
+    apply = e >= min_precision and not (is_hiphop and _is_genre(tag))
+    return mf.Suggestion(tag, score, e, split, "apply" if apply else "review")
+
+
+def assemble(
+    candidates: Sequence[Track],
+    estimates: dict[str, TagEstimate],
+    styles: Sequence[list[tuple[str, float]]],
+    vocab_hash: str,
+    min_precision: float,
+    created_at: datetime,
+) -> tuple[mf.Manifest, Stats]:
+    entries: list[tuple[float, mf.Entry]] = []
+    hiphop = dropped = 0
+    for i, track in enumerate(candidates):
+        top = styles[i]
+        is_hiphop = bool(top) and top[0][0].startswith(HIPHOP_PREFIX)
+        eb = estimates.get(EXPERIMENTAL_BASS)
+        suggestions: list[mf.Suggestion] = []
+        for tag, est in estimates.items():
+            if (s := _judge(tag, est, i, min_precision, is_hiphop)) is not None:
+                suggestions.append(s)
+        proposed = [s.tag for s in suggestions if s.decision == "apply"]
+        if eb and EXPERIMENTAL_BASS in proposed and top and top[0][0] == HALFTIME:
+            suggestions.append(mf.Suggestion(HALFTIME, *_row(eb, i), "apply"))
+            proposed.append(HALFTIME)
+        downgraded = any(
+            s.decision == "review" and s.est_precision >= min_precision for s in suggestions
+        )
+        if not suggestions:
+            dropped += 1
+            continue
+        hiphop += downgraded
+        best = max(s.est_precision for s in suggestions)
+        entries.append(
+            (
+                best,
+                mf.Entry(
+                    track.content_id,
+                    track.artist,
+                    track.title,
+                    track.bpm,
+                    top,
+                    sorted(suggestions, key=lambda s: -s.est_precision),
+                    proposed,
+                    "apply" if proposed else "review",
+                ),
+            )
+        )
+    entries.sort(key=lambda p: (p[1].decision != "apply", -p[0], p[1].content_id))
+    manifest = mf.Manifest(
+        created_at=created_at.isoformat(timespec="seconds"),
+        vocabulary_hash=vocab_hash,
+        thresholds={"review": REVIEW_PRECISION, "apply": min_precision},
+        note=NOTE,
+        entries=[e for _, e in entries],
+    )
+    return manifest, Stats(len(candidates), dropped, hiphop)
+
+
+def render_summary(
+    manifest: mf.Manifest, stats: Stats, untagged_without_embedding: int, path: str
+) -> str:
+    proposed = Counter(t for e in manifest.entries for t in e.proposed)
+    review = Counter(
+        s.tag for e in manifest.entries for s in e.suggestions if s.decision == "review"
+    )
+    per_track = Counter(len(e.proposed) for e in manifest.entries)
+    n_apply = sum(e.decision == "apply" for e in manifest.entries)
+    lines = [
+        f"candidates considered: {stats.candidates}",
+        f"entries written: {len(manifest.entries)} ({n_apply} apply, "
+        f"{len(manifest.entries) - n_apply} review); {stats.dropped_no_suggestion} had no "
+        f"suggestion at or above {REVIEW_PRECISION}",
+        f"min-precision: {manifest.thresholds['apply']}",
+        "proposed per tag: " + (", ".join(f"{t} {n}" for t, n in proposed.most_common()) or "-"),
+        "review per tag:   " + (", ".join(f"{t} {n}" for t, n in review.most_common()) or "-"),
+        "proposed tags per track: " + ", ".join(f"{k}: {v}" for k, v in sorted(per_track.items())),
+        f"hip-hop downgrades (genre tags moved to review): {stats.hiphop_downgrades}",
+        f"untagged tracks without an embedding: {untagged_without_embedding}",
+        f"manifest: {path}",
+    ]
+    return "\n".join(lines)
+
+
+def suggest(
+    library: list[Track],
+    vocab: frozenset[str],
+    cache: ev.Cache,
+    min_precision: float,
+    limit: int | None,
+    created_at: datetime,
+    progress: Callable[[str], None] = print,
+) -> tuple[mf.Manifest, Stats, int]:
+    tagged = [t for t in library if t.tags]
+    if not tagged:
+        raise SuggestInputError(
+            "no tagged tracks with an existing file; is the music drive mounted?"
+        )
+    pool, x_pool, _ = ev.align_pool(tagged, cache)
+    untagged = [t for t in library if not has_lane_tag(t, vocab)]
+    usable, _ = ev.usable(untagged, cache)
+    cands = newest_first(usable, limit)
+    cands, idx = ev.usable(cands, cache)
+    x_cand = ev.feature_matrix(cands, cache, idx)
+    cals = calibrate(pool, x_pool, cands, x_cand, vocab, progress)
+    pool_artists = frozenset(a for t in pool for a in t.artists)
+    manifest, stats = assemble(
+        cands,
+        tag_estimates(cals, cands, pool_artists),
+        top_styles(cache, idx),
+        mf.vocabulary_hash(vocab),
+        min_precision,
+        created_at,
+    )
+    return manifest, stats, len(untagged) - len(usable)

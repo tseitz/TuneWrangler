@@ -8,6 +8,7 @@ logging, and connection management.
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from pyrekordbox import Rekordbox6Database
 from pyrekordbox.db6 import tables
@@ -513,6 +514,36 @@ class RekordboxDatabase:
             return tags[0] if tags else None
         except (DatabaseQueryError, IndexError):
             return None
+
+    def add_song_tag(self, content_id: str, tag_id: str) -> str:
+        """Adds one My Tag to a track and returns the new row's ID. Not committed."""
+        self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
+        row = tables.DjmdSongMyTag.create(
+            ID=str(uuid4()),
+            UUID=str(uuid4()),
+            MyTagID=str(tag_id),
+            ContentID=str(content_id),
+            TrackNo=None,
+        )
+        # Rekordbox6Database.add registers the row for USN stamping at commit; session.add
+        # would leave rb_local_usn empty.
+        self._db.add(row)
+        return row.ID
+
+    def mark_track_info_updated(self, content_id: str) -> None:
+        """Bumps the track's info counter, as Rekordbox does when a track's My Tags change."""
+        self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
+        content = self._db.get_content(ID=str(content_id))
+        if content is None:
+            raise DatabaseQueryError(f"track {content_id} not found")
+        content.TrackInfoUpdated = (content.TrackInfoUpdated or 0) + 1
+
+    def get_local_usn(self) -> int:
+        self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
+        return int(self._db.get_local_usn())
 
     def get_tag_by_id(self, tag_id: str | int) -> Any | None:
         """

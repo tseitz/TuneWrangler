@@ -41,6 +41,7 @@ def row(id_, path="/m/a.aiff", artist="A", tags=(), deleted=0, length=100, bpm=1
         Length=length,
         MyTagNames=list(tags),
         rb_local_deleted=deleted,
+        created_at=None,
     )
 
 

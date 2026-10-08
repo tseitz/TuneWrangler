@@ -6,6 +6,7 @@ Provides concrete command classes for playlist and backup operations.
 
 import argparse
 from abc import ABC, abstractmethod
+from datetime import datetime
 from pathlib import Path
 
 from ..core.backup_manager import BackupManager
@@ -15,8 +16,10 @@ from ..core.playlist_manager import ExistingPlaylistStrategy, PlaylistManager
 from ..tagging import embed as tag_embed
 from ..tagging import evaluate as tag_evaluate
 from ..tagging import library as tag_library
+from ..tagging import manifest as tag_manifest
 from ..tagging import models as tag_models
 from ..tagging import report as tag_report
+from ..tagging import suggest as tag_suggest
 from ..utils.logging import get_logger, log_error, log_exception, log_success
 
 logger = get_logger(__name__)
@@ -620,7 +623,8 @@ class BackupCommand(BaseCommand):
 
 
 class TagCommand(BaseCommand):
-    """Read-only audio tagging exploration; writes only under the tagging directory."""
+    """Audio tagging exploration and suggestions; read-only against Rekordbox, writes only under the
+    tagging directory."""
 
     @staticmethod
     def setup_parser(parser: argparse.ArgumentParser) -> None:
@@ -645,6 +649,21 @@ class TagCommand(BaseCommand):
         subparsers.add_parser(
             "report", help="Write tracks.csv and crosstab.md from the caches and evaluation"
         )
+        suggest_parser = subparsers.add_parser(
+            "suggest", help="Write a tag manifest for the newest tracks with no lane tags"
+        )
+        suggest_parser.add_argument(
+            "--limit", type=int, default=100, help="Newest N candidates by date added (default 100)"
+        )
+        suggest_parser.add_argument(
+            "--all", action="store_true", help="Consider every candidate instead of the newest N"
+        )
+        suggest_parser.add_argument(
+            "--min-precision",
+            type=float,
+            default=tag_suggest.DEFAULT_APPLY_PRECISION,
+            help="Estimated precision a tag needs to be proposed (default 0.8)",
+        )
 
     @staticmethod
     def validate_args(args: argparse.Namespace) -> bool:
@@ -654,10 +673,21 @@ class TagCommand(BaseCommand):
         if args.tag_action == "embed" and args.limit is not None and args.limit < 1:
             logger.error("--limit must be at least 1")
             return False
+        if args.tag_action == "suggest":
+            if args.limit < 1:
+                logger.error("--limit must be at least 1")
+                return False
+            if not tag_suggest.REVIEW_PRECISION <= args.min_precision <= 1:
+                logger.error(
+                    f"--min-precision must be between {tag_suggest.REVIEW_PRECISION} and 1"
+                )
+                return False
         return True
 
     def execute(self, args: argparse.Namespace) -> int:
         try:
+            if args.tag_action == "suggest":
+                return self._suggest(args)
             if args.tag_action == "embed":
                 return self._embed(args)
             if args.tag_action == "evaluate":
@@ -672,6 +702,8 @@ class TagCommand(BaseCommand):
             tag_evaluate.PoolGuardError,
             tag_evaluate.ControlError,
             tag_report.ReportInputError,
+            tag_manifest.ManifestError,
+            tag_suggest.SuggestInputError,
         ) as e:
             log_error(logger, str(e))
             return 1
@@ -704,6 +736,27 @@ class TagCommand(BaseCommand):
         with RekordboxDatabase(self.config) as db:
             tracks = tag_library.load_library(db, vocab)
         tag_evaluate.run_evaluation(tracks, tagging_dir, vocab, args.jobs)
+        return 0
+
+    def _suggest(self, args: argparse.Namespace) -> int:
+        tagging_dir = Path(self.config.tagging_dir).expanduser()
+        vocab = tag_library.load_vocabulary(
+            Path(self.config.playlist_data_path) / "helpers" / "_lanes.json"
+        )
+        with RekordboxDatabase(self.config) as db:
+            tracks = tag_library.load_library(db, vocab)
+        now = datetime.now()
+        manifest, stats, missing = tag_suggest.suggest(
+            tracks,
+            vocab,
+            tag_evaluate.load_cache(tagging_dir),
+            args.min_precision,
+            None if args.all else args.limit,
+            now,
+        )
+        path = tagging_dir / "manifests" / f"tag-manifest-{now:%Y%m%d-%H%M%S}.json"
+        tag_manifest.write_manifest(manifest, path)
+        print(tag_suggest.render_summary(manifest, stats, missing, str(path)))
         return 0
 
     def _report(self) -> int:

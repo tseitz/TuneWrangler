@@ -4,6 +4,7 @@ import re
 import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass, replace
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +56,7 @@ class Track:
     tags: frozenset[str]
     lead: str = ""
     raw_tags: frozenset[str] = frozenset()
+    added: datetime | None = None
 
 
 def _fold(text: str) -> str:
@@ -137,6 +139,7 @@ def load_library(
                 tags=names & vocab,
                 lead=group,
                 raw_tags=names,
+                added=row.created_at,
             )
         )
     labels = artist_components([t.artists for t in tracks])
