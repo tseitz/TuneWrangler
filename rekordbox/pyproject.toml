@@ -16,7 +16,12 @@ dependencies = [
     "sqlalchemy>=2.0,<2.1",
     "python-dotenv>=1.2.1",
     "colorama>=0.4.4",
+    "numpy<2",  # essentia-tensorflow wheels are built against NumPy 1.x
+    "scikit-learn",
 ]
+
+[project.optional-dependencies]
+tagging = ["essentia-tensorflow==2.1b6.dev1177"]
 
 [project.scripts]
 rsp = "rekordbox_smart_playlists.cli.main:cli_main"

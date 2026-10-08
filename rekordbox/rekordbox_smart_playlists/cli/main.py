@@ -9,7 +9,7 @@ import sys
 
 from ..core.config import Config, load_config
 from ..utils.logging import get_logger, setup_logging
-from .commands import BackupCommand, PlaylistCommand
+from .commands import BackupCommand, PlaylistCommand, TagCommand
 
 logger = get_logger(__name__)
 
@@ -67,6 +67,9 @@ Examples:
         "backup", help="Backup and restore commands", aliases=["bk"]
     )
     BackupCommand.setup_parser(backup_parser)
+
+    tag_parser = subparsers.add_parser("tag", help="Audio tagging exploration (read-only)")
+    TagCommand.setup_parser(tag_parser)
 
     return parser
 
@@ -129,6 +132,8 @@ def validate_args(args: argparse.Namespace) -> bool:
         return PlaylistCommand.validate_args(args)
     elif args.command in ["backup", "bk"]:
         return BackupCommand.validate_args(args)
+    elif args.command == "tag":
+        return TagCommand.validate_args(args)
 
     return True
 
@@ -176,6 +181,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command in ["backup", "bk"]:
             backup_command = BackupCommand(config)
             exit_code = backup_command.execute(args)
+        elif args.command == "tag":
+            exit_code = TagCommand(config).execute(args)
         else:
             logger.error(f"Unknown command: {args.command}")
             exit_code = 1

@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = PACKAGE_ROOT.parent
 DEFAULT_PLAYLIST_DATA_PATH = str(PACKAGE_ROOT / "playlist-data")
+DEFAULT_TAGGING_DIR = str(REPO_ROOT / "logs/rekordbox/tagging")
 
 load_dotenv(REPO_ROOT / ".env")
 
@@ -26,6 +27,7 @@ BACKUP_PATH_ENV = "TUNEWRANGLER_RB_BACKUP_PATH"
 _ENV_MAPPING = {
     "TUNEWRANGLER_RB_PLAYLIST_DATA_PATH": "playlist_data_path",
     BACKUP_PATH_ENV: "backup_base_path",
+    "TUNEWRANGLER_RB_TAGGING_DIR": "tagging_dir",
     "TUNEWRANGLER_RB_PARENT_PLAYLIST": "default_parent_playlist",
     "TUNEWRANGLER_RB_DRY_RUN": "dry_run",
     "TUNEWRANGLER_RB_VERBOSE": "verbose",
@@ -48,6 +50,7 @@ class Config:
     # Paths
     playlist_data_path: str = DEFAULT_PLAYLIST_DATA_PATH
     backup_base_path: str | None = None
+    tagging_dir: str = DEFAULT_TAGGING_DIR
 
     # Database paths (auto-detected based on OS)
     pioneer_app_support: str = field(
@@ -86,7 +89,7 @@ class Config:
                 if raw.lower() not in _TRUE_WORDS | _FALSE_WORDS:
                     raise ConfigurationError(f"{env_var} must be true or false, got {raw!r}")
                 values[key] = raw.lower() in _TRUE_WORDS
-            elif key == "playlist_data_path":
+            elif key in {"playlist_data_path", "tagging_dir"}:
                 values[key] = str(Path(raw).expanduser())
             else:
                 values[key] = raw

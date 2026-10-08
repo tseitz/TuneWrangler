@@ -12,6 +12,9 @@ from ..core.backup_manager import BackupManager
 from ..core.config import Config, ConfigurationError
 from ..core.database import DatabaseError, RekordboxDatabase
 from ..core.playlist_manager import ExistingPlaylistStrategy, PlaylistManager
+from ..tagging import embed as tag_embed
+from ..tagging import library as tag_library
+from ..tagging import models as tag_models
 from ..utils.logging import get_logger, log_error, log_exception, log_success
 
 logger = get_logger(__name__)
@@ -612,3 +615,62 @@ class BackupCommand(BaseCommand):
 
         log_success(logger, f"Cleaned up {deleted_count} backups")
         return 0
+
+
+class TagCommand(BaseCommand):
+    """Read-only audio tagging exploration; writes only under the tagging directory."""
+
+    @staticmethod
+    def setup_parser(parser: argparse.ArgumentParser) -> None:
+        subparsers = parser.add_subparsers(dest="tag_action", help="Tag actions", metavar="ACTION")
+        embed_parser = subparsers.add_parser(
+            "embed", help="Embed tracks and cache the vectors (resumable)"
+        )
+        embed_parser.add_argument(
+            "--limit",
+            type=int,
+            help="Only consider the first N library tracks (by id); cached ones are skipped",
+        )
+        embed_parser.add_argument(
+            "--retry-failed", action="store_true", help="Retry tracks that failed before"
+        )
+
+    @staticmethod
+    def validate_args(args: argparse.Namespace) -> bool:
+        if not getattr(args, "tag_action", None):
+            logger.error("Tag action is required")
+            return False
+        if args.tag_action == "embed" and args.limit is not None and args.limit < 1:
+            logger.error("--limit must be at least 1")
+            return False
+        return True
+
+    def execute(self, args: argparse.Namespace) -> int:
+        try:
+            if args.tag_action == "embed":
+                return self._embed(args)
+            logger.error(f"Unknown tag action: {args.tag_action}")
+            return 1
+        except (ConfigurationError, tag_models.ModelIntegrityError) as e:
+            log_error(logger, str(e))
+            return 1
+        except Exception as e:
+            log_exception(logger, e, f"tag {args.tag_action}")
+            return 1
+
+    def _embed(self, args: argparse.Namespace) -> int:
+        tagging_dir = Path(self.config.tagging_dir).expanduser()
+        vocab = tag_library.load_vocabulary(
+            Path(self.config.playlist_data_path) / "helpers" / "_lanes.json"
+        )
+        with RekordboxDatabase(self.config) as db:
+            tracks = tag_library.load_library(db, vocab)
+        logger.info(f"{len(tracks)} library tracks with an existing file")
+
+        embed_fn, class_names = tag_embed.make_essentia_embedder(tagging_dir / "models")
+        cache = tag_embed.EmbeddingCache(tagging_dir, class_names)
+        summary = tag_embed.run_embed(
+            tracks, cache, embed_fn, limit=args.limit, retry_failed=args.retry_failed
+        )
+        print(summary.render())
+        return 1 if summary.failed else 0
