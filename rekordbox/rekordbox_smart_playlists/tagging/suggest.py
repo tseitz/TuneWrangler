@@ -11,6 +11,7 @@ from .library import GENRES, SUB_PARENT, Track
 
 EXPERIMENTAL_BASS = "Experimental Bass"
 HALFTIME = "Halftime"
+HALFTIME_STYLE = "Electronic---Halftime"
 WEIRD = "WEIRD"
 SCORED_TAGS = (
     "House",
@@ -222,13 +223,25 @@ def _row(est: TagEstimate, i: int) -> tuple[float, float, str]:
     return round(float(est.score[i]), 4), round(float(est.est[i]), 4), str(est.split[i])
 
 
+def _apply_threshold(tag: str, min_precision: float, new_tag_precision: float | None) -> float:
+    if tag == EXPERIMENTAL_BASS and new_tag_precision is not None:
+        return new_tag_precision
+    return min_precision
+
+
 def _judge(
-    tag: str, est: TagEstimate, i: int, min_precision: float, is_hiphop: bool
+    tag: str,
+    est: TagEstimate,
+    i: int,
+    min_precision: float,
+    new_tag_precision: float | None,
+    is_hiphop: bool,
 ) -> mf.Suggestion | None:
     score, e, split = _row(est, i)
     if e < REVIEW_PRECISION:
         return None
-    apply = e >= min_precision and not (is_hiphop and _is_genre(tag))
+    threshold = _apply_threshold(tag, min_precision, new_tag_precision)
+    apply = e >= threshold and not (is_hiphop and _is_genre(tag))
     return mf.Suggestion(tag, score, e, split, "apply" if apply else "review")
 
 
@@ -239,6 +252,7 @@ def assemble(
     vocab_hash: str,
     min_precision: float,
     created_at: datetime,
+    new_tag_precision: float | None = None,
 ) -> tuple[mf.Manifest, Stats]:
     entries: list[tuple[float, mf.Entry]] = []
     hiphop = dropped = 0
@@ -248,14 +262,16 @@ def assemble(
         eb = estimates.get(EXPERIMENTAL_BASS)
         suggestions: list[mf.Suggestion] = []
         for tag, est in estimates.items():
-            if (s := _judge(tag, est, i, min_precision, is_hiphop)) is not None:
+            if (s := _judge(tag, est, i, min_precision, new_tag_precision, is_hiphop)) is not None:
                 suggestions.append(s)
         proposed = [s.tag for s in suggestions if s.decision == "apply"]
-        if eb and EXPERIMENTAL_BASS in proposed and top and top[0][0] == HALFTIME:
+        if eb and EXPERIMENTAL_BASS in proposed and top and top[0][0] == HALFTIME_STYLE:
             suggestions.append(mf.Suggestion(HALFTIME, *_row(eb, i), "apply"))
             proposed.append(HALFTIME)
         downgraded = any(
-            s.decision == "review" and s.est_precision >= min_precision for s in suggestions
+            s.decision == "review"
+            and s.est_precision >= _apply_threshold(s.tag, min_precision, new_tag_precision)
+            for s in suggestions
         )
         if not suggestions:
             dropped += 1
@@ -281,7 +297,13 @@ def assemble(
     manifest = mf.Manifest(
         created_at=created_at.isoformat(timespec="seconds"),
         vocabulary_hash=vocab_hash,
-        thresholds={"review": REVIEW_PRECISION, "apply": min_precision},
+        thresholds={
+            "review": REVIEW_PRECISION,
+            "apply": min_precision,
+            EXPERIMENTAL_BASS: _apply_threshold(
+                EXPERIMENTAL_BASS, min_precision, new_tag_precision
+            ),
+        },
         note=NOTE,
         entries=[e for _, e in entries],
     )
@@ -302,7 +324,8 @@ def render_summary(
         f"entries written: {len(manifest.entries)} ({n_apply} apply, "
         f"{len(manifest.entries) - n_apply} review); {stats.dropped_no_suggestion} had no "
         f"suggestion at or above {REVIEW_PRECISION}",
-        f"min-precision: {manifest.thresholds['apply']}",
+        f"min-precision: {manifest.thresholds['apply']} "
+        f"({EXPERIMENTAL_BASS}: {manifest.thresholds.get(EXPERIMENTAL_BASS)})",
         "proposed per tag: " + (", ".join(f"{t} {n}" for t, n in proposed.most_common()) or "-"),
         "review per tag:   " + (", ".join(f"{t} {n}" for t, n in review.most_common()) or "-"),
         "proposed tags per track: " + ", ".join(f"{k}: {v}" for k, v in sorted(per_track.items())),
@@ -321,6 +344,7 @@ def suggest(
     limit: int | None,
     created_at: datetime,
     progress: Callable[[str], None] = print,
+    new_tag_precision: float | None = None,
 ) -> tuple[mf.Manifest, Stats, int]:
     tagged = [t for t in library if t.tags]
     if not tagged:
@@ -342,5 +366,6 @@ def suggest(
         mf.vocabulary_hash(vocab),
         min_precision,
         created_at,
+        new_tag_precision,
     )
     return manifest, stats, len(untagged) - len(usable)

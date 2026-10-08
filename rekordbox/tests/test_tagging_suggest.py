@@ -112,7 +112,7 @@ def test_min_precision_gates_proposed_and_review_band():
 def test_halftime_needs_experimental_bass_and_halftime_top_style():
     tracks = [_track(c, []) for c in ("both", "eb-only", "ht-only")]
     est = {sg.EXPERIMENTAL_BASS: _est([0.7, 0.7, 0.2])}
-    styles = [[("Halftime", 0.5)], [("Dubstep", 0.5)], [("Halftime", 0.5)]]
+    styles = [[("Electronic---Halftime", 0.5)], [("Electronic---Dubstep", 0.5)], [("Electronic---Halftime", 0.5)]]
     manifest, _ = _assemble(tracks, est, styles, min_precision=0.65)
     entries = _by_id(manifest)
     assert entries["both"].proposed == [sg.EXPERIMENTAL_BASS, sg.HALFTIME]
@@ -124,7 +124,7 @@ def test_halftime_not_added_when_experimental_bass_is_only_review():
     manifest, _ = _assemble(
         [_track("a", [])],
         {sg.EXPERIMENTAL_BASS: _est([0.6])},
-        [[("Halftime", 0.5)]],
+        [[("Electronic---Halftime", 0.5)]],
     )
     entry = _by_id(manifest)["a"]
     assert entry.proposed == []
@@ -214,3 +214,16 @@ def test_proposed_is_deduplicated_and_entries_sorted_apply_first():
 def test_suggest_refuses_an_empty_library():
     with pytest.raises(sg.SuggestInputError, match="drive"):
         sg.suggest([], VOCAB, None, 0.5, 100, datetime(2026, 10, 8))
+
+
+def test_new_tag_precision_applies_to_experimental_bass_only():
+    tracks = [_track("t", [], raw=[])]
+    est = {sg.EXPERIMENTAL_BASS: _est([0.55]), "Dub": _est([0.6])}
+    styles = [[("Electronic---Halftime", 0.5)]]
+    manifest = sg.assemble(
+        tracks, est, styles, "h", 0.8, datetime(2026, 10, 8), new_tag_precision=0.5
+    )[0]
+    entry = manifest.entries[0]
+    assert entry.proposed == [sg.EXPERIMENTAL_BASS, sg.HALFTIME]
+    assert {s.tag: s.decision for s in entry.suggestions}["Dub"] == "review"
+    assert manifest.thresholds[sg.EXPERIMENTAL_BASS] == 0.5

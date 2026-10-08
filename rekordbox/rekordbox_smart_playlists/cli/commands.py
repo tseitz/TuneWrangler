@@ -664,6 +664,13 @@ class TagCommand(BaseCommand):
             default=tag_suggest.DEFAULT_APPLY_PRECISION,
             help="Estimated precision a tag needs to be proposed (default 0.8)",
         )
+        suggest_parser.add_argument(
+            "--new-tag-precision",
+            type=float,
+            default=None,
+            help="Threshold for Experimental Bass (and Halftime, which follows it); "
+            "defaults to --min-precision",
+        )
 
     @staticmethod
     def validate_args(args: argparse.Namespace) -> bool:
@@ -680,6 +687,12 @@ class TagCommand(BaseCommand):
             if not tag_suggest.REVIEW_PRECISION <= args.min_precision <= 1:
                 logger.error(
                     f"--min-precision must be between {tag_suggest.REVIEW_PRECISION} and 1"
+                )
+                return False
+            new = args.new_tag_precision
+            if new is not None and not tag_suggest.REVIEW_PRECISION <= new <= 1:
+                logger.error(
+                    f"--new-tag-precision must be between {tag_suggest.REVIEW_PRECISION} and 1"
                 )
                 return False
         return True
@@ -753,6 +766,7 @@ class TagCommand(BaseCommand):
             args.min_precision,
             None if args.all else args.limit,
             now,
+            new_tag_precision=args.new_tag_precision,
         )
         path = tagging_dir / "manifests" / f"tag-manifest-{now:%Y%m%d-%H%M%S}.json"
         tag_manifest.write_manifest(manifest, path)
