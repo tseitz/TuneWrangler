@@ -71,6 +71,15 @@ deno task rb:fmt:check        # ruff format --check
 
 Global flags go before the subcommand: `--dry-run`, `-v`, `-q`, `--log-file`.
 
+Tag exploration is read-only against Rekordbox and writes only to `logs/rekordbox/tagging/`
+(`TUNEWRANGLER_RB_TAGGING_DIR`). Run in order; `embed` is resumable and takes hours:
+
+```bash
+deno task rb:tag embed [--limit N] [--retry-failed]   # Essentia embeddings + Discogs styles
+deno task rb:tag evaluate                             # cross-validated per-tag scores
+deno task rb:tag report                               # tracks.csv + crosstab.md
+```
+
 ## Rename workflow (the important one)
 
 The `rename-music` flow is **dry-run first, apply second** — never `--move` or `--auto` unless the user explicitly asks for it. The manifest exists so the user can review low-confidence entries before any files are touched.
@@ -171,7 +180,8 @@ When changing `parser.ts`, run `deno task test` and inspect the corpus output fo
   flags override env. An unset, blank or missing backup folder raises `ConfigurationError`.
 - **`audit.py`** — `deno task rb:audit`: offline structure check of `playlist-data/` (leaf counts
   per context). The test suite pins its totals, so adding a genre means updating `tests/test_audit.py`.
-- **`cli/`** — argparse entry (`rsp`): `playlist` and `backup` subcommands.
+- **`cli/`** — argparse entry (`rsp`): `playlist`, `backup` and `tag` subcommands. `tagging/` holds the embedding
+  cache, evaluation and report; only `embed.py` imports essentia (extra `tagging`).
 
 ## Logs and state
 

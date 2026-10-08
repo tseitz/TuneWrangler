@@ -16,6 +16,7 @@ from ..tagging import embed as tag_embed
 from ..tagging import evaluate as tag_evaluate
 from ..tagging import library as tag_library
 from ..tagging import models as tag_models
+from ..tagging import report as tag_report
 from ..utils.logging import get_logger, log_error, log_exception, log_success
 
 logger = get_logger(__name__)
@@ -641,6 +642,9 @@ class TagCommand(BaseCommand):
         evaluate_parser.add_argument(
             "--jobs", type=int, default=-1, help="Parallel workers for fold fits (default: all)"
         )
+        subparsers.add_parser(
+            "report", help="Write tracks.csv and crosstab.md from the caches and evaluation"
+        )
 
     @staticmethod
     def validate_args(args: argparse.Namespace) -> bool:
@@ -658,6 +662,8 @@ class TagCommand(BaseCommand):
                 return self._embed(args)
             if args.tag_action == "evaluate":
                 return self._evaluate(args)
+            if args.tag_action == "report":
+                return self._report()
             logger.error(f"Unknown tag action: {args.tag_action}")
             return 1
         except (
@@ -665,6 +671,7 @@ class TagCommand(BaseCommand):
             tag_models.ModelIntegrityError,
             tag_evaluate.PoolGuardError,
             tag_evaluate.ControlError,
+            tag_report.ReportInputError,
         ) as e:
             log_error(logger, str(e))
             return 1
@@ -697,4 +704,15 @@ class TagCommand(BaseCommand):
         with RekordboxDatabase(self.config) as db:
             tracks = tag_library.load_library(db, vocab)
         tag_evaluate.run_evaluation(tracks, tagging_dir, vocab, args.jobs)
+        return 0
+
+    def _report(self) -> int:
+        tagging_dir = Path(self.config.tagging_dir).expanduser()
+        vocab = tag_library.load_vocabulary(
+            Path(self.config.playlist_data_path) / "helpers" / "_lanes.json"
+        )
+        tag_report.read_oof(tagging_dir)
+        with RekordboxDatabase(self.config) as db:
+            tracks = tag_library.load_library(db, vocab)
+        tag_report.run_report(tracks, tagging_dir, vocab)
         return 0

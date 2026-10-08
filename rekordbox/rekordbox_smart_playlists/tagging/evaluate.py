@@ -129,16 +129,35 @@ def _tag_counts(tracks: list[Track]) -> dict[str, int]:
     return counts
 
 
-def align_pool(pool: list[Track], cache: Cache) -> tuple[list[Track], np.ndarray, str]:
-    """Keeps pool tracks with a fresh cached embedding. Returns features and a guard report."""
+def usable(tracks: list[Track], cache: Cache) -> tuple[list[Track], np.ndarray]:
+    """Tracks with a fresh cached embedding, and their cache rows."""
     row_of = {cid: i for i, cid in enumerate(cache.ids)}
     kept: list[Track] = []
     rows: list[int] = []
-    for t in pool:
+    for t in tracks:
         meta = cache.meta.get(t.content_id)
         if t.content_id in row_of and meta and (meta["path"], meta["length"]) == (t.path, t.length):
             kept.append(t)
             rows.append(row_of[t.content_id])
+    return kept, np.array(rows, dtype=int)
+
+
+def feature_matrix(tracks: list[Track], cache: Cache, idx: np.ndarray) -> np.ndarray:
+    bpm = np.array([t.bpm for t in tracks])
+    return np.hstack(
+        [
+            cache.effnet[idx],
+            cache.genre[idx],
+            cache.voice[idx][:, None],
+            bpm[:, None],
+            np.log1p(bpm)[:, None],
+        ]
+    ).astype(np.float64)
+
+
+def align_pool(pool: list[Track], cache: Cache) -> tuple[list[Track], np.ndarray, str]:
+    """Keeps pool tracks with a fresh cached embedding. Returns features and a guard report."""
+    kept, idx = usable(pool, cache)
     before, after = _tag_counts(pool), _tag_counts(kept)
     lines = [f"pool {len(pool)} tracks, embedded {len(kept)}, missing {len(pool) - len(kept)}"]
     lines += [f"  {tag}: {before[tag]} -> {after.get(tag, 0)}" for tag in sorted(before)]
@@ -148,18 +167,7 @@ def align_pool(pool: list[Track], cache: Cache) -> tuple[list[Track], np.ndarray
             f"{missing:.1%} of the pool has no usable embedding (limit {MAX_MISSING:.0%}); "
             "finish `tag embed` first.\n" + "\n".join(lines)
         )
-    idx = np.array(rows, dtype=int)
-    bpm = np.array([t.bpm for t in kept])
-    x = np.hstack(
-        [
-            cache.effnet[idx],
-            cache.genre[idx],
-            cache.voice[idx][:, None],
-            bpm[:, None],
-            np.log1p(bpm)[:, None],
-        ]
-    ).astype(np.float64)
-    return kept, x, "\n".join(lines)
+    return kept, feature_matrix(kept, cache, idx), "\n".join(lines)
 
 
 def artist_slots(tracks: list[Track]) -> tuple[np.ndarray, int]:

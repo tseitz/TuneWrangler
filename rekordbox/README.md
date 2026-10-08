@@ -93,6 +93,18 @@ deno task rb:audit                                # offline structure check, no 
 
 Global flags (`--dry-run`, `-v`, `-q`, `--log-file`) go before the subcommand.
 
+### Tag exploration (read-only)
+
+Nothing here writes to Rekordbox. Outputs land in `logs/rekordbox/tagging/`.
+
+```bash
+deno task rb:tag embed       # embed every track once (resumable, hours); Discogs styles + vectors
+deno task rb:tag evaluate    # how well each lane tag can be predicted; writes evaluation.md
+deno task rb:tag report      # tracks.csv (styles and lane fit per track) + crosstab.md
+```
+
+Run `evaluate` before `report`. The crosstab fails loudly if the style index looks misaligned.
+
 ## JSON Configuration Format
 
 ### Root File
