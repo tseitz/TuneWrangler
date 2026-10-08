@@ -13,6 +13,7 @@ from ..core.config import Config, ConfigurationError
 from ..core.database import DatabaseError, RekordboxDatabase
 from ..core.playlist_manager import ExistingPlaylistStrategy, PlaylistManager
 from ..tagging import embed as tag_embed
+from ..tagging import evaluate as tag_evaluate
 from ..tagging import library as tag_library
 from ..tagging import models as tag_models
 from ..utils.logging import get_logger, log_error, log_exception, log_success
@@ -634,6 +635,12 @@ class TagCommand(BaseCommand):
         embed_parser.add_argument(
             "--retry-failed", action="store_true", help="Retry tracks that failed before"
         )
+        evaluate_parser = subparsers.add_parser(
+            "evaluate", help="Cross-validate per-tag classifiers on the embedding cache"
+        )
+        evaluate_parser.add_argument(
+            "--jobs", type=int, default=-1, help="Parallel workers for fold fits (default: all)"
+        )
 
     @staticmethod
     def validate_args(args: argparse.Namespace) -> bool:
@@ -649,9 +656,16 @@ class TagCommand(BaseCommand):
         try:
             if args.tag_action == "embed":
                 return self._embed(args)
+            if args.tag_action == "evaluate":
+                return self._evaluate(args)
             logger.error(f"Unknown tag action: {args.tag_action}")
             return 1
-        except (ConfigurationError, tag_models.ModelIntegrityError) as e:
+        except (
+            ConfigurationError,
+            tag_models.ModelIntegrityError,
+            tag_evaluate.PoolGuardError,
+            tag_evaluate.ControlError,
+        ) as e:
             log_error(logger, str(e))
             return 1
         except Exception as e:
@@ -674,3 +688,13 @@ class TagCommand(BaseCommand):
         )
         print(summary.render())
         return 1 if summary.failed else 0
+
+    def _evaluate(self, args: argparse.Namespace) -> int:
+        tagging_dir = Path(self.config.tagging_dir).expanduser()
+        vocab = tag_library.load_vocabulary(
+            Path(self.config.playlist_data_path) / "helpers" / "_lanes.json"
+        )
+        with RekordboxDatabase(self.config) as db:
+            tracks = tag_library.load_library(db, vocab)
+        tag_evaluate.run_evaluation(tracks, tagging_dir, vocab, args.jobs)
+        return 0
