@@ -65,7 +65,7 @@ def _is_own_backup(path: Path) -> bool:
         return False
 
 
-def _assert_rekordbox_closed() -> None:
+def assert_rekordbox_closed() -> None:
     """A copy of master.db taken while Rekordbox has it open can be inconsistent."""
     if get_rekordbox_pid() or get_rekordbox_agent_pid():
         raise BackupError("Rekordbox is running. Close it before backing up or restoring.")
@@ -137,7 +137,7 @@ class BackupManager:
         """
         partial_path: Path | None = None
         try:
-            _assert_rekordbox_closed()
+            assert_rekordbox_closed()
 
             # Generate backup name with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -316,7 +316,7 @@ class BackupManager:
         logger.info(f"Restoring from backup: {backup_file.name}")
 
         try:
-            _assert_rekordbox_closed()
+            assert_rekordbox_closed()
             self._assert_restore_preconditions()
 
             if not self.validate_backup(backup_file):
@@ -411,7 +411,7 @@ class BackupManager:
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         staged = self._stage(pairs, stamp)
 
-        _assert_rekordbox_closed()  # staging can take minutes; check again before touching live
+        assert_rekordbox_closed()  # staging can take minutes; check again before touching live
         swapped: list[tuple[Path, Path | None]] = []
         try:
             for staging, target in staged:

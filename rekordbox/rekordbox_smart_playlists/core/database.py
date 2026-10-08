@@ -535,10 +535,29 @@ class RekordboxDatabase:
         """Bumps the track's info counter, as Rekordbox does when a track's My Tags change."""
         self.ensure_connected()
         assert self._db is not None  # ensured by ensure_connected()
-        content = self._db.get_content(ID=str(content_id))
+        content = self.get_track(content_id)
         if content is None:
             raise DatabaseQueryError(f"track {content_id} not found")
-        content.TrackInfoUpdated = (content.TrackInfoUpdated or 0) + 1
+        # A VARCHAR column holding digits.
+        content.TrackInfoUpdated = str(int(content.TrackInfoUpdated or 0) + 1)
+
+    def get_track(self, content_id: str) -> Any | None:
+        """One track by ID; errors propagate. pyrekordbox returns the row (or None), not a query,
+        when filtering by ID."""
+        self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
+        return self._db.get_content(ID=str(content_id))
+
+    def get_song_tag(self, row_id: str) -> Any | None:
+        self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
+        return self._db.get_my_tag_songs(ID=str(row_id))
+
+    def delete_song_tag(self, row: Any) -> None:
+        """Deletes through pyrekordbox so the change is USN-tracked. Not committed."""
+        self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
+        self._db.delete(row)
 
     def get_local_usn(self) -> int:
         self.ensure_connected()

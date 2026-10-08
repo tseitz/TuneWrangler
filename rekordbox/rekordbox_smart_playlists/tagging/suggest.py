@@ -7,7 +7,7 @@ import numpy as np
 
 from . import evaluate as ev
 from . import manifest as mf
-from .library import GENRES, SUB_PARENT, Track
+from .library import GENRES, SUB_PARENT, Track, in_training_pool
 
 EXPERIMENTAL_BASS = "Experimental Bass"
 HALFTIME = "Halftime"
@@ -346,7 +346,7 @@ def suggest(
     progress: Callable[[str], None] = print,
     new_tag_precision: float | None = None,
 ) -> tuple[mf.Manifest, Stats, int]:
-    tagged = [t for t in library if t.tags]
+    tagged = [t for t in library if in_training_pool(t)]
     if not tagged:
         raise SuggestInputError(
             "no tagged tracks with an existing file; is the music drive mounted?"

@@ -15,7 +15,7 @@ from sklearn.model_selection import GroupKFold, RepeatedStratifiedKFold
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from .library import GENRES, MODIFIERS, SUB_PARENT, Track
+from .library import GENRES, MODIFIERS, SUB_PARENT, Track, in_training_pool
 
 MIN_POSITIVES = 30
 PARENT_SHARE = 0.15
@@ -599,7 +599,7 @@ def run_evaluation(
     jobs: int = -1,
     progress: Callable[[str], None] = print,
 ) -> None:
-    pool = [t for t in tracks if t.tags]
+    pool = [t for t in tracks if in_training_pool(t)]
     cache = load_cache(directory)
     kept, x, guard_report = align_pool(pool, cache)
     progress(guard_report)

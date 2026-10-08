@@ -12,7 +12,7 @@ from sklearn.preprocessing import StandardScaler
 
 from . import evaluate as ev
 from .embed import EFFNET_DIM
-from .library import GENRES, Track
+from .library import GENRES, Track, in_training_pool
 
 STYLE_PREFIX = "Electronic---"
 TOP_STYLES = 3
@@ -414,7 +414,7 @@ def run_report(
     cache = ev.load_cache(directory)
     labels = [style_label(n) for n in load_class_names(directory)]
 
-    by_id = {t.content_id: t for t in tracks if t.tags}
+    by_id = {t.content_id: t for t in tracks if in_training_pool(t)}
     try:
         pool_all = [by_id[str(i)] for i in oof["ids"]]
     except KeyError as exc:

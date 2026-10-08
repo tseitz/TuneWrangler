@@ -11,6 +11,7 @@ from typing import Any
 EXCLUDED = frozenset({"Weapons", "Party Hits"})
 ARCHIVE_TAG = "Archive"
 SAMPLER_MARKER = "/rekordbox/Sampler/"
+AUTOTAG_MARKER = "Autotagged"
 
 GENRES = frozenset(
     {
@@ -107,6 +108,11 @@ def vocabulary(lanes_json: dict[str, Any]) -> frozenset[str]:
 
 def load_vocabulary(path: Path) -> frozenset[str]:
     return vocabulary(json.loads(path.read_text()))
+
+
+def in_training_pool(track: Track) -> bool:
+    """Tagged, and not still waiting on the user to review tags the tool wrote."""
+    return bool(track.tags) and AUTOTAG_MARKER not in track.raw_tags
 
 
 def load_library(

@@ -9,10 +9,11 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
 
-from ..core.backup_manager import BackupManager
+from ..core.backup_manager import BackupError, BackupManager, assert_rekordbox_closed
 from ..core.config import Config, ConfigurationError
 from ..core.database import DatabaseError, RekordboxDatabase
 from ..core.playlist_manager import ExistingPlaylistStrategy, PlaylistManager
+from ..tagging import apply as tag_apply
 from ..tagging import embed as tag_embed
 from ..tagging import evaluate as tag_evaluate
 from ..tagging import library as tag_library
@@ -622,9 +623,16 @@ class BackupCommand(BaseCommand):
         return 0
 
 
+def _positive_int(value: str) -> int:
+    n = int(value)
+    if n < 1:
+        raise argparse.ArgumentTypeError("must be at least 1")
+    return n
+
+
 class TagCommand(BaseCommand):
-    """Audio tagging exploration and suggestions; read-only against Rekordbox, writes only under the
-    tagging directory."""
+    """Audio tagging. Only `apply` and `undo` write to Rekordbox; the rest write under the tagging
+    directory."""
 
     @staticmethod
     def setup_parser(parser: argparse.ArgumentParser) -> None:
@@ -672,6 +680,31 @@ class TagCommand(BaseCommand):
             "defaults to --min-precision",
         )
 
+        apply_parser = subparsers.add_parser(
+            "apply", help="Add a manifest's proposed tags to Rekordbox (add-only, backs up first)"
+        )
+        apply_parser.add_argument("manifest", type=Path, help="Manifest from tag suggest")
+        pick = apply_parser.add_mutually_exclusive_group()
+        pick.add_argument("--limit", type=_positive_int, help="Only the first N apply entries")
+        pick.add_argument("--sample", type=_positive_int, help="A random N apply entries")
+        pick.add_argument("--only", nargs="+", help="Only these content ids")
+        apply_parser.add_argument("--seed", type=int, default=0, help="Seed for --sample")
+        apply_parser.add_argument(
+            "--yes", action="store_true", help="Write to Rekordbox (default is a dry run)"
+        )
+        undo_parser = subparsers.add_parser(
+            "undo", help="Remove exactly the rows a tag apply wrote, from its apply log"
+        )
+        undo_parser.add_argument("log", type=Path, help="The .applied-*.json log from tag apply")
+        undo_parser.add_argument(
+            "--yes", action="store_true", help="Write to Rekordbox (default is a dry run)"
+        )
+        undo_parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Also remove tags on tracks you've reviewed (Autotagged removed)",
+        )
+
     @staticmethod
     def validate_args(args: argparse.Namespace) -> bool:
         if not getattr(args, "tag_action", None):
@@ -707,6 +740,10 @@ class TagCommand(BaseCommand):
                 return self._evaluate(args)
             if args.tag_action == "report":
                 return self._report()
+            if args.tag_action == "apply":
+                return self._apply(args)
+            if args.tag_action == "undo":
+                return self._undo(args)
             logger.error(f"Unknown tag action: {args.tag_action}")
             return 1
         except (
@@ -717,6 +754,8 @@ class TagCommand(BaseCommand):
             tag_report.ReportInputError,
             tag_manifest.ManifestError,
             tag_suggest.SuggestInputError,
+            tag_apply.ApplyError,
+            BackupError,
         ) as e:
             log_error(logger, str(e))
             return 1
@@ -750,6 +789,66 @@ class TagCommand(BaseCommand):
             tracks = tag_library.load_library(db, vocab)
         tag_evaluate.run_evaluation(tracks, tagging_dir, vocab, args.jobs)
         return 0
+
+    def _vocab(self) -> frozenset[str]:
+        return tag_library.load_vocabulary(
+            Path(self.config.playlist_data_path) / "helpers" / "_lanes.json"
+        )
+
+    def _apply(self, args: argparse.Namespace) -> int:
+        manifest = tag_manifest.read_manifest(args.manifest)
+        selection = tag_apply.Selection(
+            limit=args.limit,
+            sample=args.sample,
+            seed=args.seed,
+            only=frozenset(args.only or ()),
+        )
+        with RekordboxDatabase(self.config) as db:
+            result = tag_apply.apply_manifest(
+                db,
+                manifest,
+                args.manifest,
+                self._vocab(),
+                selection,
+                create_backup=self._tag_backup,
+                assert_closed=assert_rekordbox_closed,
+                dry_run=self._dry(args),
+            )
+        verb = "Would add" if self._dry(args) else "Added"
+        for content_id, tags in result.writes:
+            print(f"  {content_id}: {', '.join(tags)}")
+        for content_id, reason in result.skipped:
+            print(f"  skipped {content_id}: {reason}")
+        rows = sum(len(t) for _, t in result.writes)
+        print(f"{verb} {rows} tags on {len(result.writes)} tracks; skipped {len(result.skipped)}")
+        if result.log_path:
+            print(f"apply log (for tag undo): {result.log_path}")
+        elif self._dry(args) and result.writes:
+            print("dry run: nothing written; add --yes to write")
+        return 0
+
+    def _dry(self, args: argparse.Namespace) -> bool:
+        return self.config.dry_run or not args.yes
+
+    def _undo(self, args: argparse.Namespace) -> int:
+        with RekordboxDatabase(self.config) as db:
+            removed, gone = tag_apply.undo(
+                db,
+                args.log,
+                create_backup=self._tag_backup,
+                assert_closed=assert_rekordbox_closed,
+                dry_run=self._dry(args),
+                force=args.force,
+            )
+        for row_id, reason in gone:
+            print(f"  left {row_id}: {reason}")
+        verb = "Would remove" if self._dry(args) else "Removed"
+        print(f"{verb} {len(removed)} tag rows; {len(gone)} already gone or changed")
+        return 0
+
+    def _tag_backup(self) -> str | None:
+        # Exempt from rotation: it's the snapshot to go back to if a batch goes wrong.
+        return BackupManager(self.config).create_backup(tag_apply.BACKUP_NAME, cleanup=False)
 
     def _suggest(self, args: argparse.Namespace) -> int:
         tagging_dir = Path(self.config.tagging_dir).expanduser()
