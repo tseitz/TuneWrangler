@@ -54,6 +54,7 @@ class Track:
     length: int
     tags: frozenset[str]
     lead: str = ""
+    raw_tags: frozenset[str] = frozenset()
 
 
 def _fold(text: str) -> str:
@@ -135,6 +136,7 @@ def load_library(
                 length=int(row.Length or 0),
                 tags=names & vocab,
                 lead=group,
+                raw_tags=names,
             )
         )
     labels = artist_components([t.artists for t in tracks])
