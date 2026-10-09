@@ -17,7 +17,8 @@ TuneWrangler is a music file management tool with three components:
 ```bash
 deno task rM                       # rename music: dry-run, writes manifest
 deno task rM --apply <manifest>    # apply approved entries from a manifest
-deno task rM --auto                # dry run + apply in one step (unattended runs)
+deno task rM --auto                # dry run + claude second opinion + apply (unattended runs)
+deno task rM --suggest             # dry run + claude second opinion, no apply
 deno task rM --move                # legacy: parse + move all in one shot
 deno task rM --prune [--keep N]    # list backup runs beyond the newest N (5); --yes deletes
 deno task retag [--dir D] [--overwrite[-cosmetic]] [--yes]  # tags from `artist - album - title` names; dry run by default
@@ -81,7 +82,7 @@ deno task rb:tag report                               # tracks.csv + crosstab.md
 
 ## Rename workflow (the important one)
 
-The `rename-music` flow is **dry-run first, apply second** — never `--move` or `--auto` unless the user explicitly asks for it. The manifest exists so the user can review low-confidence entries before any files are touched.
+The `rename-music` flow is **dry-run first, apply second** — never `--move` or `--auto` unless the user explicitly asks for it. The goal is no manual review: the parser names files, Claude settles what the parser gets wrong, and `review` is left only for files neither can name. A misnamed file that slips into the Collection is acceptable; it gets fixed later from Rekordbox.
 
 Applied files go **straight into the DJ Collection** (`TUNEWRANGLER_DJMUSIC_PATH`); there is no
 `Renamed/` step. The human check is the manifest's `review` entries, which stay in the Downloaded
@@ -108,10 +109,36 @@ set it must equal `<DOWNLOADED_PATH>soundcloud/`, or `rM` fails. Backups go unde
 `<run>/<source>/<src>` (the root stays flat) and never overwrite. Applying deletes the source
 file for every source.
 
-`--auto` applies only `downloaded` and `soundcloud` entries; `bandcamp`, `beatport` and `itunes`
-entries become `review` with a reason, for a manual `--apply`. `itunes` and `beatport` entries are
-excluded from the corpus (their names come from tags). A new-format manifest can't be read by
-older code, so promoting one is a one-way door.
+`--auto` applies every source once Claude's second opinion has run. If `claude` is missing, logged
+out, or every call fails, it warns, keeps the parser's names, and applies only `downloaded` and
+`soundcloud` entries (`bandcamp`, `beatport` and `itunes` wait as `review`). `itunes` and
+`beatport` entries are excluded from the corpus (their names come from tags). A new-format
+manifest can't be read by older code, so promoting one is a one-way door.
+
+### Claude second opinion (`--suggest`, always on in `--auto`)
+
+`src/core/suggest.ts` sends every `apply`/`review` entry, in batches of 25, to `claude -p`
+(Sonnet), with the rules and examples in `src/core/suggest-examples.txt` and any tags or
+SoundCloud credits. Per entry:
+
+- agrees (ignoring case, extension, accents, `&`/`x`) → parser's name kept; a `review` becomes `apply`
+- confident rename → Claude's name, cleaned like the parser's, becomes `proposed` and is applied;
+  the parser's stays in `parser_output`, so the corpus logs it as a parser bug to fix
+- unsure, or the call failed → parser's name and decision unchanged
+- a rename that adds a word not in the file's name, tags or credits, or isn't 2–3 parts, counts
+  as unsure — Claude may only reorder and clean up (this also stops a file name steering the batch)
+- a Jev downgrade, or a SoundCloud credit still missing from the name, stays `review`
+- in `--auto`, a purchase Claude never answered for (failed call, budget spent) waits as `review`
+
+Each entry records a `suggestion` (outcome, name, why, cost). The call runs in an empty temp
+folder with `--safe-mode`, `--setting-sources ""`, no tools and no MCP: a plain `claude -p` loads
+the whole global config and multiplies the cost; the child also gets a cleared environment so an
+`ANTHROPIC_API_KEY` can't switch billing. Calls time out after 3 minutes. Before changing the
+prompt or examples, re-measure on corpus names the user approved as-is (any rename there is a
+false positive). Env: `TUNEWRANGLER_CLAUDE_BIN` (found on
+PATH or `~/.local/bin` otherwise), `TUNEWRANGLER_SUGGEST_MODEL` (`sonnet`),
+`TUNEWRANGLER_SUGGEST_BATCH` (`25`), `TUNEWRANGLER_SUGGEST_MAX_USD` (`0.25` per call; the run
+stops asking at 4x that).
 
 ```
 1. deno task rM                       → writes logs/tunewrangler/manifests/rename-manifest-<ts>.json

@@ -34,6 +34,17 @@ export interface EntryTags {
   title: string;
 }
 
+export interface EntrySuggestion {
+  outcome: "agreed" | "renamed" | "unsure" | "failed";
+  name?: string;
+  confident?: boolean;
+  why?: string;
+  parser_name: string;
+  model: string;
+  cost_usd?: number;
+  error?: string;
+}
+
 export interface ManifestEntry {
   /** Relative to the entry's source folder. Only itunes may contain "/". */
   src: string;
@@ -52,6 +63,7 @@ export interface ManifestEntry {
   judgement?: EntryJudgement;
   /** Absent for any file soundcloud_dl did not download. */
   soundcloud?: SoundcloudFacts;
+  suggestion?: EntrySuggestion;
 }
 
 export interface Manifest {
@@ -164,7 +176,7 @@ function validateEntry(entry: unknown, index: number, path: string): void {
       `Manifest entry ${index} at ${path}: "${e.src}" must be a ${nestedOk ? "relative path inside its source folder" : "plain filename, not a path"}`
     );
   }
-  if (!e.proposed.trim() || e.proposed !== basename(e.proposed) || e.proposed === "." || e.proposed === ".." || e.proposed.includes("\0")) {
+  if (!isPlainFilename(e.proposed)) {
     throw new Error(`Manifest entry ${index} at ${path}: "${e.proposed}" must be a plain filename, not a path`);
   }
   if (e.tags !== undefined && !isEntryTags(e.tags)) {
@@ -195,6 +207,43 @@ function validateEntry(entry: unknown, index: number, path: string): void {
   }
   if (e.soundcloud !== undefined && !isSoundcloudFacts(e.soundcloud)) {
     throw new Error(`Manifest entry ${index} at ${path} has invalid soundcloud (needs a string url; other fields string or null)`);
+  }
+  if (e.suggestion !== undefined) {
+    validateSuggestion(e.suggestion, index, path);
+  }
+}
+
+function isPlainFilename(name: string): boolean {
+  return !!name.trim() && name === basename(name) && name !== "." && name !== ".." && !name.includes("\0");
+}
+
+const SUGGESTION_OUTCOMES = ["agreed", "renamed", "unsure", "failed"];
+
+function validateSuggestion(suggestion: unknown, index: number, path: string): void {
+  const where = `Manifest entry ${index} at ${path} has invalid suggestion`;
+  if (!suggestion || typeof suggestion !== "object" || Array.isArray(suggestion)) {
+    throw new Error(`${where} (must be an object)`);
+  }
+  const s = suggestion as Record<string, unknown>;
+
+  if (typeof s.outcome !== "string" || !SUGGESTION_OUTCOMES.includes(s.outcome)) {
+    throw new Error(`${where}.outcome (must be one of: ${SUGGESTION_OUTCOMES.join(", ")})`);
+  }
+  if (typeof s.parser_name !== "string") throw new Error(`${where}.parser_name (must be a string)`);
+  if (typeof s.model !== "string") throw new Error(`${where}.model (must be a string)`);
+  if (s.outcome === "failed") {
+    if (typeof s.error !== "string") throw new Error(`${where}.error (required string when failed)`);
+  } else if (typeof s.name !== "string" || !isPlainFilename(s.name)) {
+    throw new Error(`${where}.name (must be a plain filename, not a path)`);
+  }
+  if (s.name !== undefined && typeof s.name !== "string") throw new Error(`${where}.name (must be a string)`);
+  if (s.error !== undefined && typeof s.error !== "string") throw new Error(`${where}.error (must be a string)`);
+  if (s.confident !== undefined && typeof s.confident !== "boolean") {
+    throw new Error(`${where}.confident (must be a boolean)`);
+  }
+  if (s.why !== undefined && typeof s.why !== "string") throw new Error(`${where}.why (must be a string)`);
+  if (s.cost_usd !== undefined && (typeof s.cost_usd !== "number" || !Number.isFinite(s.cost_usd))) {
+    throw new Error(`${where}.cost_usd (must be a finite number)`);
   }
 }
 

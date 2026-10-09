@@ -1,5 +1,5 @@
 import { assertEquals, assertRejects, assertThrows } from "jsr:@std/assert@^1";
-import { entryKey, Manifest, readManifest, sourceDirFor, writeManifest } from "./manifest.ts";
+import { entryKey, EntrySuggestion, Manifest, readManifest, sourceDirFor, writeManifest } from "./manifest.ts";
 
 async function withTempFile(fn: (path: string) => Promise<void>) {
   const path = await Deno.makeTempFile({ suffix: ".json" });
@@ -223,4 +223,42 @@ Deno.test("an unknown source or malformed tags are rejected", async () => {
 Deno.test("sourceDirFor throws for a source with no dir instead of falling back", async () => {
   const loaded = await readRaw(rawManifest({ source: "bandcamp" }));
   assertThrows(() => sourceDirFor(loaded, loaded.entries[0]), Error, "bandcamp");
+});
+
+const suggestionBase = { parser_name: "A - B - C.mp3", model: "claude-x" };
+
+Deno.test("a suggestion of each outcome round-trips", async () => {
+  const suggestions: EntrySuggestion[] = [
+    { ...suggestionBase, outcome: "agreed", name: "A - B - C.mp3", confident: true, why: "ok", cost_usd: 0.01 },
+    { ...suggestionBase, outcome: "renamed", name: "A - B - D.mp3" },
+    { ...suggestionBase, outcome: "failed", error: "timeout" },
+  ];
+  for (const suggestion of suggestions) {
+    const loaded = await readRaw(rawManifest({ suggestion }));
+    assertEquals(loaded.entries[0].suggestion, suggestion);
+  }
+});
+
+Deno.test("a manifest without suggestion is unaffected", async () => {
+  const loaded = await readRaw(rawManifest({}));
+  assertEquals(loaded.entries[0].suggestion, undefined);
+});
+
+Deno.test("malformed suggestions are rejected", async () => {
+  const bad: Record<string, unknown>[] = [
+    { ...suggestionBase, outcome: "maybe", name: "x.mp3" },
+    { ...suggestionBase, outcome: "renamed" },
+    { ...suggestionBase, outcome: "renamed", name: "a/b.mp3" },
+    { ...suggestionBase, outcome: "agreed", name: "" },
+    { ...suggestionBase, outcome: "failed" },
+    { ...suggestionBase, outcome: "renamed", name: "x.mp3", cost_usd: "1" },
+    { ...suggestionBase, outcome: "renamed", name: "x.mp3", cost_usd: Infinity },
+    { ...suggestionBase, outcome: "renamed", name: "x.mp3", confident: "yes" },
+    { ...suggestionBase, outcome: "renamed", name: "x.mp3", why: 1 },
+    { outcome: "renamed", name: "x.mp3", model: "m" },
+    { outcome: "renamed", name: "x.mp3", parser_name: "p" },
+  ];
+  for (const suggestion of bad) {
+    await assertRejects(() => readRaw(rawManifest({ suggestion })), Error, "suggestion");
+  }
 });

@@ -9,6 +9,9 @@ Modes:
                          decision is "apply" into the DJ Collection. Edit the manifest
                          first to override.
   --auto                 dry run, then apply the manifest it just wrote (unattended runs).
+                         Always asks claude for a second opinion (see --suggest).
+  --suggest              dry run plus a claude second opinion: a confident rename replaces the
+                         parser's name, and an agreed or renamed entry is applied.
   --move                 legacy: process and immediately move all files (no manifest).
   --prune [--keep N]     list backup runs beyond the newest N (default 5) in the backup
                          folder; add --yes to delete them.
@@ -53,6 +56,18 @@ import {
 } from "../core/manifest.ts";
 import { pruneBackups, runStamp, startBackupRun } from "../core/utils/backups.ts";
 import { applyJudgement, assertJudgeAvailable, getJudgeThreshold, judgeEntries } from "../core/judge.ts";
+import {
+  applySuggestion,
+  claudeRunner,
+  claudeUnavailable,
+  EXAMPLES_PATH,
+  getSuggestBatch,
+  getSuggestMaxUsd,
+  getSuggestModel,
+  resolveClaudeBin,
+  type SuggestInput,
+  suggestNames,
+} from "../core/suggest.ts";
 
 const startDir = getFolder("downloaded");
 const itunesDir = getFolder("itunes");
@@ -67,7 +82,7 @@ const EX_TEMPFAIL = 75;
  * the .m4s hard-skip path, which is not judged. */
 const DUPLICATE_REASON = "duplicate of an existing track in the DJ collection";
 
-/** --auto runs unattended, so it only applies what arrives on its own; purchases wait for --apply. */
+/** Without claude's second opinion, --auto only applies what arrives on its own; purchases wait. */
 const AUTO_SOURCES: readonly Source[] = ["downloaded", "soundcloud"];
 
 const SOURCE_DIRS: Record<Source, string> = {
@@ -80,7 +95,7 @@ const SOURCE_DIRS: Record<Source, string> = {
 
 const args = parseArgs(Deno.args, {
   string: ["apply", "manifest", "keep"],
-  boolean: ["move", "no-clear", "judge", "prune", "yes", "auto"],
+  boolean: ["move", "no-clear", "judge", "prune", "yes", "auto", "suggest"],
   default: { "no-clear": false, judge: false, keep: "5" },
 });
 
@@ -93,6 +108,18 @@ if (args.judge) {
 const modes = [args.prune, Boolean(args.apply), args.move, args.auto].filter(Boolean).length;
 if (modes > 1) {
   console.error("Pick one of --prune, --apply, --move, --auto.");
+  Deno.exit(2);
+}
+if (args.suggest && (args.prune || args.apply || args.move)) {
+  console.error("--suggest goes with a dry run or --auto, not --prune, --apply or --move.");
+  Deno.exit(2);
+}
+
+// --suggest asked for claude, so a missing one stops the run; --auto falls back to the parser.
+const claudeBin = args.suggest || args.auto ? await resolveClaudeBin() : undefined;
+const claudeProblem = args.suggest || args.auto ? await claudeUnavailable(claudeBin) : undefined;
+if (args.suggest && claudeProblem) {
+  console.error(`--suggest: ${claudeProblem}`);
   Deno.exit(2);
 }
 
@@ -136,7 +163,7 @@ function isJudgeCandidate(entry: ManifestEntry): boolean {
 /**
  * Default mode: parse + score every file, write a manifest, do not move.
  * The user reviews the manifest, edits any "review" decisions, then runs --apply.
- * Returns the manifest path once it is final, i.e. after any --judge rewrite.
+ * Returns the manifest path once it is final, i.e. after any --judge and claude rewrites.
  */
 async function runDryRun(manifestOverride?: string, { auto = false } = {}): Promise<string> {
   await requireFolders(envFolders("downloaded", "itunes", "djMusic", ...(auto ? ["backup" as const] : [])));
@@ -151,7 +178,7 @@ async function runDryRun(manifestOverride?: string, { auto = false } = {}): Prom
   for (const file of listing.skipped) logWithBreak(`Skipping (unsupported extension): ${entryKey(file)}`);
 
   for (const file of await readSourceTags(listing.files)) {
-    const result = buildEntry(file, cache, { auto });
+    const result = buildEntry(file, cache);
     if (!result) continue;
     const facts = factsFor(soundcloud, basename(result.entry.src));
     built.push(facts ? { ...result, entry: applySoundcloudCredits(result.entry, facts) } : result);
@@ -172,9 +199,23 @@ async function runDryRun(manifestOverride?: string, { auto = false } = {}): Prom
   await fs.ensureDir(MANIFEST_DIR);
   await writeManifest(manifestPath, manifest);
 
-  const finalEntries = args.judge ? await judgeAndRewrite(built, manifest, manifestPath) : manifest.entries;
+  if (args.judge) await judgeAndRewrite(built, manifest, manifestPath);
 
-  printSummary(finalEntries, manifestPath, { auto });
+  let claudeDecided = false;
+  if (args.suggest || auto) {
+    if (claudeProblem) {
+      console.warn(`\n*** claude second opinion skipped: ${claudeProblem}. Using the parser's names only. ***`);
+    } else {
+      claudeDecided = await suggestAndRewrite(manifest, manifestPath, soundcloudCredits(built));
+    }
+  }
+  if (auto) {
+    // Purchases claude never looked at wait, as if claude weren't there.
+    manifest.entries = manifest.entries.map((e) => !claudeDecided || e.suggestion?.outcome === "failed" ? holdPurchases(e) : e);
+    await writeManifest(manifestPath, manifest);
+  }
+
+  printSummary(manifest.entries, manifestPath, { auto });
   return manifestPath;
 }
 
@@ -187,7 +228,7 @@ async function judgeAndRewrite(
   built: BuildResult[],
   manifest: Manifest,
   manifestPath: string,
-): Promise<ManifestEntry[]> {
+): Promise<void> {
   const candidates = built.filter((b) => isJudgeCandidate(b.entry));
   const threshold = getJudgeThreshold();
 
@@ -210,7 +251,77 @@ async function judgeAndRewrite(
 
   manifest.entries = finalEntries;
   await writeManifest(manifestPath, manifest);
-  return finalEntries;
+}
+
+function soundcloudCredits(built: BuildResult[]): Map<string, string> {
+  const credits = new Map<string, string>();
+  for (const { entry } of built) {
+    const facts = entry.soundcloud;
+    if (!facts) continue;
+    const parts = [facts.metadata_artist && `artist ${facts.metadata_artist}`, facts.uploader && `uploaded by ${facts.uploader}`];
+    if (parts.some(Boolean)) credits.set(entryKey(entry), parts.filter(Boolean).join(", "));
+  }
+  return credits;
+}
+
+/**
+ * Asks claude about every apply/review entry and folds its answers on (see applySuggestion), then
+ * rewrites the manifest. Returns false when every call failed, so --auto falls back to holding
+ * purchases. A total failure also sets exit code 1: the run otherwise looks normal.
+ */
+async function suggestAndRewrite(manifest: Manifest, manifestPath: string, credits: Map<string, string>): Promise<boolean> {
+  const candidates = manifest.entries.filter((e) => e.decision !== "skip");
+  if (candidates.length === 0) return true;
+  const model = getSuggestModel();
+  const inputs: SuggestInput[] = candidates.map((e) => ({
+    source: e.source ?? "downloaded",
+    filename: basename(e.src),
+    tags: e.tags,
+    credits: credits.get(entryKey(e)),
+    parserName: e.proposed,
+  }));
+
+  console.log(`\nAsking claude (${model}) about ${candidates.length} entries...`);
+  const result = await suggestNames(inputs, {
+    run: claudeRunner(claudeBin!, model, getSuggestMaxUsd()),
+    examples: await Deno.readTextFile(EXAMPLES_PATH),
+    batchSize: getSuggestBatch(),
+    perCallMaxUsd: getSuggestMaxUsd(),
+    runMaxUsd: getSuggestMaxUsd() * 4,
+  });
+
+  const folded = new Map(candidates.map((e, i) => {
+    const input = inputs[i];
+    const sourceText = [e.src, input.tags?.artist, input.tags?.album, input.tags?.title, input.credits].join(" ");
+    return [entryKey(e), applySuggestion(e, result.outputs[i], result.errors[i], model, sourceText)];
+  }));
+  manifest.entries = manifest.entries.map((e) => folded.get(entryKey(e)) ?? e);
+
+  const counts = { agreed: 0, renamed: 0, unsure: 0, failed: 0 };
+  for (const e of folded.values()) counts[e.suggestion!.outcome]++;
+  if (Object.values(counts).reduce((a, b) => a + b, 0) !== candidates.length) {
+    throw new Error(`suggest post-condition failed: ${JSON.stringify(counts)} vs ${candidates.length} candidates`);
+  }
+  console.log(
+    `claude: agreed ${counts.agreed}, renamed ${counts.renamed}, unsure ${counts.unsure}, failed ${counts.failed}` +
+      ` — $${result.costUsd.toFixed(3)}`,
+  );
+  await writeManifest(manifestPath, manifest);
+
+  if (counts.failed === candidates.length) {
+    console.error(`*** every claude call failed (${result.errors.find(Boolean)}); kept the parser's names ***`);
+    Deno.exitCode = 1;
+    return false;
+  }
+  return true;
+}
+
+/** --auto without claude's view: Bandcamp, Beatport and iTunes purchases wait for a manual --apply. */
+function holdPurchases(entry: ManifestEntry): ManifestEntry {
+  const source = entry.source ?? "downloaded";
+  if (entry.decision !== "apply" || AUTO_SOURCES.includes(source)) return entry;
+  const reason = `--auto without claude's view applies only the Downloaded root and soundcloud/; run --apply for ${source}`;
+  return { ...entry, decision: "review", reasons: [...entry.reasons, reason] };
 }
 
 /**
@@ -309,7 +420,7 @@ interface BuildResult {
  * --judge pass can grade the same parse without re-deriving it), or null if the file should
  * be skipped (tags unreadable, parser threw, etc.).
  */
-function buildEntry(file: TaggedSourceFile, cache: MusicCache, { auto = false } = {}): BuildResult | null {
+function buildEntry(file: TaggedSourceFile, cache: MusicCache): BuildResult | null {
   const key = entryKey(file);
   console.log("Processing: ", key);
   if (file.tagError) {
@@ -335,10 +446,6 @@ function buildEntry(file: TaggedSourceFile, cache: MusicCache, { auto = false } 
     cache.add(song);
     logWithBreak(`${song.finalFilename}  [${score.level}]`);
 
-    if (auto && score.decision === "apply" && !AUTO_SOURCES.includes(file.source)) {
-      const reason = `--auto applies only the Downloaded root and soundcloud/; run --apply for ${file.source}`;
-      return { song, entry: { ...base, reasons: [...score.reasons, reason], decision: "review" } };
-    }
     return { song, entry: { ...base, reasons: score.reasons, decision: score.decision } };
   } catch (error) {
     logWithBreak(`Skipping (parse error): ${key} - ${error instanceof Error ? error.message : error}`);
@@ -369,7 +476,7 @@ function printSummary(entries: ManifestEntry[], manifestPath: string, { auto }: 
     bySource.set(source, (bySource.get(source) ?? 0) + 1);
     byDecision[e.decision]++;
     byConfidence[e.confidence]++;
-    if (e.decision === "review" && e.judgement && !e.judgement.error) downgradedByJudge++;
+    if (e.decision === "review" && e.reasons.some((r) => r.startsWith("jev:"))) downgradedByJudge++;
   }
 
   console.log("\n========================================");

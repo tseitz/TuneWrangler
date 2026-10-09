@@ -1,0 +1,51 @@
+# Rules
+- Name is "Artist - Title" or "Artist - Album - Title". The album slot is optional.
+- A remix, flip, edit, bootleg or "freebie" rework is "Remixer - Original Artist - Title". The remixer always comes first.
+- A label, uploader account or collective that released someone else's track goes in the album slot: "Artist - Label - Title".
+- Several artists are joined with " x " (never "&", ",", "feat.", "ft.", "and"). A featured artist joins the artist slot it belongs to; on a remix, featured artists belong to the original artist slot.
+- Remix credits and their brackets come out of the title: "(X Remix)", "(X Flip)", "(X Edit)", "(X Bootleg)", "(Original Mix)", "(club mix)", "(Dub Edit)", "(Radio Edit)", "(free download)".
+- Keep "(Extended Mix)", "(VIP)", "(Instrumental)" in the title.
+- Drop track numbers ("01 "), iTunes' " - Single" and " - EP" endings (with the dash), and an album that just repeats the title. "EP" that is part of a release's own name stays ("BURN EP", "Fake EP").
+- Accented and special letters become plain ASCII where a plain equivalent exists (Ø→O, é→e, ū→u); keep scripts with no ASCII equivalent (大蛇丸) as they are.
+- Keep the artist's own capitalization; don't change case.
+- Never drop a word the source has unless a rule above removes it. If the file name has no title, or you can't tell which part is the artist, album or title, return the parser's name unchanged with confident=false.
+- A style word inside a remix credit is not part of the remixer's name: "(Bukez Finezt Jersey Club Bootleg Remix)" is a remix by Bukez Finezt.
+
+# Corrections the owner made by hand (source file -> approved name)
+Lil Pimp - Cook Crack on da Stove - Lushreds Remix.wav -> Lushreds - Lil Pimp - Cook Crack on da Stove
+Fred Again - Jungle (Jimmy Pé RMX).wav -> Jimmy Pe - Fred Again - Jungle
+Dr. Ushūu - Kaaris-Chargé (Ushuuflip).wav -> Dr. Ushuu - Kaaris - Charge
+Delerium - Silence - Average Citizens Dub.wav -> Average Citizens - Delerium - Silence
+phompy - 大蛇丸 (666 freebie).wav -> phompy - 大蛇丸
+OF THE TREES FT. SOPHIE MARKS - WINDHORSE - KALI FLIP.mp3 -> KALI - OF THE TREES x SOPHIE MARKS - WINDHORSE
+STEVE FERAL - Fight For Your Right (STEVE FERAL's Tech House Edit)- Beastie Boys.wav -> STEVE FERAL - Beastie Boys - Fight For Your Right
+SAINT MILLER - To ü,, saint miller flip.wav -> SAINT MILLER - To u
+Halsey - Gasoline - Fang Shui Flip.wav -> Fang Shui - Halsey - Gasoline
+HOLD ON (Lindley X Remix) - Justin Bieber.mp3 -> Lindley X - Justin Bieber - HOLD ON
+Eminem - Lose Yourself - James Hype Edit.aif -> James Hype - Eminem - Lose Yourself
+XOTIX - DEAN TURNLEY- ACTIN' TOUGH (XOTIX x MYRIAS FLIP).wav -> XOTIX x MYRIAS - Dean Turnley - ACTIN' TOUGH
+Big Nut Chuck - Think U The Shit (Fart) [Big Nut Chuck Remix] - Ice Spice.wav -> Big Nut Chuck - Ice Spice - Think U The Shit (Fart)
+FOSSILS - AVALON - SUICIDEBOYS (FOSSILS X CHIRENJI REMIX).wav -> FOSSILS x CHIRENJI - SUICIDEBOYS - AVALON
+MORTY - Deftones - My Own Summer (Shove it) (MORTY BOOTLEG).wav -> MORTY - Deftones - My Own Summer (Shove it)
+Dr. Ushūu - MPH & Nathan Nicholson - Long Goodbye (Ushuuedit).mp3 -> Dr. Ushuu - MPH x Nathan Nicholson - Long Goodbye
+MOUSAI - BALL SO HARD (Mousai & UrBoiN8).wav -> MOUSAI x UrBoiN8 - BALL SO HARD
+Wormhole Music Group - Fake Two Piece - Cheap Bastards.wav -> Fake Two Piece - Wormhole Music Group - Cheap Bastards
+ILL GROOVE SOCIETY - Duality - Fallin'.aiff (Bandcamp) -> Duality - ILL GROOVE SOCIETY - Fallin'
+Bukez Finezt - BUKEZ BOOTLEGZ #1 - 02 Cam'Ron - Oh Boy (Bukez Finezt Jersey Club Bootleg Remix).aiff (Bandcamp) -> Bukez Finezt - Cam'Ron - Oh Boy
+Kursa - In The Distance - 01 Blasta.aiff (Bandcamp) -> Kursa - In The Distance - Blasta
+
+# Names already in the collection
+Detox Unit - Lana Del Rey - Doin' Time
+Osmosis Jones - Kreayshawn - Gucci Gucci
+MORTY - Korn - Freak On a Leash
+PLSMA x LUCKKY - John Summit x LAVINIA - Shadows
+Acyan - Little Simz - I Ain't Feelin It (Extended Mix)
+Bukez Finezt - Distinct Motive - Mellow Man
+Gunnar Nash - Sweet Sounds Collective - Suddenly
+Dr. Ozi - Screamers Comp Vol. 1 - I Am Fine
+Klinical x Azotix - Boundary 1 - Reach For It
+Cesco - Fake EP - Ahyea
+DAD - BAKEY x CAPO LEE - TOO MUCH SAUCE
+KAYZO x DENNETT - STEPHANIE
+Crastinate - ILLEST
+jordnmoody - puddles
