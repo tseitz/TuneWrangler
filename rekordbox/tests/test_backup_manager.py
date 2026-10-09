@@ -65,6 +65,21 @@ def test_cleanup_deletes_only_zips_this_tool_wrote(tmp_path):
     ]
 
 
+def test_cleanup_never_rotates_out_tag_apply_snapshots(tmp_path):
+    ours = {"created_by": BACKUP_CREATED_BY}
+    _zip(tmp_path / "before_tag_apply_20260101_000000.zip", ours, mtime=100)
+    _zip(tmp_path / "before_playlist_creation_1.zip", ours, mtime=1_000)
+    _zip(tmp_path / "before_playlist_creation_2.zip", ours, mtime=2_000)
+
+    manager = BackupManager(Config(backup_base_path=str(tmp_path), max_backups=1))
+    manager._cleanup_old_backups()
+
+    assert sorted(p.name for p in tmp_path.iterdir()) == [
+        "before_playlist_creation_2.zip",
+        "before_tag_apply_20260101_000000.zip",
+    ]
+
+
 def test_backup_round_trip_restores_live_folders(manager, pioneer):
     library, app_support = pioneer
     backup = manager.create_backup("before_test")

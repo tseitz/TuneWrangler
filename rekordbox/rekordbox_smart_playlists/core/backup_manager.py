@@ -50,6 +50,8 @@ class BackupValidationError(BackupError):
 
 
 BACKUP_CREATED_BY = "rekordbox-smart-playlists"
+# Snapshots taken before a tag batch; rotation never deletes them.
+PINNED_BACKUP_NAME = "before_tag_apply"
 MASTER_DB = "Library/rekordbox/master.db"
 
 
@@ -274,7 +276,9 @@ class BackupManager:
     def _cleanup_old_backups(self) -> None:
         """Clean up old backups based on max_backups setting."""
         try:
-            backups = self.list_backups()
+            backups = [
+                b for b in self.list_backups() if not b.name.startswith(f"{PINNED_BACKUP_NAME}_")
+            ]
             if len(backups) <= self.config.max_backups:
                 return
 
