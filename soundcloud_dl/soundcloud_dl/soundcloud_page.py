@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from playwright.async_api import BrowserContext, Frame, Page
 
 from soundcloud_dl.config import get_debug_dir
-from soundcloud_dl.gate_handlers import skip_reason
+from soundcloud_dl.gate_handlers import avoid_reason
 from soundcloud_dl.playwright_browser import new_page, random_delay
 
 logger = logging.getLogger("soundcloud_dl.soundcloud_page")
@@ -40,10 +40,10 @@ _GATE_DOMAINS = frozenset(
         "valorizd.app",
         "backstaged.io",
         "followeb.de",
-        # Skipped domains — still extracted so main.py records why a track is skipped
-        # instead of falling through to 'manual_review'. _poll_gate_sc_url prefers any
-        # other gate over these.
         "laylo.com",
+        # Skipped domain — still extracted so main.py records why a track is skipped
+        # instead of falling through to 'manual_review'. _poll_gate_sc_url prefers any
+        # other gate over these, and over laylo.
         "bandcamp.com",
     }
 )
@@ -84,10 +84,10 @@ _URL_IN_TEXT = re.compile(r"https?://[^\s<>\"')\]]+")
 
 
 def gate_in_description(description: str | None) -> str | None:
-    """The first gate link in a track description that is not skip-listed."""
+    """The first gate link in a track description that is neither skipped nor a last resort."""
     for found in _URL_IN_TEXT.findall(description or ""):
         url = _unwrap_gate_sc(found.rstrip(".,;!"))
-        if _host_is_gate(url) and skip_reason(url) is None:
+        if _host_is_gate(url) and avoid_reason(url) is None:
             return url
     return None
 
@@ -154,11 +154,11 @@ def _decode_gate_sc(href: str) -> str | None:
 
 
 def _pick_gate(hrefs: list[str], last_seen: set[str]) -> tuple[str | None, str | None]:
-    """(first real gate, first skip-listed gate) among these gate.sc links."""
+    """(first preferred gate, first skipped or last-resort gate) among these gate.sc links."""
     skipped: str | None = None
     for href in hrefs:
         inner = _decode_gate_sc(href)
-        if inner and skip_reason(inner) is None:
+        if inner and avoid_reason(inner) is None:
             return inner, skipped
         if inner:
             skipped = skipped or inner

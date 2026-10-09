@@ -69,6 +69,10 @@ async def detect_captcha(page: Page) -> CaptchaKind | None:
             continue
         if kind == CaptchaKind.RECAPTCHA:
             try:
+                # Invisible reCAPTCHA parks a 256x60 badge iframe on the page with
+                # visibility:hidden (Laylo's every page has one); only a shown one blocks.
+                if not await el.is_visible():
+                    continue
                 bbox = await el.bounding_box()
             except Exception:  # noqa: BLE001
                 logger.debug("reCAPTCHA bounding_box() failed; treating as invisible")

@@ -8,12 +8,16 @@ import pytest
 # Env vars config.py reads — cleared before every test so the user's repo-root
 # .env (loaded at import time via dotenv) doesn't leak in.
 _CONFIG_ENV_VARS = (
+    "TUNEWRANGLER_SC_LAYLO_EMAIL",
     "TUNEWRANGLER_SC_PLAYLIST_URL",
     "SOUNDCLOUD_CLIENT_ID",
     "SOUNDCLOUD_CLIENT_SECRET",
     "TUNEWRANGLER_SC_EMAIL",
     "TUNEWRANGLER_SC_NAME",
     "TUNEWRANGLER_SC_COMMENT",
+    "TUNEWRANGLER_SC_PHONE",
+    "TUNEWRANGLER_SC_GMAIL_CLIENT_ID",
+    "TUNEWRANGLER_SC_GMAIL_CLIENT_SECRET",
     "TUNEWRANGLER_SC_HEADED",
     "TUNEWRANGLER_SC_CHROME_PATH",
     "TUNEWRANGLER_SC_CHROME_DEBUG_PORT",
@@ -178,3 +182,44 @@ def test_a_reachable_download_dir_warns_about_nothing(monkeypatch, tmp_path, cap
     with caplog.at_level(logging.WARNING):
         config.validate_phase2_config()
     assert not any("unreachable" in r.getMessage() for r in caplog.records)
+
+
+_LAYLO_ENV = {
+    "TUNEWRANGLER_SC_GMAIL_CLIENT_ID": "id",
+    "TUNEWRANGLER_SC_GMAIL_CLIENT_SECRET": "secret",
+}
+_LAYLO_CONTACTS = {
+    "TUNEWRANGLER_SC_PHONE": "5551234567",
+    "TUNEWRANGLER_SC_LAYLO_EMAIL": "me@gmail.example",
+}
+
+
+def test_the_phone_has_no_default():
+    assert _reload_config().DOWNLOAD_PHONE == ""
+
+
+@pytest.mark.parametrize("contact", sorted(_LAYLO_CONTACTS))
+def test_laylo_is_configured_with_either_contact(contact):
+    env = {**_LAYLO_ENV, contact: _LAYLO_CONTACTS[contact]}
+    assert _reload_config(**env).laylo_config_problem() is None
+
+
+@pytest.mark.parametrize("var", sorted(_LAYLO_ENV))
+@pytest.mark.parametrize("blank", ["", "   "])
+def test_laylo_names_the_blank_var(var, blank):
+    cfg = _reload_config(**{**_LAYLO_ENV, **_LAYLO_CONTACTS, var: blank})
+    assert var in (cfg.laylo_config_problem() or "")
+
+
+def test_laylo_needs_a_phone_or_an_email():
+    blanks = dict.fromkeys(_LAYLO_CONTACTS, "")
+    problem = _reload_config(**{**_LAYLO_ENV, **blanks}).laylo_config_problem() or ""
+    assert "TUNEWRANGLER_SC_LAYLO_EMAIL or TUNEWRANGLER_SC_PHONE" in problem
+
+
+def test_laylo_state_files_live_under_the_log_dir():
+    cfg = _reload_config()
+    log_dir = cfg.get_log_dir()
+    assert cfg.get_gmail_token_file() == log_dir / "gmail_token.json"
+    assert cfg.get_laylo_drops_file() == log_dir / "laylo_drops.json"
+    assert cfg.get_laylo_tmp_dir() == log_dir / "laylo_tmp"

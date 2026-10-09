@@ -110,6 +110,11 @@ def looks_like_asset(name: str) -> bool:
     return urllib.parse.urlparse(name).path.lower().endswith(_REJECT_EXTS)
 
 
+def fallback_dir() -> Path:
+    """Where a file goes when the download dir is unset or unwritable."""
+    return get_log_dir() / "downloads"
+
+
 def save_bytes(dest: Path, content: bytes) -> Path:
     """Write content to dest, falling back to the log directory if that path is unusable.
 
@@ -122,7 +127,7 @@ def save_bytes(dest: Path, content: bytes) -> Path:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(content)
     except OSError as exc:
-        fallback = get_log_dir() / "downloads" / dest.name
+        fallback = fallback_dir() / dest.name
         fallback.parent.mkdir(parents=True, exist_ok=True)
         fallback.write_bytes(content)
         logger.warning("Could not write to %s (%s) — saved to %s instead", dest, exc, fallback)

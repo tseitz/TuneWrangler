@@ -26,6 +26,7 @@ GATE_URLS = [
     "https://gaterush.com/abc",
     "https://gate.influenceplanner.com/abc",
     "https://ipln.io/abc",
+    "https://laylo.com/artist/drop",
 ]
 
 

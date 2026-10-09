@@ -48,6 +48,15 @@ TYPESAFE_API_KEY = os.getenv("TYPESAFE_API_KEY")
 DOWNLOAD_EMAIL = os.getenv("TUNEWRANGLER_SC_EMAIL", "")
 DOWNLOAD_NAME = os.getenv("TUNEWRANGLER_SC_NAME", "Tom")
 DOWNLOAD_COMMENT = os.getenv("TUNEWRANGLER_SC_COMMENT", "🔥🔥🔥")
+# Laylo only. No default, for the same reason as the email, and handed to Laylo's gate alone.
+DOWNLOAD_PHONE = os.getenv("TUNEWRANGLER_SC_PHONE", "")
+# Laylo RSVPs by email where a drop offers it, into the inbox --authorize-gmail reads.
+# Deliberately not TUNEWRANGLER_SC_EMAIL: that address goes to every other gate.
+LAYLO_EMAIL = os.getenv("TUNEWRANGLER_SC_LAYLO_EMAIL", "")
+
+# Desktop-app OAuth client that reads the Google Voice texts forwarded to Gmail.
+GMAIL_CLIENT_ID = os.getenv("TUNEWRANGLER_SC_GMAIL_CLIENT_ID")
+GMAIL_CLIENT_SECRET = os.getenv("TUNEWRANGLER_SC_GMAIL_CLIENT_SECRET")
 
 # Headed browser (visible window). Set TUNEWRANGLER_SC_HEADED=1 in .env. Off by default:
 # a headed run raises its window on every turn to keep Chrome from throttling the tab,
@@ -188,6 +197,21 @@ def get_owner_token_file() -> Path:
     return get_log_dir() / "owner_token.json"
 
 
+def get_gmail_token_file() -> Path:
+    """Path to the Gmail read-only token store. Under logs/, which is gitignored."""
+    return get_log_dir() / "gmail_token.json"
+
+
+def get_laylo_drops_file() -> Path:
+    """Path to JSON file storing each Laylo drop's submit/link/folder progress."""
+    return get_log_dir() / "laylo_drops.json"
+
+
+def get_laylo_tmp_dir() -> Path:
+    """Scratch space for Laylo downloads, on local disk rather than the download dir."""
+    return get_log_dir() / "laylo_tmp"
+
+
 # ── Validation ─────────────────────────────────────────────────────────────────
 
 
@@ -246,6 +270,27 @@ def validate_jev_config() -> None:
         )
         raise RuntimeError(msg)
     warn_if_download_dir_unreachable()
+
+
+def laylo_config_problem() -> str | None:
+    """Return why a Laylo gate cannot run, or None when it can.
+
+    Returns rather than raises so the caller can record the track as unsupported, which a
+    run does not retry, instead of failed, which every run does.
+    """
+    missing = [
+        name
+        for name, value in (
+            ("TUNEWRANGLER_SC_GMAIL_CLIENT_ID", GMAIL_CLIENT_ID),
+            ("TUNEWRANGLER_SC_GMAIL_CLIENT_SECRET", GMAIL_CLIENT_SECRET),
+        )
+        if not (value or "").strip()
+    ]
+    if not (DOWNLOAD_PHONE.strip() or LAYLO_EMAIL.strip()):
+        missing.append("TUNEWRANGLER_SC_LAYLO_EMAIL or TUNEWRANGLER_SC_PHONE")
+    if missing:
+        return f"laylo needs {', '.join(missing)}"
+    return None
 
 
 def warn_if_download_dir_unreachable() -> None:

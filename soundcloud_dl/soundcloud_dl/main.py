@@ -27,7 +27,9 @@ from soundcloud_dl.config import (
     DOWNLOAD_DIR,
     DOWNLOAD_EMAIL,
     DOWNLOAD_NAME,
+    DOWNLOAD_PHONE,
     HEADED,
+    LAYLO_EMAIL,
     PLAYLIST_CACHE_ENABLED,
     RESUME_ENABLED,
     SCROLL_BEFORE_CLICK,
@@ -35,12 +37,14 @@ from soundcloud_dl.config import (
     TUNEWRANGLER_SC_PLAYLIST_URL,
     TYPE_DELAY_MS,
     get_debug_dir,
+    laylo_config_problem,
     validate_jev_config,
     validate_phase1_config,
     validate_phase2_config,
 )
 from soundcloud_dl.gate_handlers import (
     GateNotSupportedError,
+    avoid_reason,
     detect_handler_from_page,
     get_handler_for_url,
     skip_reason,
@@ -248,6 +252,22 @@ def _parse_args() -> argparse.Namespace:
         ),
     )
     p.add_argument(
+        "--authorize-gmail",
+        action="store_true",
+        help=(
+            "Sign in once to the Gmail inbox Google Voice forwards texts to (read-only). "
+            "Laylo gates text their download link; this is how a run reads it."
+        ),
+    )
+    p.add_argument(
+        "--laylo-forget",
+        metavar="DROP_URL",
+        help=(
+            "Forget what a Laylo drop's record holds (submit, texted link, folder), so the "
+            "next run RSVPs it again. For a record that took the wrong text."
+        ),
+    )
+    p.add_argument(
         "--prune-playlist",
         action="store_true",
         help=(
@@ -317,6 +337,8 @@ _ONE_SHOT_FLAGS = (
     "--inspect",
     "--sc-auth",
     "--authorize-owner",
+    "--authorize-gmail",
+    "--laylo-forget",
     "--prune-playlist",
     "--sc-do",
     "--sc-undo",
@@ -402,6 +424,30 @@ async def _api_download(
         return None
 
 
+def gate_template_vars(handler_cls: type) -> dict[str, str]:
+    """What a gate's form fields get filled with. Laylo's contacts only go to Laylo."""
+    if getattr(handler_cls, "rsvp_gate", False):
+        # Only these two: Laylo's page carries a hidden first_name trap for bots. And never
+        # TUNEWRANGLER_SC_EMAIL — Laylo gets its own address, the inbox the bot can read.
+        contacts = {"phone": DOWNLOAD_PHONE, "email": LAYLO_EMAIL}
+        return {k: v for k, v in contacts.items() if v.strip()}
+    return {"email": DOWNLOAD_EMAIL, "name": DOWNLOAD_NAME, "comment": DOWNLOAD_COMMENT}
+
+
+def is_rsvp_gate(gate_url: str) -> bool:
+    try:
+        return bool(getattr(get_handler_for_url(gate_url), "rsvp_gate", False))
+    except GateNotSupportedError:
+        return False
+
+
+def laylo_setup_problem() -> str | None:
+    """Why a Laylo gate cannot run right now (config or Gmail sign-in), or None."""
+    from soundcloud_dl.gmail_auth import gmail_problem  # noqa: PLC0415
+
+    return laylo_config_problem() or gmail_problem()
+
+
 async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
     context: object, track: TrackItem, *, pause: bool = False, sc_actions: bool = False
 ) -> TrackOutcome:
@@ -463,12 +509,14 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
         if (
             track.purchase_url
-            and skip_reason(track.purchase_url) is not None
+            and avoid_reason(track.purchase_url) is not None
             and (described := gate_in_description(track.description))
         ):
             gate_url = described
             logger.info(
-                "Buy link %s is skipped; using description gate %s", track.purchase_url, gate_url
+                "Buy link %s is skipped or a last resort; using description gate %s",
+                track.purchase_url,
+                gate_url,
             )
         elif track.purchase_url:
             gate_url = track.purchase_url
@@ -478,6 +526,13 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         if (skipped := skip_reason(gate_url)) is not None:
             logger.warning("UNSUPPORTED | %s | %s: %s", track_label, skipped, gate_url)
             return TrackOutcome("unsupported", f"{skipped}: {gate_url}")
+        # Before any SoundCloud action, which is permanent. A Laylo run that cannot read its
+        # text would RSVP the number for nothing; `unsupported` keeps it out of the retries
+        # until the setup is fixed.
+        rsvp_gate = is_rsvp_gate(gate_url)
+        if rsvp_gate and (problem := laylo_setup_problem()) is not None:
+            logger.warning("UNSUPPORTED | %s | %s", track_label, problem)
+            return TrackOutcome("unsupported", problem[:_MAX_REASON_CHARS])
 
         gate_attempted = True
         # After the blacklist check, because a gate we will not open must not cost
@@ -485,7 +540,8 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         # user can delete it. Before the gate opens, though — a gate that checks
         # SoundCloud (droploud reads the repost back) then finds the work already done
         # and only has to verify, which keeps the gate loop a pure click-driver.
-        if sc_actions:
+        # Laylo never reads SoundCloud back, so a follow, like or comment buys nothing there.
+        if sc_actions and not rsvp_gate:
             await do_soundcloud_actions(
                 context,  # type: ignore[arg-type]
                 track.url,
@@ -518,6 +574,10 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         # the run has already handed over follows it cannot take back.
         if issubclass(handler_cls, JevHandler):
             validate_jev_config()
+        # A shortener can land on Laylo, which the check above never saw.
+        if getattr(handler_cls, "rsvp_gate", False) and (problem := laylo_setup_problem()):
+            logger.warning("UNSUPPORTED | %s | %s", track_label, problem)
+            return TrackOutcome("unsupported", problem[:_MAX_REASON_CHARS])
         # Only judgment handlers take one; a YAML handler has no per-turn decision to record.
         extra: dict[str, Any] = {}
         if issubclass(handler_cls, JevHandler):
@@ -528,11 +588,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 # below covers them and not just the four opening actions.
                 extra["on_requirements"] = requirement_follower(actions)
         handler = handler_cls(
-            template_vars={
-                "email": DOWNLOAD_EMAIL,
-                "name": DOWNLOAD_NAME,
-                "comment": DOWNLOAD_COMMENT,
-            },
+            template_vars=gate_template_vars(handler_cls),
             action_delay_min_ms=ACTION_DELAY_MIN_MS,
             action_delay_max_ms=ACTION_DELAY_MAX_MS,
             type_delay_ms=TYPE_DELAY_MS,
@@ -553,11 +609,7 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 if real_handler_cls is not handler_cls:
                     logger.info("Meta-gate → %s, running %s", post_url, real_handler_cls.__name__)
                     real_handler = real_handler_cls(
-                        template_vars={
-                            "email": DOWNLOAD_EMAIL,
-                            "name": DOWNLOAD_NAME,
-                            "comment": DOWNLOAD_COMMENT,
-                        },
+                        template_vars=gate_template_vars(real_handler_cls),
                         action_delay_min_ms=ACTION_DELAY_MIN_MS,
                         action_delay_max_ms=ACTION_DELAY_MAX_MS,
                         type_delay_ms=TYPE_DELAY_MS,
@@ -601,7 +653,10 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 track_label,
                 results,
             )
-            return TrackOutcome("manual_review", "gate ran out of steps with no download")
+            reason = getattr(handler, "review_reason", None) or (
+                "gate ran out of steps with no download"
+            )
+            return TrackOutcome("manual_review", reason[:_MAX_REASON_CHARS])
     except CaptchaEncountered as e:
         terminal = "captcha"
         keep_follows = True
@@ -902,6 +957,16 @@ def _run_one_shot(args: argparse.Namespace) -> bool:  # noqa: C901, PLR0912
         from soundcloud_dl.soundcloud_auth import authorize  # noqa: PLC0415
 
         asyncio.run(authorize(owner=True))
+    elif args.laylo_forget:
+        from soundcloud_dl import laylo_drops  # noqa: PLC0415
+
+        key = laylo_drops.drop_key(args.laylo_forget)
+        forgotten = laylo_drops.forget(key)
+        logger.info("%s %s", "Forgot" if forgotten else "No record for", key)
+    elif args.authorize_gmail:
+        from soundcloud_dl.gmail_auth import authorize_gmail  # noqa: PLC0415
+
+        asyncio.run(authorize_gmail())
     elif args.prune_playlist:
         from soundcloud_dl.playlist_prune import (  # noqa: PLC0415
             PruneError,

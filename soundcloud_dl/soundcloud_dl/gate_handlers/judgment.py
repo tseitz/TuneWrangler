@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import re
 import urllib.parse
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
@@ -82,6 +83,7 @@ _ASKED_AGAIN = (
 # per SoundCloud action, then a skipper slide per platform) and reached its download button on
 # turn 16, one past the old ceiling of 15.
 _MAX_ITERATIONS = 25
+_MIN_PHONE_DIGITS = 7
 _ALREADY_UNLOCKED = "already_unlocked"
 
 # Hypeddit only flips an action's class once it has confirmed that action against the
@@ -180,6 +182,8 @@ _FIELD_HINTS: dict[str, tuple[str, ...]] = {
     "email": ("email",),
     "name": ("name", "fullname", "full_name", "firstname"),
     "comment": ("comment", "message", "note", "thoughts"),
+    # Only reachable for a handler given a phone value; see main.gate_template_vars.
+    "phone": ("phone",),
 }
 
 
@@ -440,6 +444,26 @@ class JudgmentGateHandler(GateHandler):
                     best = (at, len(hint), var_key)
         return best[2] if best is not None else None
 
+    def _typed_values(self) -> list[str]:
+        """Every value this run may type into a page, for _redact to mask."""
+        return list(self.template_vars.values())
+
+    def _redact(self, el: dict[str, Any]) -> dict[str, Any]:
+        """The element as sent to the model, with a value we typed shown as "<filled>".
+
+        A field's snapshot text is its value, so without this every later turn ships the
+        email, comment — or Laylo's phone number — to the judgment service.
+        """
+        if el["tag"] not in ("input", "textarea"):
+            return el
+        values = [v.strip() for v in self._typed_values() if v and v.strip()]
+        text = el["text"].strip()
+        # Digits too: a phone box re-displays "+15551234567" as "+1 555 123 4567".
+        digits = {d for v in values if len(d := re.sub(r"\D", "", v)) >= _MIN_PHONE_DIGITS}
+        if text not in values and re.sub(r"\D", "", text) not in digits:
+            return el
+        return {**el, "text": "<filled>"}
+
     @staticmethod
     def _describe(el: dict[str, Any]) -> str:
         desc = f"<{el['tag']}> text={el['text']!r} class={el['cls']!r} href={el['href']!r}"
@@ -459,7 +483,7 @@ class JudgmentGateHandler(GateHandler):
     ) -> str:
         # Only what a person could actually click. Offering the off-screen carousel slides
         # would let the model pick a button that silently does nothing.
-        offered = _on_screen(snapshot)
+        offered = {k: self._redact(el) for k, el in _on_screen(snapshot).items()}
         # A control already clicked to no effect is a dead end — Hypeddit's SoundCloud Next
         # stays on screen after its page is finished, and the model kept re-picking it at
         # 0.94+ while the gate sat still. Withholding them is cheaper and more reliable than
@@ -1106,6 +1130,14 @@ class JudgmentGateHandler(GateHandler):
         last_turn = self._download_last_attempt_turn.get(key, 0)
         return i - last_turn >= _DOWNLOAD_RETRY_EVERY_TURNS
 
+    async def _form_submitted(self, page: Page, target: dict[str, Any]) -> bool:  # noqa: ARG002
+        """Whether the action just taken ended the gate's part of the run.
+
+        For a gate whose payoff arrives somewhere other than this page — Laylo texts its
+        link — so the loop stops instead of hunting for a download that never appears.
+        """
+        return False
+
     async def _maybe_download(
         self,
         page: Page,
@@ -1410,7 +1442,7 @@ class JudgmentGateHandler(GateHandler):
         if self.recorder is not None:
             await self.recorder.screenshot(page, f"turn-{i:02d}-before")
 
-    async def _run_steps(  # noqa: C901
+    async def _run_steps(  # noqa: C901, PLR0911, PLR0912
         self, page: Page, results: dict[str, StepResult]
     ) -> dict[str, StepResult]:
         idle_turns = 0
@@ -1467,6 +1499,8 @@ class JudgmentGateHandler(GateHandler):
                 result, downloaded = await self._act(page, kind, target)
                 results[f"el_{i}_{kind}"] = result
                 if downloaded:
+                    return results
+                if result is StepResult.EXECUTED and await self._form_submitted(page, target):
                     return results
             except Exception:  # noqa: BLE001
                 # A single bad judgment (e.g. picking an element hidden behind a carousel

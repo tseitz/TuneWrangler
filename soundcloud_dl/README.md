@@ -72,6 +72,35 @@ is left open and the track is recorded as `manual_review` — consider running
 
 Supported gates: **Hypeddit** (`hypeddit.com`), **Toneden** (`toneden.io`).
 
+## Laylo drops
+
+Laylo (`laylo.com`) gates send the download link after an RSVP rather than serving
+it on the page, so the bot reads it out of Gmail. It is a last resort: a track with
+any other gate uses that one.
+
+- **Email first.** Where the drop offers "RSVP by EMAIL", the bot RSVPs with
+  `TUNEWRANGLER_SC_LAYLO_EMAIL` and reads Laylo's confirmation email for the link.
+- **Phone fallback.** Otherwise it RSVPs with `TUNEWRANGLER_SC_PHONE`. A number
+  Laylo has not seen gets a texted code, which the bot types back in; the artist
+  then texts the link. Use a Google Voice number with Settings → Messages →
+  "Forward messages to email" on, into the same Gmail.
+- The whole drop (often a Dropbox folder of several tracks) is kept under
+  `<download dir>/laylo/<artist>-<slug>/`; the matching track is copied beside the
+  other downloads. No match → `manual_review` with the folder path.
+
+Gmail setup, once:
+
+1. In Google Cloud, signed in as the Gmail account (project with **no
+   organization**): enable the **Gmail API**.
+2. Google Auth Platform: audience **External**, add yourself as a test user, then
+   **Publish** to "In production". A Testing app's token expires every 7 days.
+3. Clients → create a **Desktop app** client; put its ID and secret in `.env` as
+   `TUNEWRANGLER_SC_GMAIL_CLIENT_ID` / `TUNEWRANGLER_SC_GMAIL_CLIENT_SECRET`.
+4. `deno task py --authorize-gmail` and approve read-only access.
+
+`deno task py --laylo-forget <drop url>` clears a drop's record so the next run
+RSVPs it again.
+
 ## Dedicated Chrome instance
 
 Phase 2 attaches to a real Google Chrome instance via the Chrome DevTools Protocol
@@ -115,6 +144,10 @@ scaffolds a starter YAML at `soundcloud_dl/gate_handlers/<gate-name>.yaml`.
 | `SOUNDCLOUD_CLIENT_SECRET` | — | SoundCloud API client secret (required) |
 | `TUNEWRANGLER_SC_EMAIL` | — | Email for gate forms (required). No default — gate runs refuse to start without it. |
 | `TUNEWRANGLER_SC_NAME` | `Tom` | Name for gate forms |
+| `TUNEWRANGLER_SC_LAYLO_EMAIL` | — | Laylo's RSVP address; the Gmail `--authorize-gmail` reads |
+| `TUNEWRANGLER_SC_PHONE` | — | Laylo's phone fallback (Google Voice, forwarding to that Gmail) |
+| `TUNEWRANGLER_SC_GMAIL_CLIENT_ID` | — | Google Desktop-app OAuth client ID |
+| `TUNEWRANGLER_SC_GMAIL_CLIENT_SECRET` | — | Google Desktop-app OAuth client secret |
 | `TUNEWRANGLER_SC_COMMENT` | `🔥🔥🔥` | Comment for gate forms |
 | `TUNEWRANGLER_SC_CHROME_PATH` | macOS Chrome path | Path to real Chrome binary. Required to be set on Linux/Windows. |
 | `TUNEWRANGLER_SC_CHROME_PROFILE_DIR` | `soundcloud_dl_chrome_profile/` | Dedicated profile dir for the bot's Chrome. |

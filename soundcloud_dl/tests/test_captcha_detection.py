@@ -77,3 +77,13 @@ async def test_detects_the_current_cloudflare_interstitial() -> None:
         await page.goto((FIXTURE_DIR / "captcha_cloudflare_interstitial.html").as_uri())
         assert await detect_captcha(page) == CaptchaKind.CLOUDFLARE_INTERSTITIAL
         await browser.close()
+
+
+@pytest.mark.asyncio
+async def test_hidden_invisible_recaptcha_badge_is_not_a_challenge() -> None:
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch()
+        page = await browser.new_page()
+        await page.goto((FIXTURE_DIR / "captcha_recaptcha_invisible_badge.html").as_uri())
+        assert await detect_captcha(page) is None
+        await browser.close()

@@ -18,18 +18,37 @@ class GateNotSupportedError(ValueError):
 # Gates we never open, each with the reason recorded against the track. Matched on the
 # host, so a store's per-artist subdomains are covered.
 _SKIPPED_DOMAINS: dict[str, str] = {
-    "laylo.com": "laylo wants a phone number and a texted code",
     "bandcamp.com": "a Bandcamp store page, not a gate — download it yourself",
 }
+
+# Gates opened only when a track offers nothing else: each run of one costs something a free
+# gate does not.
+_DEPRIORITISED_DOMAINS: dict[str, str] = {
+    "laylo.com": "laylo RSVPs the phone number, so any other gate goes first",
+}
+
+
+def _reason_for_host(url: str, domains: dict[str, str]) -> str | None:
+    host = (urlparse(url).hostname or "").lower()
+    for domain, reason in domains.items():
+        if host == domain or host.endswith(f".{domain}"):
+            return reason
+    return None
+
+
+def is_laylo_host(url: str) -> bool:
+    """Whether this URL is on laylo.com itself, the only place the phone number may go."""
+    return _reason_for_host(url, {"laylo.com": "laylo"}) is not None
 
 
 def skip_reason(url: str) -> str | None:
     """Why this gate is never opened, or None if it should be."""
-    host = (urlparse(url).hostname or "").lower()
-    for domain, reason in _SKIPPED_DOMAINS.items():
-        if host == domain or host.endswith(f".{domain}"):
-            return reason
-    return None
+    return _reason_for_host(url, _SKIPPED_DOMAINS)
+
+
+def avoid_reason(url: str) -> str | None:
+    """Why another gate is preferred over this one: skipped or deprioritised. None if not."""
+    return skip_reason(url) or _reason_for_host(url, _DEPRIORITISED_DOMAINS)
 
 
 async def detect_handler_from_page(page: Page) -> type[GateHandler] | None:
@@ -111,6 +130,13 @@ def get_handler_for_url(url: str) -> type[GateHandler]:  # noqa: PLR0911
         from soundcloud_dl.gate_handlers.jev import DroploudHandler  # noqa: PLC0415
 
         return DroploudHandler
+
+    # By host, never by substring: this route types the phone number, and a buy link is
+    # the uploader's to write — "evil.example/?ref=laylo.com" must not get it.
+    if is_laylo_host(url):
+        from soundcloud_dl.gate_handlers.laylo import LayloHandler  # noqa: PLC0415
+
+        return LayloHandler
 
     if "gaterush" in lower:
         from soundcloud_dl.gate_handlers.jev import GaterushHandler  # noqa: PLC0415

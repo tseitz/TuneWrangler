@@ -16,8 +16,6 @@ from soundcloud_dl.config import (
     ACTION_DELAY_MIN_MS,
     DOWNLOAD_COMMENT,
     DOWNLOAD_DIR,
-    DOWNLOAD_EMAIL,
-    DOWNLOAD_NAME,
     SCROLL_BEFORE_CLICK,
     TYPE_DELAY_MS,
     validate_jev_config,
@@ -28,7 +26,12 @@ from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered
 from soundcloud_dl.gate_handlers.jev import gate_name_for
 from soundcloud_dl.gate_handlers.judgment import JudgmentGateHandler
 from soundcloud_dl.gate_handlers.login_wall import LoginWallEncountered
-from soundcloud_dl.main import _save_debug_artifacts
+from soundcloud_dl.main import (
+    _save_debug_artifacts,
+    gate_template_vars,
+    is_rsvp_gate,
+    laylo_setup_problem,
+)
 from soundcloud_dl.playwright_browser import attached_browser
 from soundcloud_dl.run_artifacts import RunRecorder
 from soundcloud_dl.sc_actions_flow import (
@@ -97,7 +100,23 @@ async def _clean_up_comment(context: BrowserContext, url: str, *, resuming: bool
         logger.exception("Comment clean-up failed for %s", url)
 
 
-async def run_jev_pilot(
+def _pilot_handler_class(gate_url: str) -> type[JudgmentGateHandler] | None:
+    """The plain judgment handler, except for Laylo. None when Laylo is not set up.
+
+    Laylo is the one host --jev hands to its registered class: the plain judgment handler
+    would take the RSVP button for the file and press it until it gave up.
+    """
+    if not is_rsvp_gate(gate_url):
+        return JudgmentGateHandler
+    if (problem := laylo_setup_problem()) is not None:
+        logger.error("UNSUPPORTED | %s", problem)
+        return None
+    from soundcloud_dl.gate_handlers.laylo import LayloHandler  # noqa: PLC0415
+
+    return LayloHandler
+
+
+async def run_jev_pilot(  # noqa: PLR0915
     url: str, *, track_url: str | None = None, pause: bool = False, sc_actions: bool = False
 ) -> None:
     """Open a gate URL and let JudgmentGateHandler drive it, reporting the outcome."""
@@ -130,21 +149,20 @@ async def run_jev_pilot(
             logger.info("Treating URL as a gate page directly (no SoundCloud lookup)")
             gate_url = url
 
+        handler_cls = _pilot_handler_class(gate_url)
+        if handler_cls is None:
+            return
         recorder = RunRecorder(gate_name_for(gate_url))
 
         page = await context.new_page()
         await page.goto(gate_url, wait_until="domcontentloaded", timeout=30_000)
         logger.info("Gate page open: %s", page.url)
 
-        handler = JudgmentGateHandler(
+        handler = handler_cls(
             # Otherwise every line of a droploud run is logged as [hypeddit_jev], which is
             # the default baked into the handler for the gate it was first written against.
             config={"gate": gate_name_for(gate_url), "steps": []},
-            template_vars={
-                "email": DOWNLOAD_EMAIL,
-                "name": DOWNLOAD_NAME,
-                "comment": DOWNLOAD_COMMENT,
-            },
+            template_vars=gate_template_vars(handler_cls),
             action_delay_min_ms=ACTION_DELAY_MIN_MS,
             action_delay_max_ms=ACTION_DELAY_MAX_MS,
             type_delay_ms=TYPE_DELAY_MS,
@@ -191,7 +209,7 @@ async def run_jev_pilot(
                 logger.exception("FAILED | jev pilot run")
                 raise
 
-            downloaded = any(
+            downloaded = handler.downloaded or any(
                 step_id.endswith("_download") and result == StepResult.EXECUTED
                 for step_id, result in results.items()
             )
@@ -207,7 +225,11 @@ async def run_jev_pilot(
                 logger.info("DOWNLOAD_SUCCESS | steps=%s", results)
             else:
                 await _save_debug_artifacts(page, "jev_pilot")
-                logger.warning("GATE_INCOMPLETE | no download step reached | steps=%s", results)
+                logger.warning(
+                    "GATE_INCOMPLETE | %s | steps=%s",
+                    getattr(handler, "review_reason", None) or "no download step reached",
+                    results,
+                )
         finally:
             # After the follows, never before — see main.py's _process_track for why.
             await _settle_follows(actions, resuming=resuming)

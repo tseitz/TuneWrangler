@@ -163,13 +163,52 @@ def test_gaterush_routes_to_a_handler_that_does_not_reapprove_oauth():
     [
         ("https://dubdenrecords.bandcamp.com/album/tiip-trainwreck", True),
         ("https://bandcamp.com/download?id=1", True),
-        ("https://laylo.com/spagheddy/flips", True),
+        # Not skipped: a last resort. See test_avoid_reason.
+        ("https://laylo.com/spagheddy/flips", False),
         ("https://hypeddit.com/virxmusic/eyes", False),
         # A host match, not a substring one: a gate that merely links to a store is a gate.
         ("https://gaterush.me/x?next=https://a.bandcamp.com", False),
     ],
 )
 def test_skip_reason(url, skipped):
-    from soundcloud_dl.gate_handlers import skip_reason  # noqa: PLC0415
+    from soundcloud_dl.gate_handlers import skip_reason
 
     assert (skip_reason(url) is not None) is skipped
+
+
+@pytest.mark.parametrize(
+    ("url", "avoided"),
+    [
+        ("https://laylo.com/spagheddy/flips", True),
+        ("https://dubdenrecords.bandcamp.com/album/x", True),
+        ("https://hypeddit.com/virxmusic/eyes", False),
+    ],
+)
+def test_avoid_reason(url, avoided):
+    from soundcloud_dl.gate_handlers import avoid_reason
+
+    assert (avoid_reason(url) is not None) is avoided
+
+
+def test_laylo_routes_to_its_own_handler():
+    from soundcloud_dl.gate_handlers.laylo import LayloHandler
+
+    assert get_handler_for_url("https://laylo.com/spagheddy/flips") is LayloHandler
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://evil.example/?ref=laylo.com",
+        "https://laylo.com.evil.example/x",
+        "https://notlaylo.com/a",
+    ],
+)
+def test_only_laylo_itself_gets_the_laylo_handler(url):
+    from soundcloud_dl.gate_handlers.laylo import LayloHandler
+
+    try:
+        handler = get_handler_for_url(url)
+    except GateNotSupportedError:
+        return
+    assert handler is not LayloHandler

@@ -67,7 +67,7 @@ def test_decode_gate_sc_matches_the_host_not_a_substring() -> None:
 def test_a_real_gate_wins_over_an_earlier_bandcamp_link() -> None:
     """Every description link is gate.sc-wrapped. An artist's Bandcamp link first in the
     page would otherwise get the track skipped as a store page."""
-    from soundcloud_dl.soundcloud_page import _pick_gate  # noqa: PLC0415
+    from soundcloud_dl.soundcloud_page import _pick_gate
 
     bandcamp = "https://gate.sc/?url=https%3A%2F%2Fartist.bandcamp.com%2Ftrack%2Fx&token=a"
     gate = "https://gate.sc/?url=https%3A%2F%2Fpl8list.com%2Fa%2Fb&token=b"
@@ -87,7 +87,7 @@ def test_a_real_gate_wins_over_an_earlier_bandcamp_link() -> None:
 )
 def test_unwrap_gate_sc(href: str, expected: str) -> None:
     """A text-matched card link is unwrapped, so the skip list sees laylo, not gate.sc."""
-    from soundcloud_dl.soundcloud_page import _unwrap_gate_sc  # noqa: PLC0415
+    from soundcloud_dl.soundcloud_page import _unwrap_gate_sc
 
     assert _unwrap_gate_sc(href) == expected
 
@@ -108,3 +108,17 @@ def test_gate_in_description_unwraps_gate_sc() -> None:
 )
 def test_gate_in_description_ignores_non_gates(text: str | None) -> None:
     assert gate_in_description(text) is None
+
+
+def test_gate_in_description_passes_over_laylo_for_a_free_gate() -> None:
+    text = "RSVP https://laylo.com/a/b or FREE DL https://hypeddit.com/a/b"
+    assert gate_in_description(text) == "https://hypeddit.com/a/b"
+
+
+def test_pick_gate_holds_laylo_back_as_the_last_resort() -> None:
+    from soundcloud_dl.soundcloud_page import _pick_gate
+
+    laylo = "https://gate.sc/?url=https://laylo.com/a/b&token=x"
+    hyp = "https://gate.sc/?url=https://hypeddit.com/a/b&token=x"
+    assert _pick_gate([laylo, hyp], set()) == ("https://hypeddit.com/a/b", "https://laylo.com/a/b")
+    assert _pick_gate([laylo], set()) == (None, "https://laylo.com/a/b")

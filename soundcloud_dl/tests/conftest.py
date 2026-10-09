@@ -79,3 +79,16 @@ def _isolate_track_index(tmp_path, monkeypatch):
     monkeypatch.setattr(
         track_index, "get_track_index_file", lambda: tmp_path / "track_index.json"
     )
+
+
+@pytest.fixture(autouse=True)
+def _isolate_laylo_state(tmp_path, monkeypatch):
+    """Keep drop records, the Gmail token and fetch scratch files out of logs/ in tests.
+
+    A real drop record would make a later live run skip a submit it never made.
+    """
+    from soundcloud_dl import config
+
+    monkeypatch.setattr(config, "get_laylo_drops_file", lambda: tmp_path / "laylo_drops.json")
+    monkeypatch.setattr(config, "get_gmail_token_file", lambda: tmp_path / "gmail_token.json")
+    monkeypatch.setattr(config, "get_laylo_tmp_dir", lambda: tmp_path / "laylo_tmp")
