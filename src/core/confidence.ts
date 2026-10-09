@@ -73,6 +73,16 @@ export function scoreConfidence(
     level = "low";
   }
 
+  if (/^\d+$/.test(song.title.trim())) {
+    reasons.push("title is only digits — likely a track number, not a title");
+    level = "low";
+  }
+
+  if (source === "bandcamp" && sourceFilename.split(" - ").length >= 4) {
+    reasons.push("Bandcamp name has 4+ parts — which part is the artist, album or title is a guess");
+    level = "low";
+  }
+
   if (level === "low") {
     return { level, reasons, decision: "review" };
   }
@@ -85,7 +95,8 @@ export function scoreConfidence(
   }
 
   if (song.dashCount >= 2) {
-    const assumed = source === "bandcamp" ? "artist-album-title" : "album-artist-title";
+    const albumDownload = source === "bandcamp" && /\s-\s\d{2}\s/.test(sourceFilename);
+    const assumed = albumDownload ? "artist-album-title" : "album-artist-title";
     reasons.push(`source has ${song.dashCount} dash separators — assumed ${assumed} structure`);
     if (level === "high") level = "medium";
   }

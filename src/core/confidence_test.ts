@@ -163,8 +163,19 @@ Deno.test("tag source: filename-shape signals don't fire on a track-numbered nam
   }
 });
 
-Deno.test("bandcamp: the 2-dash reason names the artist-first order", () => {
-  const song = buildSong("Artist - Album - Title.wav");
+Deno.test("bandcamp: the 2-dash reason names the artist-first order for an album download", () => {
+  const song = buildSong("Artist - Album - 01 Title.wav");
   const result = scoreConfidence(song, song.filename, { source: "bandcamp" });
   assertEquals(result.reasons.some((r) => r.includes("assumed artist-album-title")), true);
+});
+
+Deno.test("bandcamp: a 4-part name goes to review", () => {
+  const src = "Substance - No God - Bass Pit - 02 Bass Pit.aiff";
+  const result = scoreConfidence(buildSong(src), src, { source: "bandcamp" });
+  assertEquals(result.decision, "review");
+});
+
+Deno.test("a title that is only digits goes to review", () => {
+  const song = buildSong("Acct - 01.wav");
+  assertEquals(scoreConfidence(song, song.filename).decision, "review");
 });

@@ -38,11 +38,16 @@ for (const [rule, src, want] of cases) {
 }
 
 const bandcampCases: [string, string][] = [
+  ["ILL GROOVE SOCIETY - Duality - Fallin'.aiff", "Duality - ILL GROOVE SOCIETY - Fallin'.aiff"],
+  ["fez the kid - D.Tee - As we enter.aiff", "D.Tee - fez the kid - As we enter.aiff"],
+  ["fez the kid - Fez the kid - Keep the fire burning.aiff", "Fez the kid - Keep the fire burning.aiff"],
+  ["Jaz Imsky, En-vy - Codebreaker - 01 Codebreaker.aiff", "Jaz Imsky x En-vy - Codebreaker.aiff"],
+  ["Gaszia - Ninajirachi - Fuck My Computer (Gaszia Edit).aiff", "Gaszia - Ninajirachi - Fuck My Computer.aiff"],
   ["D-FORM - BURN EP - 01 Statik.aiff", "D-FORM - BURN EP - Statik.aiff"],
   ["Cardvell - Bang Laser.aiff", "Cardvell - Bang Laser.aiff"],
   [
     "Bukez Finezt - BUKEZ BOOTLEGZ #1 - 02 Cam'Ron - Oh Boy (Bukez Finezt Jersey Club Bootleg Remix).aiff",
-    "Bukez Finezt Jersey Club Bootleg - BUKEZ BOOTLEGZ #1 - Oh Boy.aiff",
+    "Bukez Finezt - Cam'Ron - Oh Boy.aiff",
   ],
   ["Alex Unger - Jet Fuel (feat. parkbreezy).aiff", "Alex Unger x parkbreezy - Jet Fuel.aiff"],
 ];
@@ -58,4 +63,8 @@ Deno.test("parser bandcamp order differs from downloaded for a 3-part name", () 
 
 Deno.test("parser bandcamp rejects a name with no dash", () => {
   assertThrows(() => parseBandcampSong(Object.assign(new DownloadedSong("Cardvell - X.aiff", "/tmp/"), { dashCount: 0 })));
+});
+
+Deno.test("parser bandcamp: a remix credited to the release's own artist is still a remix", () => {
+  assertEquals(parseFilename("Acct - Album - 01 Artist2 - Title (Acct Remix).mp3", "bandcamp"), "Acct - Artist2 - Title.mp3");
 });

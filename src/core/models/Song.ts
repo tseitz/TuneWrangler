@@ -2,6 +2,10 @@ import * as path from "@std/path";
 import { normalizeUnicode, normalizeFilename } from "../utils/unicode.ts";
 import { NAMES_WITH_AMPERSAND } from "../../config/artistNames.ts";
 
+/** "(Dub Edit)", "(Club Mix)": a version of the track, not a remixer's credit. */
+const VERSION_ONLY =
+  /^(DUB|CLUB|RADIO|EXTENDED|ORIGINAL|INSTRUMENTAL|VIP|SHORT|CLEAN|DIRTY|INTRO|VOCAL|ACOUSTIC|ALBUM)( (EDIT|MIX))?$/i;
+
 export class Song {
   artist = "";
   album = "";
@@ -194,7 +198,11 @@ export class Song {
       this.dashCount = this.getDashCount();
     }
 
-    if (origArtist !== this.artist) {
+    if (origArtist !== this.artist && VERSION_ONLY.test(this.artist)) {
+      this.artist = origArtist;
+      this.filename = filename;
+      this.dashCount = this.getDashCount();
+    } else if (origArtist !== this.artist) {
       this.remix = true;
       this.changed = true;
     }

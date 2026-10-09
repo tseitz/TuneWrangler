@@ -159,10 +159,11 @@ function buildFromTags(src: string, dir: string, tags: EntryTags): Song {
   song.title = fixItunesLabeling(tags.title);
 
   song.checkFeat();
-  song.removeAnd("artist", "album");
+  // A remix's album slot holds the original artists; otherwise it's the release's own title.
+  song.removeAnd(...(song.remix ? ["artist", "album"] as const : ["artist"] as const));
   song.lastCheck();
 
-  if (song.title === song.album) song.album = "";
+  if (song.title.toLowerCase() === song.album.toLowerCase()) song.album = "";
   song.finalFilename = song.album
     ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`
     : `${song.artist} - ${song.title}${song.extension}`;

@@ -1,5 +1,6 @@
 import { DownloadedSong } from "./models/Song.ts";
 import { foldName as fold, normalizeUnicode } from "./utils/unicode.ts";
+import { setFinalDownloadedSongName } from "./utils/common.ts";
 
 /**
  * Runs the full filename-parsing pipeline on a DownloadedSong.
@@ -29,37 +30,65 @@ export function parseDownloadedSong(song: DownloadedSong): DownloadedSong {
   return song;
 }
 
+const TRACK_NUMBER = /^\d{2}\s/;
+
+/**
+ * Album downloads are `artist - album - NN title`. Without a track number it's a single-track
+ * download, named `account - [track artist -] title` like any other download.
+ */
 export function parseBandcampSong(song: DownloadedSong): DownloadedSong {
   if (song.dashCount < 1) throw new Error(`Not a Bandcamp name (no " - "): ${song.filename}`);
-
-  // DownloadedSong prefills album-first; Bandcamp names are artist-first.
-  song.artist = song.grabFirst();
-  song.album = song.dashCount > 1 ? song.grabSecond() : "";
+  if (!stemOf(song).split(" - ").slice(1).some((s) => TRACK_NUMBER.test(s.trim()))) {
+    parseDownloadedSong(song);
+    return setFinalDownloadedSongName(song);
+  }
 
   song.removeBadCharacters();
+  const stem = stemOf(song);
+  const account = song.grabFirst();
+  song.artist = account;
+  song.album = "";
   song.checkRemix();
+  // checkRemix sees no change when the credit is the release's own artist, so it misses the remix.
+  if (!song.remix && selfRemix(stem, account)) song.remix = true;
+  // A credit that starts with the release's own artist: the words after it are a style, not a name.
+  const remixer = song.remix && song.artist.toLowerCase().startsWith(`${account.toLowerCase()} `)
+    ? account
+    : song.artist;
+
+  const segments = stemOf(song).split(" - ").map((s) => s.trim());
+  const numbered = segments.findIndex((s, i) => i > 0 && TRACK_NUMBER.test(s));
+  const album = segments.slice(1, numbered).join(" - ");
+  const hasTrackArtist = numbered < segments.length - 1;
+  const trackArtist = hasTrackArtist ? segments[numbered].replace(TRACK_NUMBER, "") : account;
+  song.title = segments.slice(hasTrackArtist ? numbered + 1 : numbered).join(" - ").replace(TRACK_NUMBER, "");
+
   if (song.remix) {
-    song.album = song.dashCount === 1 ? song.grabFirst() : song.grabSecond();
-    song.removeAnd("album");
+    song.artist = remixer;
+    song.album = trackArtist !== remixer ? trackArtist : album;
   } else {
-    song.artist = song.grabFirst();
+    song.artist = trackArtist;
+    song.album = album;
   }
   song.checkWith();
-
-  if (!song.album && song.dashCount > 1) {
-    song.album = song.grabSecond();
-  }
-
-  song.title = song.grabLast().replace(/^\d{2}\s/, "");
-
   song.checkFeat();
-  song.removeAnd("artist", "album");
+  song.removeAnd(...(song.remix ? ["artist", "album"] as const : ["artist"] as const));
   song.lastCheck();
+  if (song.album.toLowerCase() === song.title.toLowerCase()) song.album = "";
 
-  song.finalFilename = song.dashCount === 1 && !song.album
-    ? `${song.artist} - ${song.title}${song.extension}`
-    : `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
+  song.finalFilename = song.album
+    ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`
+    : `${song.artist} - ${song.title}${song.extension}`;
   return song;
+}
+
+function selfRemix(stem: string, account: string): boolean {
+  const credit = /[(\[]([^)\]]+) (REMIX|REFIX|FLIP|EDIT|BOOTLEG|REBOOT|DUB)[)\]]/i.exec(stem)?.[1];
+  return credit?.trim().toLowerCase() === account.toLowerCase();
+}
+
+function stemOf(song: DownloadedSong): string {
+  return song.filename.slice(0, song.filename.length - song.extension.length);
 }
 
 function grabDownloadedArtist(song: DownloadedSong): DownloadedSong {

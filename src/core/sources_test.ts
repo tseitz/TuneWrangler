@@ -162,3 +162,20 @@ Deno.test("listSourceFiles: an iTunes folder overlapping a scanned folder is ref
     await assertRejects(() => listSourceFiles({ downloaded, itunes }), Error, "overlaps");
   }
 });
+
+Deno.test("buildSong: an iTunes version label is not a remixer", () => {
+  const tags = { artist: "Hypho", album: "Low Down Deep - Single", title: "Low Down Deep (Dub Edit)" };
+  const song = buildSong("itunes", "Hypho/Low Down Deep - Single/02 Low Down Deep (Dub Edit).m4a", "/i/", tags);
+  assertEquals(song.finalFilename, "Hypho - Low Down Deep.m4a");
+});
+
+Deno.test("buildSong: & stays in an iTunes album title", () => {
+  const tags = { artist: "Molecular", album: "Heritage & Sound", title: "Next Level" };
+  const song = buildSong("itunes", "Molecular/Heritage & Sound/10 Next Level.m4a", "/i/", tags);
+  assertEquals(song.finalFilename, "Molecular - Heritage & Sound - Next Level.m4a");
+});
+
+Deno.test("buildSong: other version labels aren't remixers either", () => {
+  const tags = { artist: "Hypho", album: "EP", title: "Track (Clean Edit)" };
+  assertEquals(buildSong("itunes", "Hypho/EP/01 Track (Clean Edit).m4a", "/i/", tags).finalFilename, "Hypho - EP - Track.m4a");
+});
