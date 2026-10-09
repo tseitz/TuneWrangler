@@ -21,7 +21,7 @@ Deno.test("an unset path variable fails naming it, rather than falling back to a
 });
 
 Deno.test("a path without a trailing slash gets one", () => {
-  withEnv("TUNEWRANGLER_RENAME_PATH", "/music/renamed", () => {
-    assertEquals(getFolder("rename"), "/music/renamed/");
+  withEnv("TUNEWRANGLER_DJMUSIC_PATH", "/music/renamed", () => {
+    assertEquals(getFolder("djMusic"), "/music/renamed/");
   });
 });

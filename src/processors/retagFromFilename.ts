@@ -2,8 +2,8 @@
 Writes artist/album/title tags from each file's `artist - album - title` name, so players that
 read tags (Rekordbox reads them on import) agree with the filename.
 
-  deno task retag                     dry run over the rename folder: list what would change
-  deno task retag --dir <folder>      any other folder, e.g. the DJ collection
+  deno task retag                     dry run over the DJ collection: list what would change
+  deno task retag --dir <folder>      any other folder
   deno task retag --yes               write the tags (audio is stream-copied, never re-encoded)
   deno task retag --overwrite         also replace tags that are set but disagree with the name;
                                       by default only missing tags are filled in
@@ -59,7 +59,7 @@ export function planRetag(file: string, current: TrackTags, overwrite: Overwrite
 async function main(): Promise<void> {
   const args = parseArgs(Deno.args, { string: ["dir"], boolean: ["yes", "overwrite", "overwrite-cosmetic"] });
   const overwrite: OverwriteMode = args.overwrite ? "all" : args["overwrite-cosmetic"] ? "cosmetic" : "none";
-  const dir = args.dir ? (args.dir.endsWith("/") ? args.dir : `${args.dir}/`) : getFolder("rename");
+  const dir = args.dir ? (args.dir.endsWith("/") ? args.dir : `${args.dir}/`) : getFolder("djMusic");
 
   const plans: RetagPlan[] = [];
   const skipped: string[] = [];

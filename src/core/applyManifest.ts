@@ -1,8 +1,8 @@
-import { backupFile, cacheMusic, checkIfDuplicate, logWithBreak, renameAndMove, setFinalDownloadedSongName } from "./utils/common.ts";
-import { DownloadedSong } from "./models/Song.ts";
-import { parseDownloadedSong } from "./parser.ts";
+import { backupFile, cacheMusic, checkIfDuplicate, logWithBreak, renameAndMove } from "./utils/common.ts";
+import { Song } from "./models/Song.ts";
+import { buildSong } from "./sources.ts";
 import { tagsFromFilename } from "./tagging.ts";
-import { Manifest } from "./manifest.ts";
+import { entryKey, Manifest, sourceDirFor } from "./manifest.ts";
 import { startBackupRun } from "./utils/backups.ts";
 
 export interface MoveFailure {
@@ -31,18 +31,31 @@ export async function settleMoves(ops: Promise<void>[], sources: string[]): Prom
   return results.flatMap((r, i) => r.status === "rejected" ? [{ src: sources[i], reason: r.reason }] : []);
 }
 
+/** `src` is text from an editable manifest; a symlinked folder on its path could lead outside `dir`. */
+async function assertRegularFileInside(dir: string, src: string): Promise<void> {
+  const path = `${dir}${src}`;
+  if (!(await Deno.lstat(path)).isFile) throw new Error(`${path} is not a regular file`);
+  const [realDir, realPath] = await Promise.all([Deno.realPath(dir), Deno.realPath(path)]);
+  if (!realPath.startsWith(`${realDir}/`)) throw new Error(`${path} resolves outside ${dir}`);
+}
+
+/** Downloaded-root files keep the flat backup layout older runs used. */
+export function backupNameFor(entry: { source?: string; src: string }): string {
+  return !entry.source || entry.source === "downloaded" ? entry.src : `${entry.source}/${entry.src}`;
+}
+
 /**
- * Moves only entries with decision "apply", from the manifest's source_dir into its move_dir,
+ * Moves only entries with decision "apply", from each entry's source folder into its move_dir,
  * checking duplicates against its cache_dir. The folders come from the manifest, not the env, so
  * an apply lands where the dry run said it would.
  */
 export async function applyManifest(manifest: Manifest, { backupDir }: { backupDir: string }): Promise<ApplyResult> {
-  const sourceDir = withTrailingSlash(manifest.source_dir);
   const destDir = withTrailingSlash(manifest.move_dir);
 
   const cache = await cacheMusic(withTrailingSlash(manifest.cache_dir));
 
-  const moves: { src: string; song: DownloadedSong }[] = [];
+  const moves: { key: string; dir: string; src: string; backupName: string; song: Song }[] = [];
+  const failures: MoveFailure[] = [];
   let skipped = 0;
 
   for (const entry of manifest.entries) {
@@ -57,9 +70,16 @@ export async function applyManifest(manifest: Manifest, { backupDir }: { backupD
       );
     }
 
-    const song = new DownloadedSong(entry.src, sourceDir);
-    if (song.dashCount > 0) parseDownloadedSong(song);
-    setFinalDownloadedSongName(song);
+    let song: Song;
+    let dir: string;
+    try {
+      dir = withTrailingSlash(sourceDirFor(manifest, entry));
+      await assertRegularFileInside(dir, entry.src);
+      song = buildSong(entry.source ?? "downloaded", entry.src, dir, entry.tags);
+    } catch (reason) {
+      failures.push({ src: entryKey(entry), reason });
+      continue;
+    }
 
     // Honor user override: if the manifest's proposed name differs from what
     // the parser produces, trust the manifest (the user may have edited it).
@@ -76,17 +96,22 @@ export async function applyManifest(manifest: Manifest, { backupDir }: { backupD
       continue;
     }
     cache.add(song);
-    moves.push({ src: entry.src, song });
+    moves.push({ key: entryKey(entry), dir, src: entry.src, backupName: backupNameFor(entry), song });
   }
 
-  if (moves.length === 0) return { applied: 0, skipped, failures: [], runBackupDir: null };
+  if (moves.length === 0) return { applied: 0, skipped, failures, runBackupDir: null };
 
   const runBackupDir = await startBackupRun(backupDir, "rename-music");
-  const failures = await settleMoves(
-    moves.map(({ src, song }) =>
-      backupFile(sourceDir, runBackupDir, src).then(() => renameAndMove(destDir, song, undefined, true))
+  const moveFailures = await settleMoves(
+    moves.map(({ dir, src, backupName, song }) =>
+      backupFile(dir, runBackupDir, src, backupName).then(() => renameAndMove(destDir, song, undefined, true))
     ),
-    moves.map(({ src }) => src),
+    moves.map(({ key }) => key),
   );
-  return { applied: moves.length - failures.length, skipped, failures, runBackupDir };
+  return {
+    applied: moves.length - moveFailures.length,
+    skipped,
+    failures: [...failures, ...moveFailures],
+    runBackupDir,
+  };
 }

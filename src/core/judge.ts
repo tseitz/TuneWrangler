@@ -1,11 +1,12 @@
 import type { TypeSafeClient as TypeSafeClientClass } from "@typesafe-ai/sdk";
 import { ConfigurationError } from "./utils/errors.ts";
-import { EntryJudgement, ManifestEntry } from "./manifest.ts";
-import { DownloadedSong } from "./models/Song.ts";
+import { basename } from "@std/path";
+import { EntryJudgement, entryKey, ManifestEntry } from "./manifest.ts";
+import { Song } from "./models/Song.ts";
 
 export interface JudgeCandidate {
   entry: ManifestEntry;
-  song: DownloadedSong;
+  song: Song;
 }
 
 const DEFAULT_THRESHOLD = 0.5;
@@ -20,6 +21,7 @@ const NOTHING_LOST_CARVE_OUTS = [
     "of the title into a separate remix credit",
   '"- Single" / "- EP" suffixes and commas are removed',
   '"&" is normalized to "x"',
+  'a leading track number ("01 ") is dropped from the title',
 ].join("; ");
 
 let clientPromise: Promise<TypeSafeClientClass> | undefined;
@@ -68,7 +70,7 @@ async function judgeOne(client: TypeSafeClientClass, candidate: JudgeCandidate):
 
   const response = await client.systemOne({
     state: {
-      source_filename: entry.src,
+      source_filename: basename(entry.src),
       proposed: {
         artist: song.artist,
         album: song.album,
@@ -102,7 +104,7 @@ async function judgeOne(client: TypeSafeClientClass, candidate: JudgeCandidate):
   };
 }
 
-/** Judges each candidate, keyed by entry.src. A failed request records a fail-closed error entry rather than a pass. */
+/** Judges each candidate, keyed by entryKey. A failed request records a fail-closed error entry rather than a pass. */
 export async function judgeEntries(candidates: JudgeCandidate[]): Promise<Map<string, EntryJudgement>> {
   const client = await getClient();
   const concurrency = Math.min(getJudgeConcurrency(), candidates.length) || 1;
@@ -113,9 +115,9 @@ export async function judgeEntries(candidates: JudgeCandidate[]): Promise<Map<st
     while (next < candidates.length) {
       const candidate = candidates[next++];
       try {
-        results.set(candidate.entry.src, await judgeOne(client, candidate));
+        results.set(entryKey(candidate.entry), await judgeOne(client, candidate));
       } catch (error) {
-        results.set(candidate.entry.src, {
+        results.set(entryKey(candidate.entry), {
           nouls: {},
           judged_proposed: candidate.entry.proposed,
           model: "",

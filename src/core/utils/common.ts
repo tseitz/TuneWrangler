@@ -4,7 +4,7 @@ import { getPath, loadConfig, validatePaths } from "../../config/index.ts";
 import { logError } from "./errors.ts";
 // ffmpeg npm package no longer needed - using Deno.Command for all conversions
 import nodeId3 from "node-id3";
-import { extname, join } from "@std/path";
+import { basename, dirname, extname, join } from "@std/path";
 import { Semaphore } from "../models/Semaphore.ts";
 import { id3Flags } from "../tagging.ts";
 import { normalizeUnicode } from "./unicode.ts";
@@ -221,7 +221,7 @@ async function removeIfPresent(path: string): Promise<void> {
  */
 export async function renameAndMove(
   moveDir: string,
-  song: DownloadedSong,
+  song: Song,
   mergedMetadata?: nodeId3.Tags & Partial<Tags>,
   clear: boolean = false
 ) {
@@ -231,6 +231,9 @@ export async function renameAndMove(
   const stem = song.finalFilename.slice(0, song.finalFilename.length - extname(song.finalFilename).length);
   const finalName = isMp3 ? song.finalFilename : `${stem}.aiff`;
   const finalPath = `${moveDir}${finalName}`;
+  if (!stem.trim() || finalName !== basename(finalName) || finalName.includes("\0")) {
+    throw new Error(`refusing to move ${song.fullFilename}: "${finalName}" is not a plain file name`);
+  }
 
   // Claimed before the first await, so two moves to one name in this process can't both pass.
   const claim = finalPath.normalize("NFC").toLowerCase();
@@ -299,8 +302,25 @@ export async function convertLocalToAiff(moveDir: string, song: LocalSong) {
   }
 }
 
-export async function backupFile(startDir: string, backupDir: string, name: string) {
-  return await Deno.copyFile(`${startDir}${name}`, `${backupDir}${name}`);
+/**
+ * Copies `${startDir}${name}` to `${backupDir}${backupName}`, creating its folders. Refuses an
+ * existing target: the caller deletes the original next, so an overwritten backup loses a file.
+ */
+export async function backupFile(startDir: string, backupDir: string, name: string, backupName = name) {
+  const target = `${backupDir}${backupName}`;
+  await Deno.mkdir(dirname(target), { recursive: true });
+  try {
+    (await Deno.open(target, { write: true, createNew: true })).close();
+  } catch (error) {
+    if (error instanceof Deno.errors.AlreadyExists) throw new Error(`refusing to overwrite backup ${target}`);
+    throw error;
+  }
+  try {
+    await Deno.copyFile(`${startDir}${name}`, target);
+  } catch (error) {
+    await Deno.remove(target).catch((cleanup) => console.error(`Could not remove ${target}: ${cleanup}`));
+    throw error;
+  }
 }
 
 export function setFinalDownloadedSongName(song: DownloadedSong): DownloadedSong {

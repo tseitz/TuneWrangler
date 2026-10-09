@@ -25,7 +25,6 @@ deno task promote <manifest>       # copy manifest into tests/corpus/ as regress
 deno task promote --refresh        # lock in improvement targets the parser now gets right
 deno task test                     # run all tests (unit + corpus regression)
 deno task validate                 # validate config paths exist
-deno task rBc / rI / rBp           # rename Bandcamp / iTunes / Beatport
 deno task cF                       # convert FLACs
 deno task ytRb                     # add M3U to YouTube playlist
 deno task playlistImport           # import playlists
@@ -91,6 +90,29 @@ hold `logs/tunewrangler/rm.lock`, one run at a time. A missing folder (drive unp
 lock exits **75** with nothing changed — a scheduler should retry later, not alert. `--auto` (dry
 run, then apply the manifest it wrote) exists for the nightly job.
 
+`rM` reads every source in one manifest. Each entry carries `source` (absent = `downloaded`) and
+`src` relative to that source's folder; the manifest's `source_dirs` records the folders.
+
+| Source | Folder | Naming |
+| --- | --- | --- |
+| `downloaded` | `TUNEWRANGLER_DOWNLOADED_PATH` root (files only) | parsed from the filename |
+| `soundcloud` | `soundcloud/` under the root | parsed from the filename |
+| `bandcamp` | `bandcamp/` under the root | artist-first, `NN` track number stripped |
+| `beatport` | `beatport/` under the root | from tags |
+| `itunes` | `TUNEWRANGLER_ITUNES_PATH`, recursive (`src` may nest) | from tags |
+
+Other root subfolders are ignored and printed; `.zip/.m3u/.plist` are skipped; `rM` never unzips
+or creates folders. A missing `soundcloud/`, `bandcamp/` or `beatport/` folder is a warning; a
+missing root or `TUNEWRANGLER_ITUNES_PATH` exits 75. If `TUNEWRANGLER_SC_DOWNLOAD_DIR` is
+set it must equal `<DOWNLOADED_PATH>soundcloud/`, or `rM` fails. Backups go under
+`<run>/<source>/<src>` (the root stays flat) and never overwrite. Applying deletes the source
+file for every source.
+
+`--auto` applies only `downloaded` and `soundcloud` entries; `bandcamp`, `beatport` and `itunes`
+entries become `review` with a reason, for a manual `--apply`. `itunes` and `beatport` entries are
+excluded from the corpus (their names come from tags). A new-format manifest can't be read by
+older code, so promoting one is a one-way door.
+
 ```
 1. deno task rM                       → writes logs/tunewrangler/manifests/rename-manifest-<ts>.json
                                         Each entry has confidence (high/medium/low) + decision (apply/review/skip)
@@ -135,9 +157,10 @@ When changing `parser.ts`, run `deno task test` and inspect the corpus output fo
 ### Deno/TypeScript (`src/`)
 
 - **`src/cli/main.ts`** — CLI entry. Args parsed via `@std/cli/parse-args`. Commands registered in a record with metadata.
-- **`src/cli/commands/`** — Command handlers. `index.ts` is a barrel of small handlers (`renameMusic`, `renameBandcamp`, `renameItunes`, `renameBeatport`, `convertFlacs`, `addM3uToYoutube`, `playlistImport`, `validate`) that mostly delegate to a processor. `analyze.ts` and `logs.ts` are standalone handlers.
-- **`src/processors/`** — Per-source processors. `renameMusic.ts` is the manifest-driven flow; the rest (`renameBandcamp`, `renameItunes`, `renameBeatport`, `convertFlacs`, `addM3uToYoutubePlaylist`, `betterM3uSearch`, `analyzeDjCollection`) still use the older immediate-action pattern.
-- **`src/core/parser.ts`** — `parseDownloadedSong()`: extracted parsing pipeline. Pure-ish entry point used by both `renameMusic` and the corpus tests.
+- **`src/cli/commands/`** — Command handlers. `index.ts` is a barrel of small handlers (`renameMusic`, `convertFlacs`, `addM3uToYoutube`, `playlistImport`, `validate`) that mostly delegate to a processor. `analyze.ts` and `logs.ts` are standalone handlers.
+- **`src/processors/`** — `renameMusic.ts` is the manifest-driven flow over every source; the rest (`convertFlacs`, `addM3uToYoutubePlaylist`, `betterM3uSearch`, `analyzeDjCollection`) still use the older immediate-action pattern.
+- **`src/core/parser.ts`** — `parseDownloadedSong()`: extracted parsing pipeline. Pure-ish entry point used by both `renameMusic` and the corpus tests. `parseBandcampSong()` handles Bandcamp's artist-first names (leading `NN` track number stripped).
+- **`src/core/sources.ts`** — Scans each source folder and builds a `Song` per file: `buildSong()` parses names for downloaded/soundcloud/bandcamp, and names iTunes/Beatport files from their tags.
 - **`src/core/confidence.ts`** — `scoreConfidence()`: returns `{level, reasons, decision}`.
 - **`src/core/manifest.ts`** — `Manifest`/`ManifestEntry` types + `readManifest`/`writeManifest`. `parser_output` is immutable; `proposed` is user-editable.
 - **`src/core/models/Song.ts`** — Song data model. Heavy mutation, regex-based methods (`checkRemix`, `checkFeat`, `checkWith`). Refactor target — see "Known tech debt" below.

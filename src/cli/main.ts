@@ -8,9 +8,6 @@ import { configureLogger, getLogger, LogLevel } from "../core/utils/logger.ts";
 // Import all commands
 import {
   renameMusic,
-  renameBandcamp,
-  renameItunes,
-  renameBeatport,
   addM3uToYoutube,
   playlistImport,
   convertFlacs,
@@ -41,7 +38,7 @@ const commands: Record<string, Command> = {
     flags: [
       {
         name: "move",
-        description: "Move files to the rename directory",
+        description: "Move files",
       },
       {
         name: "no-clear",
@@ -56,53 +53,6 @@ const commands: Record<string, Command> = {
     ],
     execute: renameMusic,
   },
-  "rename-bandcamp": {
-    name: "rename-bandcamp",
-    description: "Rename Bandcamp music files",
-    usage: "tunewrangler rename-bandcamp [options]",
-    flags: [
-      {
-        name: "move",
-        description: "Move files to the rename directory",
-      },
-      {
-        name: "no-clear",
-        description: "Do not clear the backup directory",
-      },
-      {
-        name: "ignore-dupes",
-        description: "Ignore duplicate files",
-      },
-    ],
-    examples: ["tunewrangler rename-bandcamp", "tunewrangler rename-bandcamp --help"],
-    execute: renameBandcamp,
-  },
-  "rename-itunes": {
-    name: "rename-itunes",
-    description: "Rename iTunes music files",
-    usage: "tunewrangler rename-itunes [options]",
-    flags: [
-      {
-        name: "move",
-        description: "Move files to the rename directory",
-      },
-    ],
-    examples: ["tunewrangler rename-itunes", "tunewrangler rename-itunes --help"],
-    execute: renameItunes,
-  },
-  "rename-beatport": {
-    name: "rename-beatport",
-    description: "Rename Beatport music files",
-    usage: "tunewrangler rename-beatport [options]",
-    flags: [
-      {
-        name: "move",
-        description: "Move files to the rename directory",
-      },
-    ],
-    examples: ["tunewrangler rename-beatport", "tunewrangler rename-beatport --help"],
-    execute: renameBeatport,
-  },
   youtube: {
     name: "youtube",
     description: "Add M3U playlists to YouTube",
@@ -110,7 +60,7 @@ const commands: Record<string, Command> = {
     flags: [
       {
         name: "move",
-        description: "Move files to the rename directory",
+        description: "Move files",
       },
     ],
     examples: ["tunewrangler youtube", "tunewrangler youtube --help"],

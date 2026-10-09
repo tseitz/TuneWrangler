@@ -20,14 +20,12 @@ const { valid, errors } = await validatePaths(config);
 |---|---|---|
 | `music` | `TUNEWRANGLER_MUSIC_PATH` | Main music library |
 | `downloads` | `TUNEWRANGLER_DOWNLOADS_PATH` | OS Downloads folder |
-| `downloaded` | `TUNEWRANGLER_DOWNLOADED_PATH` | Source for `rename-music` |
-| `bandcamp` | `TUNEWRANGLER_BANDCAMP_PATH` | Source for `rename-bandcamp` |
-| `itunes` | `TUNEWRANGLER_ITUNES_PATH` | Source for `rename-itunes` |
+| `downloaded` | `TUNEWRANGLER_DOWNLOADED_PATH` | Downloaded root: loose files plus `soundcloud/`, `bandcamp/`, `beatport/` subfolders, read by `rename-music` |
+| `itunes` | `TUNEWRANGLER_ITUNES_PATH` | iTunes inbox, read recursively by `rename-music` |
 | `youtube` | `TUNEWRANGLER_YOUTUBE_PATH` | YouTube downloads |
 | `djMusic` | `TUNEWRANGLER_DJMUSIC_PATH` | DJ collection (used for dedup) |
 | `djPlaylists` | `TUNEWRANGLER_DJPLAYLISTS_PATH` | DJ playlist backups |
 | `djPlaylistImport` | `TUNEWRANGLER_DJPLAYLISTIMPORT_PATH` | Playlist import staging |
-| `rename` | `TUNEWRANGLER_RENAME_PATH` | Destination for renamed files |
 | `backup` | `TUNEWRANGLER_BACKUP_PATH` | Source-file backup destination |
 | `transfer` | `TUNEWRANGLER_TRANSFER_PATH` | Transfer/staging folder |
 

@@ -1,7 +1,7 @@
 import { assertEquals, assertRejects } from "jsr:@std/assert@^1";
 import { join } from "@std/path";
 import { isProcessable, MusicCache, renameAndMove } from "./common.ts";
-import { DownloadedSong } from "../models/Song.ts";
+import { DownloadedSong, Song } from "../models/Song.ts";
 
 async function tone(path: string): Promise<void> {
   const args = ["-v", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=0.2", "-y", path];
@@ -86,4 +86,11 @@ Deno.test("a finished move leaves only the final file behind", async () => {
 
   assertEquals(await listNames(out), ["Blosso - Galvanize.aiff"]);
   assertEquals(await listNames(src), []);
+});
+
+Deno.test("renameAndMove refuses a final name with a path in it", async () => {
+  const dir = `${await Deno.makeTempDir()}/`;
+  const song = new Song("x.wav", dir);
+  song.finalFilename = "AC/DC - T.wav";
+  await assertRejects(() => renameAndMove(dir, song), Error, "not a plain file name");
 });

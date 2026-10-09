@@ -20,8 +20,27 @@ export interface SoundcloudFacts {
   label_name: string | null;
 }
 
+export const SOURCES = ["downloaded", "soundcloud", "bandcamp", "beatport", "itunes"] as const;
+export type Source = typeof SOURCES[number];
+
+/** Named from the file's tags, so `src` alone can't reproduce the name. */
+export function isTagSource(source: Source | undefined): boolean {
+  return source === "itunes" || source === "beatport";
+}
+
+export interface EntryTags {
+  artist: string;
+  album: string;
+  title: string;
+}
+
 export interface ManifestEntry {
+  /** Relative to the entry's source folder. Only itunes may contain "/". */
   src: string;
+  /** Absent means "downloaded". */
+  source?: Source;
+  /** What readTags returned, for tag-named sources. */
+  tags?: EntryTags;
   /** What the user approved (may be edited from parser_output before --apply). */
   proposed: string;
   /** Immutable: what the parser originally produced. Never edited by the user. */
@@ -39,6 +58,7 @@ export interface Manifest {
   version: 1;
   generated_at: string;
   source_dir: string;
+  source_dirs?: Partial<Record<Source, string>>;
   move_dir: string;
   cache_dir: string;
   entries: ManifestEntry[];
@@ -46,6 +66,20 @@ export interface Manifest {
 
 const VALID_CONFIDENCE: ConfidenceLevel[] = ["high", "medium", "low"];
 const VALID_DECISION: Decision[] = ["apply", "review", "skip"];
+
+export function entryKey(entry: Pick<ManifestEntry, "src" | "source">): string {
+  return `${entry.source ?? "downloaded"}/${entry.src}`;
+}
+
+export function sourceDirFor(manifest: Manifest, entry: Pick<ManifestEntry, "src" | "source">): string {
+  const source = entry.source ?? "downloaded";
+  const dirs = manifest.source_dirs ?? { downloaded: manifest.source_dir };
+  const dir = dirs[source];
+  if (dir === undefined) {
+    throw new Error(`Manifest has no source_dirs entry for "${source}" (entry "${entry.src}")`);
+  }
+  return dir;
+}
 
 export async function writeManifest(path: string, manifest: Manifest): Promise<void> {
   await Deno.writeTextFile(path, JSON.stringify(manifest, null, 2));
@@ -76,14 +110,32 @@ function validateManifest(raw: unknown, path: string): Manifest {
     validateEntry(entry, i, path);
   }
 
+  const sourceDir = typeof obj.source_dir === "string" ? obj.source_dir : "";
+  const sourceDirs = obj.source_dirs === undefined ? undefined : validateSourceDirs(obj.source_dirs, path);
+
   return {
     version: 1,
     generated_at: typeof obj.generated_at === "string" ? obj.generated_at : "",
-    source_dir: typeof obj.source_dir === "string" ? obj.source_dir : "",
+    source_dir: sourceDir,
+    ...(sourceDirs ? { source_dirs: sourceDirs } : {}),
     move_dir: typeof obj.move_dir === "string" ? obj.move_dir : "",
     cache_dir: typeof obj.cache_dir === "string" ? obj.cache_dir : "",
     entries: obj.entries as ManifestEntry[],
   };
+}
+
+function validateSourceDirs(raw: unknown, path: string): Partial<Record<Source, string>> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`Manifest at ${path} has invalid source_dirs (must be an object)`);
+  }
+  const dirs: Partial<Record<Source, string>> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (!SOURCES.includes(key as Source) || typeof value !== "string") {
+      throw new Error(`Manifest at ${path} has invalid source_dirs entry "${key}" (known source, string path)`);
+    }
+    dirs[key as Source] = value;
+  }
+  return dirs;
 }
 
 function validateEntry(entry: unknown, index: number, path: string): void {
@@ -95,11 +147,28 @@ function validateEntry(entry: unknown, index: number, path: string): void {
   if (typeof e.src !== "string" || typeof e.proposed !== "string") {
     throw new Error(`Manifest entry ${index} at ${path} requires string src and proposed`);
   }
-  // Both are joined onto folders by string concatenation; an edited "../x" would escape them.
-  for (const name of [e.src, e.proposed]) {
-    if (name !== basename(name) || name === "." || name === ".." || name.includes("\0")) {
-      throw new Error(`Manifest entry ${index} at ${path}: "${name}" must be a plain filename, not a path`);
-    }
+  if (e.source !== undefined && !SOURCES.includes(e.source as Source)) {
+    throw new Error(
+      `Manifest entry ${index} at ${path} has invalid source "${e.source}" (must be one of: ${SOURCES.join(", ")})`
+    );
+  }
+  // Joined onto folders by string concatenation; an edited "../x" would escape them.
+  const segments = e.src.split("/");
+  const nestedOk = e.source === "itunes";
+  if (
+    e.src.includes("\0") ||
+    segments.some((seg) => seg === "" || seg === "." || seg === "..") ||
+    (segments.length > 1 && !nestedOk)
+  ) {
+    throw new Error(
+      `Manifest entry ${index} at ${path}: "${e.src}" must be a ${nestedOk ? "relative path inside its source folder" : "plain filename, not a path"}`
+    );
+  }
+  if (!e.proposed.trim() || e.proposed !== basename(e.proposed) || e.proposed === "." || e.proposed === ".." || e.proposed.includes("\0")) {
+    throw new Error(`Manifest entry ${index} at ${path}: "${e.proposed}" must be a plain filename, not a path`);
+  }
+  if (e.tags !== undefined && !isEntryTags(e.tags)) {
+    throw new Error(`Manifest entry ${index} at ${path} has invalid tags (artist, album, title must be strings)`);
   }
   // parser_output was added in a later version; default to proposed for older manifests
   if (e.parser_output !== undefined && typeof e.parser_output !== "string") {
@@ -127,6 +196,12 @@ function validateEntry(entry: unknown, index: number, path: string): void {
   if (e.soundcloud !== undefined && !isSoundcloudFacts(e.soundcloud)) {
     throw new Error(`Manifest entry ${index} at ${path} has invalid soundcloud (needs a string url; other fields string or null)`);
   }
+}
+
+function isEntryTags(value: unknown): value is EntryTags {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const v = value as Record<string, unknown>;
+  return typeof v.artist === "string" && typeof v.album === "string" && typeof v.title === "string";
 }
 
 const OPTIONAL_FACTS = ["title", "uploader", "metadata_artist", "label_name"] as const;

@@ -29,6 +29,39 @@ export function parseDownloadedSong(song: DownloadedSong): DownloadedSong {
   return song;
 }
 
+export function parseBandcampSong(song: DownloadedSong): DownloadedSong {
+  if (song.dashCount < 1) throw new Error(`Not a Bandcamp name (no " - "): ${song.filename}`);
+
+  // DownloadedSong prefills album-first; Bandcamp names are artist-first.
+  song.artist = song.grabFirst();
+  song.album = song.dashCount > 1 ? song.grabSecond() : "";
+
+  song.removeBadCharacters();
+  song.checkRemix();
+  if (song.remix) {
+    song.album = song.dashCount === 1 ? song.grabFirst() : song.grabSecond();
+    song.removeAnd("album");
+  } else {
+    song.artist = song.grabFirst();
+  }
+  song.checkWith();
+
+  if (!song.album && song.dashCount > 1) {
+    song.album = song.grabSecond();
+  }
+
+  song.title = song.grabLast().replace(/^\d{2}\s/, "");
+
+  song.checkFeat();
+  song.removeAnd("artist", "album");
+  song.lastCheck();
+
+  song.finalFilename = song.dashCount === 1 && !song.album
+    ? `${song.artist} - ${song.title}${song.extension}`
+    : `${song.artist} - ${song.album} - ${song.title}${song.extension}`;
+  return song;
+}
+
 function grabDownloadedArtist(song: DownloadedSong): DownloadedSong {
   song.checkRemix();
 

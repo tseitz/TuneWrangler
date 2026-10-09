@@ -1,4 +1,5 @@
-import { DownloadedSong } from "./models/Song.ts";
+import type { Song } from "./models/Song.ts";
+import { type EntryTags, isTagSource, type Source } from "./manifest.ts";
 
 export type ConfidenceLevel = "high" | "medium" | "low";
 export type Decision = "apply" | "review" | "skip";
@@ -19,8 +20,19 @@ export interface ConfidenceResult {
  *
  * Default decisions: high+medium → apply, low → review.
  * The user can override any decision by editing the manifest before --apply.
+ *
+ * Tag sources (itunes, beatport) skip the filename-shape signals: their names are
+ * `NN Title.ext`, so dash counts and segment checks say nothing.
  */
-export function scoreConfidence(song: DownloadedSong, sourceFilename: string): ConfidenceResult {
+export function scoreConfidence(
+  song: Song,
+  sourceFilename: string,
+  { source = "downloaded", tags }: { source?: Source; tags?: EntryTags } = {},
+): ConfidenceResult {
+  if (isTagSource(source)) {
+    return scoreTagConfidence(song, tags ?? { artist: "", album: "", title: "" });
+  }
+
   const reasons: string[] = [];
   let level: ConfidenceLevel = "high";
 
@@ -73,7 +85,8 @@ export function scoreConfidence(song: DownloadedSong, sourceFilename: string): C
   }
 
   if (song.dashCount >= 2) {
-    reasons.push(`source has ${song.dashCount} dash separators — assumed album-artist-title structure`);
+    const assumed = source === "bandcamp" ? "artist-album-title" : "album-artist-title";
+    reasons.push(`source has ${song.dashCount} dash separators — assumed ${assumed} structure`);
     if (level === "high") level = "medium";
   }
 
@@ -88,6 +101,20 @@ export function scoreConfidence(song: DownloadedSong, sourceFilename: string): C
     reasons,
     decision: "apply",
   };
+}
+
+function scoreTagConfidence(song: Song, tags: EntryTags): ConfidenceResult {
+  const reasons: string[] = [];
+  if (!tags.artist.trim()) reasons.push("file has no artist tag");
+  if (!tags.title.trim()) reasons.push("file has no title tag");
+  if (hasMangledExtension(song.finalFilename)) {
+    reasons.push("finalFilename appears mangled (duplicate extension or extra characters past the first extension)");
+  }
+  if (!song.artist.trim()) reasons.push("artist field is empty after parsing");
+  if (!song.title.trim()) reasons.push("title field is empty after parsing");
+
+  if (reasons.length > 0) return { level: "low", reasons, decision: "review" };
+  return { level: "high", reasons: ["named from tags"], decision: "apply" };
 }
 
 const BARE_REMIX_KEYWORDS = ["FLIP", "EDIT", "REMIX", "REFIX", "BOOTLEG", "REBOOT", "DUB", "MIX", "VIP"];
@@ -118,7 +145,7 @@ function hasMangledExtension(finalFilename: string): boolean {
   return Object.values(counts).some((c) => c > 1);
 }
 
-function artistAppearsTwice(song: DownloadedSong): boolean {
+function artistAppearsTwice(song: Song): boolean {
   if (!song.artist || !song.album) return false;
   const a = song.artist.toUpperCase();
   const b = song.album.toUpperCase();

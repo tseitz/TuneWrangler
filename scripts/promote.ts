@@ -19,7 +19,7 @@
  *     test. Re-promoting a manifest cannot do this — its parser_output is frozen at dry-run time.
  */
 import { readManifest, writeManifest } from "../src/core/manifest.ts";
-import { parseFilename } from "../src/core/corpus.ts";
+import { parseFilename, reproducibleFromFilename } from "../src/core/corpus.ts";
 import { ensureDir } from "@std/fs";
 import { basename } from "@std/path";
 
@@ -39,7 +39,8 @@ async function refreshCorpus(): Promise<void> {
     let changed = 0;
     for (const e of manifest.entries) {
       if (e.decision !== "apply" || e.proposed === e.parser_output) continue;
-      if (parseFilename(e.src) !== e.proposed) continue;
+      if (!reproducibleFromFilename(e)) continue;
+      if (parseFilename(e.src, e.source) !== e.proposed) continue;
       console.log(`  locked in: ${e.proposed}`);
       e.parser_output = e.proposed;
       changed++;
@@ -67,7 +68,9 @@ const destPath = `${CORPUS_DIR}/${destName}`;
 
 await Deno.copyFile(sourcePath, destPath);
 
-const applied = manifest.entries.filter((e) => e.decision === "apply");
+const allApplied = manifest.entries.filter((e) => e.decision === "apply");
+const applied = allApplied.filter(reproducibleFromFilename);
+const excluded = allApplied.length - applied.length;
 const regressions = applied.filter((e) => e.proposed === e.parser_output);
 const improvements = applied.filter((e) => e.proposed !== e.parser_output);
 const skipped = manifest.entries.filter((e) => e.decision === "skip");
@@ -88,6 +91,9 @@ if (improvements.length > 0) {
     console.log(`        parser: ${e.parser_output}`);
     console.log(`        fixed:  ${e.proposed}`);
   }
+}
+if (excluded > 0) {
+  console.log(`  Excluded from corpus: ${excluded} (named from tags, not reproducible from filename)`);
 }
 console.log(`  Skipped (duplicate): ${skipped.length}`);
 if (review.length > 0) {

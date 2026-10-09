@@ -4,11 +4,9 @@ export interface PathConfig {
   readonly youtube: string;
   readonly downloaded: string;
   readonly itunes: string;
-  readonly bandcamp: string;
   readonly djMusic: string;
   readonly djPlaylists: string;
   readonly djPlaylistImport: string;
-  readonly rename: string;
   readonly backup: string;
   readonly transfer: string;
 }
@@ -40,14 +38,12 @@ import { ConfigurationError, TryLaterError } from "../core/utils/errors.ts";
 export const PATH_ENV_VARS: Readonly<Record<keyof PathConfig, string>> = {
   music: "TUNEWRANGLER_MUSIC_PATH",
   downloads: "TUNEWRANGLER_DOWNLOADS_PATH",
-  bandcamp: "TUNEWRANGLER_BANDCAMP_PATH",
   youtube: "TUNEWRANGLER_YOUTUBE_PATH",
   downloaded: "TUNEWRANGLER_DOWNLOADED_PATH",
   itunes: "TUNEWRANGLER_ITUNES_PATH",
   djMusic: "TUNEWRANGLER_DJMUSIC_PATH",
   djPlaylists: "TUNEWRANGLER_DJPLAYLISTS_PATH",
   djPlaylistImport: "TUNEWRANGLER_DJPLAYLISTIMPORT_PATH",
-  rename: "TUNEWRANGLER_RENAME_PATH",
   backup: "TUNEWRANGLER_BACKUP_PATH",
   transfer: "TUNEWRANGLER_TRANSFER_PATH",
 };

@@ -14,8 +14,8 @@
  * Grow the corpus by running `deno task promote <manifest>` after each apply.
  */
 import { assertEquals } from "jsr:@std/assert@^1";
-import { parseFilename } from "./corpus.ts";
-import { ManifestEntry, readManifest } from "./manifest.ts";
+import { parseFilename, reproducibleFromFilename } from "./corpus.ts";
+import { Manifest, ManifestEntry, readManifest } from "./manifest.ts";
 
 const CORPUS_DIR = "./tests/corpus";
 
@@ -25,17 +25,23 @@ interface CorpusStats {
   corpusFiles: number;
 }
 
-async function loadCorpusEntries(): Promise<{ entries: ManifestEntry[]; stats: CorpusStats }> {
+function parsedName(e: ManifestEntry): string {
+  return parseFilename(e.src, e.source);
+}
+
+async function loadCorpusEntries(
+  dir: string,
+): Promise<{ entries: ManifestEntry[]; stats: CorpusStats }> {
   const entries: ManifestEntry[] = [];
   let corpusFiles = 0;
 
   try {
-    for await (const file of Deno.readDir(CORPUS_DIR)) {
+    for await (const file of Deno.readDir(dir)) {
       if (!file.isFile || !file.name.endsWith(".json")) continue;
       corpusFiles++;
-      const manifest = await readManifest(`${CORPUS_DIR}/${file.name}`);
+      const manifest = await readManifest(`${dir}/${file.name}`);
       for (const entry of manifest.entries) {
-        if (entry.decision === "apply") entries.push(entry);
+        if (entry.decision === "apply" && reproducibleFromFilename(entry)) entries.push(entry);
       }
     }
   } catch (e) {
@@ -50,7 +56,7 @@ async function loadCorpusEntries(): Promise<{ entries: ManifestEntry[]; stats: C
 }
 
 // Load corpus once synchronously at module level so Deno can discover all tests
-const { entries, stats } = await loadCorpusEntries();
+const { entries, stats } = await loadCorpusEntries(CORPUS_DIR);
 
 if (stats.corpusFiles === 0) {
   Deno.test("corpus: no corpus files yet — run `deno task promote` after your first --apply", () => {
@@ -59,7 +65,7 @@ if (stats.corpusFiles === 0) {
 } else {
   // Summary test — always runs, shows corpus health at a glance
   // Targets are counted from the stored parser_output, so a parser fix only shows up here.
-  const nowMatching = entries.filter((e) => e.proposed !== e.parser_output && parseFilename(e.src) === e.proposed);
+  const nowMatching = entries.filter((e) => e.proposed !== e.parser_output && parsedName(e) === e.proposed);
   const fixedNote = nowMatching.length > 0
     ? ` (${nowMatching.length} now match — run \`deno task promote --refresh\` to lock them in)`
     : "";
@@ -79,7 +85,7 @@ if (stats.corpusFiles === 0) {
   for (const entry of entries.filter((e) => e.proposed === e.parser_output)) {
     const name = `corpus regression: ${entry.src}`;
     Deno.test(name, () => {
-      const actual = parseFilename(entry.src);
+      const actual = parsedName(entry);
       assertEquals(
         actual,
         entry.proposed,
@@ -88,3 +94,30 @@ if (stats.corpusFiles === 0) {
     });
   }
 }
+
+Deno.test("corpus: bandcamp entries use the bandcamp parser, itunes entries are skipped", async () => {
+  const dir = await Deno.makeTempDir();
+  try {
+    const base = { confidence: "high" as const, reasons: [] as string[], decision: "apply" as const };
+    const bandcamp = "Artist - Album - 01 Song.mp3";
+    const manifest: Manifest = {
+      version: 1,
+      generated_at: "",
+      source_dir: "",
+      move_dir: "",
+      cache_dir: "",
+      entries: [
+        { ...base, src: bandcamp, source: "bandcamp", proposed: "Artist - Album - Song.mp3", parser_output: "Artist - Album - Song.mp3" },
+        { ...base, src: "Artist/Album/01 Song.mp3", source: "itunes", proposed: "x.mp3", parser_output: "x.mp3" },
+        { ...base, src: "Beat - Port.mp3", source: "beatport", proposed: "x.mp3", parser_output: "x.mp3" },
+      ],
+    };
+    await Deno.writeTextFile(`${dir}/m.json`, JSON.stringify(manifest));
+    const loaded = await loadCorpusEntries(dir);
+    assertEquals(loaded.entries.map((e) => e.source), ["bandcamp"]);
+    assertEquals(parsedName(loaded.entries[0]), loaded.entries[0].proposed);
+    assertEquals(parseFilename(bandcamp), "Album - Artist - 01 Song.mp3");
+  } finally {
+    await Deno.remove(dir, { recursive: true });
+  }
+});

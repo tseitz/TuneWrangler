@@ -1,5 +1,7 @@
-import { assertEquals } from "jsr:@std/assert@^1";
+import { assertEquals, assertNotEquals, assertThrows } from "jsr:@std/assert@^1";
 import { parseFilename } from "./corpus.ts";
+import { DownloadedSong } from "./models/Song.ts";
+import { parseBandcampSong } from "./parser.ts";
 
 const cases: [string, string, string][] = [
   // Bracket remixer with extra words, posted by the remixer: the uploader's spelling wins.
@@ -34,3 +36,26 @@ const cases: [string, string, string][] = [
 for (const [rule, src, want] of cases) {
   Deno.test(`parser ${rule}: ${src}`, () => assertEquals(parseFilename(src), want));
 }
+
+const bandcampCases: [string, string][] = [
+  ["D-FORM - BURN EP - 01 Statik.aiff", "D-FORM - BURN EP - Statik.aiff"],
+  ["Cardvell - Bang Laser.aiff", "Cardvell - Bang Laser.aiff"],
+  [
+    "Bukez Finezt - BUKEZ BOOTLEGZ #1 - 02 Cam'Ron - Oh Boy (Bukez Finezt Jersey Club Bootleg Remix).aiff",
+    "Bukez Finezt Jersey Club Bootleg - BUKEZ BOOTLEGZ #1 - Oh Boy.aiff",
+  ],
+  ["Alex Unger - Jet Fuel (feat. parkbreezy).aiff", "Alex Unger x parkbreezy - Jet Fuel.aiff"],
+];
+
+for (const [src, want] of bandcampCases) {
+  Deno.test(`parser bandcamp: ${src}`, () => assertEquals(parseFilename(src, "bandcamp"), want));
+}
+
+Deno.test("parser bandcamp order differs from downloaded for a 3-part name", () => {
+  const src = "D-FORM - BURN EP - 01 Statik.aiff";
+  assertNotEquals(parseFilename(src, "bandcamp"), parseFilename(src));
+});
+
+Deno.test("parser bandcamp rejects a name with no dash", () => {
+  assertThrows(() => parseBandcampSong(Object.assign(new DownloadedSong("Cardvell - X.aiff", "/tmp/"), { dashCount: 0 })));
+});

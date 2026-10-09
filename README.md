@@ -37,7 +37,8 @@ deno task rM --apply ./logs/tunewrangler/manifests/rename-manifest-<timestamp>.j
 The `rename-music` flow uses a **manifest workflow** so you can review the
 parser's guesses before any files are moved:
 
-1. **Dry-run** — `deno task rM` parses every file in `TUNEWRANGLER_DOWNLOADED_PATH`,
+1. **Dry-run** — `deno task rM` parses every file in the Downloaded root, its
+   `soundcloud/`, `bandcamp/` and `beatport/` subfolders, and `TUNEWRANGLER_ITUNES_PATH`,
    scores confidence (high/medium/low), and writes a JSON manifest to
    `logs/tunewrangler/manifests/`. No files are touched.
 2. **Review** — open the manifest. High and medium confidence entries are
@@ -63,7 +64,6 @@ deno task promote <manifest>       # add manifest to regression test corpus
 deno task test                     # run all tests (unit + corpus)
 deno task validate                 # validate config paths
 
-deno task rBc / rI / rBp           # rename Bandcamp / iTunes / Beatport
 deno task cF                       # convert FLACs
 deno task ytRb                     # add M3U to YouTube playlist
 deno task playlistImport           # import playlists
@@ -78,12 +78,10 @@ them.
 
 | Variable | Purpose |
 |---|---|
-| `TUNEWRANGLER_DOWNLOADED_PATH` | Source folder for `rename-music` |
+| `TUNEWRANGLER_DOWNLOADED_PATH` | Downloaded root for `rename-music`, incl. its source subfolders |
 | `TUNEWRANGLER_DJMUSIC_PATH` | DJ collection used for duplicate detection |
-| `TUNEWRANGLER_RENAME_PATH` | Destination for renamed files |
 | `TUNEWRANGLER_BACKUP_PATH` | Source-file backup destination |
-| `TUNEWRANGLER_BANDCAMP_PATH` | Source for `rename-bandcamp` |
-| `TUNEWRANGLER_ITUNES_PATH` | Source for `rename-itunes` |
+| `TUNEWRANGLER_ITUNES_PATH` | iTunes inbox, read recursively by `rename-music` |
 | `TUNEWRANGLER_YOUTUBE_PATH` | YouTube downloads |
 | `TUNEWRANGLER_DJPLAYLISTS_PATH` | DJ playlist backups |
 | `TUNEWRANGLER_DJPLAYLISTIMPORT_PATH` | Playlist import staging |
@@ -116,7 +114,7 @@ src/                          Main tool (Deno/TypeScript)
 │   ├── manifest.ts           Manifest types + read/write
 │   ├── models/               Song, Semaphore, ArtistAnalysis
 │   └── utils/                Logger, errors, retry, unicode, etc.
-├── processors/               Per-source rename processors + FLAC conversion
+├── processors/               Manifest-driven rename + FLAC conversion, playlist tools
 └── ...
 
 soundcloud_dl/                Python subproject
