@@ -205,6 +205,31 @@ async function pathExists(path: string): Promise<boolean> {
   }
 }
 
+/**
+ * The exFAT drive lists names decomposed (NFD) but unlinks only under the form the file was
+ * created with, so a name read from a listing can stat fine and still fail to delete.
+ */
+export async function removeAnyForm(
+  path: string,
+  remove: (path: string) => Promise<void> = (p) => Deno.remove(p),
+): Promise<void> {
+  try {
+    await remove(path);
+  } catch (error) {
+    if (!(error instanceof Deno.errors.NotFound)) throw error;
+    for (const form of ["NFC", "NFD"] as const) {
+      const other = path.normalize(form);
+      if (other === path) continue;
+      try {
+        return await remove(other);
+      } catch (retry) {
+        if (!(retry instanceof Deno.errors.NotFound)) throw retry;
+      }
+    }
+    throw error;
+  }
+}
+
 async function removeIfPresent(path: string): Promise<void> {
   try {
     await Deno.remove(path);
@@ -266,7 +291,7 @@ export async function renameAndMove(
         throw error;
       }
 
-      if (clear) await Deno.remove(song.fullFilename);
+      if (clear) await removeAnyForm(song.fullFilename);
 
       if (tempImageFile) await Deno.remove(tempImageFile);
     } finally {

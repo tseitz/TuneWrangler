@@ -1,6 +1,6 @@
 import { assertEquals, assertRejects } from "jsr:@std/assert@^1";
 import { join } from "@std/path";
-import { isProcessable, MusicCache, renameAndMove } from "./common.ts";
+import { isProcessable, MusicCache, removeAnyForm, renameAndMove } from "./common.ts";
 import { DownloadedSong, Song } from "../models/Song.ts";
 
 async function tone(path: string): Promise<void> {
@@ -93,4 +93,17 @@ Deno.test("renameAndMove refuses a final name with a path in it", async () => {
   const song = new Song("x.wav", dir);
   song.finalFilename = "AC/DC - T.wav";
   await assertRejects(() => renameAndMove(dir, song), Error, "not a plain file name");
+});
+
+Deno.test("a source the listing names decomposed is still deleted when it was created composed", async () => {
+  const created = "ADÉLA.wav".normalize("NFC");
+  const removed: string[] = [];
+  const remove = (path: string) => {
+    if (path !== created) return Promise.reject(new Deno.errors.NotFound("ENOENT"));
+    removed.push(path);
+    return Promise.resolve();
+  };
+  await removeAnyForm(created.normalize("NFD"), remove);
+  assertEquals(removed, [created]);
+  await assertRejects(() => removeAnyForm("missing.wav", remove), Deno.errors.NotFound);
 });
