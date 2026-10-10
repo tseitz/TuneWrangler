@@ -92,3 +92,11 @@ def _isolate_laylo_state(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "get_laylo_drops_file", lambda: tmp_path / "laylo_drops.json")
     monkeypatch.setattr(config, "get_gmail_token_file", lambda: tmp_path / "gmail_token.json")
     monkeypatch.setattr(config, "get_laylo_tmp_dir", lambda: tmp_path / "laylo_tmp")
+
+
+@pytest.fixture(autouse=True)
+def _isolate_last_run(tmp_path, monkeypatch):
+    """Keep test runs from overwriting the record the nightly report reads."""
+    from soundcloud_dl import run_record
+
+    monkeypatch.setattr(run_record, "get_last_run_file", lambda: tmp_path / "last_run.json")

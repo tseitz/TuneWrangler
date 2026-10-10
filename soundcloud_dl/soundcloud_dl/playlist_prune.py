@@ -25,6 +25,7 @@ import httpx
 from soundcloud_dl.config import (
     TUNEWRANGLER_DJMUSIC_PATH,
     TUNEWRANGLER_SC_PLAYLIST_URL,
+    get_log_dir,
     get_manifest_dirs,
     get_owner_token_file,
     get_playlist_backup_dir,
@@ -36,10 +37,13 @@ logger = logging.getLogger("soundcloud_dl.playlist_prune")
 #: Written by the Deno rename flow (renameMusic.ts) on an entry skipped as already collected.
 DUPLICATE_REASON = "duplicate of an existing track in the DJ collection"
 
-# Above either, a run needs --allow-bulk. A nightly job never passes it, so a bug in the
-# proof chain costs a handful of tracks rather than the playlist.
+# Above this many new removals a run needs --allow-bulk. A nightly job never passes it, so a
+# bug in the proof chain costs a handful of tracks rather than the playlist. A track pruned
+# before and written back (a stale SoundCloud client does this) doesn't count toward it.
 _BULK_COUNT = 20
-_BULK_SHARE = 0.25
+# This many returned tracks in one run means a client rewrote the playlist; it may have dropped
+# new additions too, which only a person can see.
+_MASS_RETURN = 5
 
 _PAGE_SIZE = 50
 # Far past any real playlist (SoundCloud caps them at 500 tracks); stops a cursor loop.
@@ -71,6 +75,8 @@ class PrunePlan:
     not_in_collection: list[dict[str, Any]] = field(default_factory=list)
     duplicate_skipped: list[dict[str, Any]] = field(default_factory=list)
     unlinked: list[dict[str, Any]] = field(default_factory=list)
+    #: Removals this playlist had already pruned once.
+    returned: list[dict[str, Any]] = field(default_factory=list)
     #: Everything not removed, in playlist order — exactly what the update sends.
     keep: list[dict[str, Any]] = field(default_factory=list)
 
@@ -141,6 +147,7 @@ def plan_prune(
     linked: dict[str, Proof],
     duplicates: set[str],
     stems: set[str],
+    pruned_before: frozenset[str] = frozenset(),
 ) -> PrunePlan:
     """Sort each track by the proof there is for it. Pure, so the rules are testable."""
     plan = PrunePlan()
@@ -149,6 +156,8 @@ def plan_prune(
         proof = linked.get(url) if url else None
         if proof is not None and _stem(proof.name) in stems:
             plan.remove.append((track, proof))
+            if str(track.get("id")) in pruned_before:
+                plan.returned.append(track)
             continue
         if proof is not None:
             plan.not_in_collection.append(track)
@@ -160,18 +169,62 @@ def plan_prune(
     return plan
 
 
-def check_guards(plan: PrunePlan, total: int, *, allow_bulk: bool) -> None:
-    """Refuse a plan that would empty the playlist, or remove a lot without being told to."""
-    removing = len(plan.remove)
-    if total > 0 and not plan.keep:
-        msg = f"Refusing to remove all {total} tracks — the playlist would be empty"
-        raise PruneError(msg)
-    if not allow_bulk and (removing > _BULK_COUNT or removing > total * _BULK_SHARE):
+def check_guards(plan: PrunePlan, *, allow_bulk: bool) -> None:
+    """Refuse to remove a lot of never-pruned tracks without being told to.
+
+    Emptying the playlist is allowed: on a living playlist it is what a good night looks like
+    (an empty track list PUT was probed 2026-10-09 and sticks).
+    """
+    new = len(plan.remove) - len(plan.returned)
+    if not allow_bulk and new > _BULK_COUNT:
         msg = (
-            f"Refusing to remove {removing} of {total} tracks without --allow-bulk "
-            f"(the limit is {_BULK_COUNT} tracks or {int(_BULK_SHARE * 100)}%)"
+            f"Refusing to remove {new} tracks never pruned before without --allow-bulk "
+            f"(the limit is {_BULK_COUNT})"
         )
         raise PruneError(msg)
+
+
+def get_prune_log_file() -> Path:
+    return get_log_dir() / "prune_log.json"
+
+
+def get_last_prune_file() -> Path:
+    return get_log_dir() / "last_prune.json"
+
+
+def _write_json(path: Path, data: object) -> None:
+    tmp = path.with_name(f"{path.name}.tmp")
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(path)
+
+
+def read_prune_log() -> dict[str, dict[str, Any]]:
+    """playlist urn → track id → what was removed. Loud on a bad file: it guards the cap."""
+    path = get_prune_log_file()
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        msg = f"Could not read the prune log {path}: {exc}"
+        raise PruneError(msg) from exc
+    if not isinstance(data, dict):
+        msg = f"The prune log {path} is not a JSON object"
+        raise PruneError(msg)
+    return data
+
+
+def _log_removals(log: dict[str, dict[str, Any]], urn: str, plan: PrunePlan) -> None:
+    removed_at = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    entries = log.setdefault(urn, {})
+    for track, proof in plan.remove:
+        entries[str(track["id"])] = {
+            "url": track.get("permalink_url"),
+            "title": track.get("title"),
+            "proven_name": proof.name,
+            "removed_at": removed_at,
+        }
+    _write_json(get_prune_log_file(), log)
 
 
 async def _fetch_tracks(client: httpx.AsyncClient, urn: str) -> list[dict[str, Any]]:
@@ -284,6 +337,12 @@ def _report(plan: PrunePlan, total: int) -> None:
         )
     for track in plan.not_in_collection:
         logger.info("KEEP    %s — approved, but not in the Collection yet", track.get("title"))
+    if len(plan.returned) >= _MASS_RETURN:
+        logger.warning(
+            "%d tracks pruned before are back on the playlist. A SoundCloud client with a stale "
+            "copy likely rewrote it — check that tracks added recently are still there.",
+            len(plan.returned),
+        )
     logger.info(
         "%d tracks: %d to remove, %d kept (%d approved but not collected, %d already in the "
         "Collection under another download, %d with no rename record)",
@@ -297,28 +356,60 @@ def _report(plan: PrunePlan, total: int) -> None:
 
 
 async def prune_playlist(*, apply: bool, allow_bulk: bool) -> None:
-    """Dry run unless apply: list what would be removed, and why each one is safe to."""
+    """Dry run unless apply: list what would be removed, and why each one is safe to.
+
+    Writes last_prune.json on every path, errors included, for the nightly report.
+    """
+    record: dict[str, Any] = {
+        "version": 1,
+        "run_started_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "applied": apply,
+        "playlist_urn": None,
+        "removed": 0,
+        "returned": 0,
+        "kept": None,
+        "mass_return": False,
+        "error": None,
+    }
+    try:
+        await _prune(record, apply=apply, allow_bulk=allow_bulk)
+    except BaseException as exc:
+        record["error"] = str(exc) or type(exc).__name__
+        raise
+    finally:
+        _write_json(get_last_prune_file(), record)
+
+
+async def _prune(record: dict[str, Any], *, apply: bool, allow_bulk: bool) -> None:
     stems = collection_stems(TUNEWRANGLER_DJMUSIC_PATH)
     linked, duplicates = linked_names(get_manifest_dirs())
+    prune_log = read_prune_log()
     async with api_client(get_owner_token_file(), "--authorize-owner") as client:
         try:
             playlist, tracks = await fetch_playlist(client)
         except (httpx.HTTPError, ApiError) as exc:
             msg = f"Could not read the playlist: {exc}"
             raise PruneError(msg) from exc
-        plan = plan_prune(tracks, linked, duplicates, stems)
+        urn = playlist["urn"]
+        plan = plan_prune(tracks, linked, duplicates, stems, frozenset(prune_log.get(urn, {})))
+        record.update(
+            playlist_urn=urn,
+            returned=len(plan.returned),
+            kept=len(plan.keep),
+            mass_return=len(plan.returned) >= _MASS_RETURN,
+        )
         _report(plan, len(tracks))
         if not plan.remove:
             logger.info("Nothing to remove.")
             return
         if not apply:
             try:
-                check_guards(plan, len(tracks), allow_bulk=allow_bulk)
+                check_guards(plan, allow_bulk=allow_bulk)
             except PruneError as exc:
                 logger.warning("--apply would stop here: %s", exc)
             logger.info("Dry run — add --apply to remove them.")
             return
-        check_guards(plan, len(tracks), allow_bulk=allow_bulk)
+        check_guards(plan, allow_bulk=allow_bulk)
         backup = write_backup(playlist, tracks)
         logger.info("Backed up the full track list to %s", backup)
         try:
@@ -328,4 +419,6 @@ async def prune_playlist(*, apply: bool, allow_bulk: bool) -> None:
             # A timed-out update may still have landed, so this can't claim nothing changed.
             msg = f"{exc} — the playlist may have changed; the full list before is in {backup}"
             raise UpdateUncertainError(msg) from exc
+        record["removed"] = len(plan.remove)
+        _log_removals(prune_log, urn, plan)
         logger.info("Removed %d tracks; %d remain.", len(plan.remove), len(plan.keep))

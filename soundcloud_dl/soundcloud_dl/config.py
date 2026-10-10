@@ -160,6 +160,11 @@ def get_processed_file() -> Path:
     return get_log_dir() / "processed.json"
 
 
+def get_last_run_file() -> Path:
+    """Path to the record of how the last batch run ended."""
+    return get_log_dir() / "last_run.json"
+
+
 def get_pending_follows_file() -> Path:
     """Path to JSON file storing follows a run took but deliberately did not give back."""
     return get_log_dir() / "pending_follows.json"

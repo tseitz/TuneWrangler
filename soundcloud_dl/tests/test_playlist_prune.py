@@ -131,18 +131,28 @@ def _plan(remove: int, keep: int) -> prune.PrunePlan:
     )
 
 
-def test_emptying_the_playlist_is_refused_even_with_allow_bulk() -> None:
-    with pytest.raises(PruneError, match="empty"):
-        prune.check_guards(_plan(3, 0), 3, allow_bulk=True)
+def test_emptying_the_playlist_is_allowed() -> None:
+    prune.check_guards(_plan(3, 0), allow_bulk=False)
 
 
-def test_a_large_removal_needs_allow_bulk() -> None:
+def test_more_than_20_new_removals_need_allow_bulk() -> None:
     with pytest.raises(PruneError, match="--allow-bulk"):
-        prune.check_guards(_plan(21, 200), 221, allow_bulk=False)
-    with pytest.raises(PruneError, match="--allow-bulk"):
-        prune.check_guards(_plan(5, 10), 15, allow_bulk=False)
-    prune.check_guards(_plan(21, 200), 221, allow_bulk=True)
-    prune.check_guards(_plan(2, 10), 12, allow_bulk=False)
+        prune.check_guards(_plan(21, 200), allow_bulk=False)
+    prune.check_guards(_plan(21, 200), allow_bulk=True)
+    prune.check_guards(_plan(20, 0), allow_bulk=False)
+
+
+def test_returned_tracks_do_not_count_toward_the_cap() -> None:
+    plan = _plan(30, 0)
+    plan.returned = [t for t, _ in plan.remove[:10]]
+    prune.check_guards(plan, allow_bulk=False)
+
+
+def test_a_proven_track_pruned_before_is_marked_returned() -> None:
+    tracks = [_track(1), _track(2)]
+    linked = {prune.normalize_url(t["permalink_url"]): _proof("A - One.wav") for t in tracks}
+    plan = prune.plan_prune(tracks, linked, set(), {"A - One"}, frozenset({"2"}))
+    assert [t["id"] for t in plan.returned] == [2]
 
 
 # ── prune_playlist against a fake API ──────────────────────────────────────────
@@ -223,7 +233,67 @@ def world(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[FakeSoundClo
     monkeypatch.setattr(prune, "get_manifest_dirs", lambda: [manifests])
     monkeypatch.setattr(prune, "get_playlist_backup_dir", lambda: backups)
     monkeypatch.setattr(prune, "_VERIFY_RETRY_S", 0)
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    monkeypatch.setattr(prune, "get_log_dir", lambda: logs)
     return fake, backups
+
+
+def _prune_log(world: tuple[FakeSoundCloud, Path]) -> dict[str, Any]:
+    path = world[1].parent / "logs" / "prune_log.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+
+def _last_prune(world: tuple[FakeSoundCloud, Path]) -> dict[str, Any]:
+    return json.loads((world[1].parent / "logs" / "last_prune.json").read_text(encoding="utf-8"))
+
+
+async def test_a_successful_prune_logs_what_it_removed(world: tuple[FakeSoundCloud, Path]) -> None:
+    await prune.prune_playlist(apply=True, allow_bulk=False)
+    assert sorted(_prune_log(world)[URN]) == ["1", "2"]
+    assert _prune_log(world)[URN]["1"]["proven_name"] == "A - One.wav"
+    last = _last_prune(world)
+    assert (last["removed"], last["kept"], last["error"]) == (2, 1, None)
+
+
+async def test_the_playlist_can_be_emptied(world: tuple[FakeSoundCloud, Path]) -> None:
+    fake, _ = world
+    fake.tracks = fake.tracks[:2]
+    fake.track_count = 2
+    await prune.prune_playlist(apply=True, allow_bulk=False)
+    assert fake.puts == [[]]
+
+
+async def test_an_uncertain_update_logs_no_removals_but_records_the_error(
+    world: tuple[FakeSoundCloud, Path],
+) -> None:
+    fake, _ = world
+    fake.ignore_put = True
+    with pytest.raises(prune.UpdateUncertainError):
+        await prune.prune_playlist(apply=True, allow_bulk=False)
+    assert _prune_log(world) == {}
+    assert "may have changed" in _last_prune(world)["error"]
+
+
+async def test_tracks_written_back_after_a_prune_are_counted_and_flagged(
+    world: tuple[FakeSoundCloud, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake, _ = world
+    monkeypatch.setattr(prune, "_MASS_RETURN", 2)
+    await prune.prune_playlist(apply=True, allow_bulk=False)
+    fake.tracks = [_track(1), _track(2), _track(3)]
+    fake.track_count = 3
+    await prune.prune_playlist(apply=True, allow_bulk=False)
+    assert _last_prune(world)["returned"] == 2
+    assert _last_prune(world)["mass_return"] is True
+
+
+async def test_a_corrupt_prune_log_stops_before_any_change(world: tuple[FakeSoundCloud, Path]) -> None:
+    fake, _ = world
+    fake.put_allowed = False
+    (world[1].parent / "logs" / "prune_log.json").write_text("{", encoding="utf-8")
+    with pytest.raises(PruneError, match="prune log"):
+        await prune.prune_playlist(apply=True, allow_bulk=False)
 
 
 async def test_a_dry_run_never_changes_the_playlist(world: tuple[FakeSoundCloud, Path]) -> None:
@@ -269,9 +339,12 @@ async def test_a_failed_backup_stops_before_the_update(
         await prune.prune_playlist(apply=True, allow_bulk=True)
 
 
-async def test_the_bulk_guard_stops_apply_without_allow_bulk(world: tuple[FakeSoundCloud, Path]) -> None:
+async def test_the_bulk_guard_stops_apply_without_allow_bulk(
+    world: tuple[FakeSoundCloud, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
     fake, _ = world
     fake.put_allowed = False
+    monkeypatch.setattr(prune, "_BULK_COUNT", 1)
     with pytest.raises(PruneError, match="--allow-bulk"):
         await prune.prune_playlist(apply=True, allow_bulk=False)
 

@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 from playwright.async_api import Error as PlaywrightError
 
-from soundcloud_dl import pending_follows
+from soundcloud_dl import pending_follows, run_record
 from soundcloud_dl.comment_guard import keep_one_comment
 from soundcloud_dl.config import (
     ACTION_DELAY_MAX_MS,
@@ -66,6 +66,7 @@ from soundcloud_dl.resume import (
     TrackState,
     is_given_up_on,
     load_attempts,
+    load_reasons,
     load_states,
     record_state,
     should_skip,
@@ -763,17 +764,12 @@ async def _run_phase2(
     *,
     pause: bool = False,
     sc_actions: bool = False,
+    outcome_record: run_record.RunRecord | None = None,
 ) -> None:
     """Run gate handler against each track via CDP-attached Chrome; track outcomes."""
+    rec = outcome_record or run_record.RunRecord()
+    rec.untried = len(to_process)
     validate_phase2_config()
-    counts = {
-        "done": 0,
-        "unsupported": 0,
-        "captcha_pending": 0,
-        "login_required": 0,
-        "manual_review": 0,
-        "failed": 0,
-    }
     needs_attention: list[tuple[TrackItem, TrackOutcome]] = []
 
     # --pause forces a window regardless of config, and the login guard below has to ask
@@ -819,7 +815,7 @@ async def _run_phase2(
                 break
             else:
                 timed_out_in_a_row = 0
-            counts[outcome.state] += 1
+            _tally(rec, track, outcome, remaining=len(to_process) - idx)
             if outcome.state != "done":
                 needs_attention.append((track, outcome))
             if RESUME_ENABLED:
@@ -838,8 +834,35 @@ async def _run_phase2(
             if idx < len(to_process) and DELAY_SECONDS > 0:
                 await asyncio.sleep(DELAY_SECONDS)
 
-    _print_summary(counts)
+    _print_summary(rec.counts)
     _print_worklist(needs_attention)
+
+
+_ATTENTION_STATES = frozenset({"captcha_pending", "manual_review", "failed", "login_required"})
+
+
+def _item(track: TrackItem, state: str, reason: str) -> run_record.Item:
+    return {"title": track.title or "", "url": track.url, "state": state, "reason": reason}
+
+
+def _tally(
+    rec: run_record.RunRecord, track: TrackItem, outcome: TrackOutcome, *, remaining: int
+) -> None:
+    rec.counts[outcome.state] += 1
+    rec.untried = remaining
+    if outcome.state in _ATTENTION_STATES:
+        rec.needs_attention.append(_item(track, outcome.state, outcome.reason))
+
+
+def _gave_up_on(tracks: list[TrackItem], playlist_url: str) -> list[run_record.Item]:
+    states = load_states(playlist_url)
+    attempts = load_attempts(playlist_url)
+    reasons = load_reasons(playlist_url)
+    return [
+        _item(t, states[t.url], reasons.get(t.url, ""))
+        for t in tracks
+        if is_given_up_on(t.url, states, attempts)
+    ]
 
 
 def _print_worklist(items: list[tuple[TrackItem, TrackOutcome]]) -> None:
@@ -902,6 +925,34 @@ async def main_async(
     retry_unsupported: bool = False,
     sc_actions: bool = False,
 ) -> None:
+    """Run one batch and leave last_run.json behind however it ends."""
+    run_record.clear()
+    rec = run_record.RunRecord()
+    try:
+        await _run_batch(
+            rec,
+            limit=limit,
+            pause=pause,
+            retry_unsupported=retry_unsupported,
+            sc_actions=sc_actions,
+        )
+        rec.finished = True
+    except BaseException as exc:
+        rec.error = _why(exc)
+        raise
+    finally:
+        rec.stopped_early = rec.untried > 0
+        run_record.write(rec)
+
+
+async def _run_batch(
+    rec: run_record.RunRecord,
+    *,
+    limit: int | None,
+    pause: bool,
+    retry_unsupported: bool,
+    sc_actions: bool,
+) -> None:
     """Load config, run Phase 1 (API track list), then Phase 2 (stealth Playwright per track)."""
     validate_phase1_config()
     if not TUNEWRANGLER_SC_PLAYLIST_URL:
@@ -917,6 +968,9 @@ async def main_async(
         logger.info("No tracks to process; skipping Phase 2.")
         return
 
+    if RESUME_ENABLED and not retry_unsupported:
+        rec.gave_up = _gave_up_on(tracks, playlist_url)
+
     to_process = _get_tracks_to_process(tracks, playlist_url, retry_unsupported=retry_unsupported)
     if not to_process:
         logger.info("No tracks left to process (all already done or none found).")
@@ -926,7 +980,9 @@ async def main_async(
         to_process = to_process[:limit]
         logger.info("--limit %d: processing %d track(s)", limit, len(to_process))
 
-    await _run_phase2(playlist_url, to_process, pause=pause, sc_actions=sc_actions)
+    await _run_phase2(
+        playlist_url, to_process, pause=pause, sc_actions=sc_actions, outcome_record=rec
+    )
 
 
 async def _run_login_bootstrap() -> None:
