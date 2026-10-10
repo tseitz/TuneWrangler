@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Nightly download → rename → prune → auto-tag for TuneWrangler (scripts/nightly.ts).
+
+  Install:
+    mkdir -p logs/nightly
+    cp scripts/com.tseitz.tunewrangler.nightly.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.tseitz.tunewrangler.nightly.plist
+
+  Run one poll now:
+    launchctl kickstart -p gui/$(id -u)/com.tseitz.tunewrangler.nightly
+
+  Remove:
+    launchctl bootout gui/$(id -u)/com.tseitz.tunewrangler.nightly
+
+  This polls; the script's gate decides (pause file, once a day, lid/battery, drive mounted).
+  A StartCalendarInterval fires during DarkWake with the lid shut and freezes the run for hours
+  (measured in tegan-trades). A LaunchAgent, not a daemon: claude -p and Chrome's cookies need
+  the login keychain.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.tseitz.tunewrangler.nightly</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/tseitz/.local/share/mise/shims/deno</string>
+    <string>task</string>
+    <string>nightly</string>
+  </array>
+
+  <!-- The mise shims pick the tool versions from .mise.toml here. -->
+  <key>WorkingDirectory</key>
+  <string>/Users/tseitz/code/projects/TuneWrangler</string>
+
+  <key>StartInterval</key>
+  <integer>1800</integer>
+  <!-- Plugging in the SSD starts a poll at once. Any mount fires it; the gate makes that cheap. -->
+  <key>StartOnMount</key>
+  <true/>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>KeepAlive</key>
+  <false/>
+
+  <!-- The script writes its own logs; these catch a failure to start at all. -->
+  <key>StandardOutPath</key>
+  <string>/Users/tseitz/code/projects/TuneWrangler/logs/nightly/launchd.out</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/tseitz/code/projects/TuneWrangler/logs/nightly/launchd.err</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/tseitz/.local/share/mise/shims:/Users/tseitz/.local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>HOME</key>
+    <string>/Users/tseitz</string>
+  </dict>
+</dict>
+</plist>

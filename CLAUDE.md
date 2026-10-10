@@ -21,6 +21,7 @@ deno task rM --auto                # dry run + claude second opinion + apply (un
 deno task rM --suggest             # dry run + claude second opinion, no apply
 deno task rM --move                # legacy: parse + move all in one shot
 deno task rM --prune [--keep N]    # list backup runs beyond the newest N (5); --yes deletes
+deno task nightly [--force]        # one poll of the nightly job (see "Nightly job")
 deno task retag [--dir D] [--overwrite[-cosmetic]] [--yes]  # tags from `artist - album - title` names; dry run by default
 deno task promote <manifest>       # copy manifest into tests/corpus/ as regression coverage
 deno task promote --refresh        # lock in improvement targets the parser now gets right
@@ -79,6 +80,11 @@ deno task rb:tag embed [--limit N] [--retry-failed]   # Essentia embeddings + Di
 deno task rb:tag evaluate                             # cross-validated per-tag scores
 deno task rb:tag report                               # tracks.csv + crosstab.md
 ```
+
+`rb:tag` exits 75 when Rekordbox is running (nothing written). `rb:tag apply --db-keep N` backs up
+`master.db` alone and keeps the newest N copies instead of the pinned full-library zip;
+`rb:tag suggest --skip-applied` leaves out tracks an earlier apply tagged, so one stripped by
+hand isn't re-tagged.
 
 ## Rename workflow (the important one)
 
@@ -179,6 +185,26 @@ downgrade, a flagged entry only reaches the corpus if you flip it back to `apply
 
 When changing `parser.ts`, run `deno task test` and inspect the corpus output for entries where `proposed !== parser_output` — those are open improvement targets. If your change closes one (parser now matches the user's override), the corpus summary says how many now match; run `deno task promote --refresh` to convert them from "improvement target" to "regression test" so they stay locked in. Re-promoting a manifest does not do this — its `parser_output` is frozen at dry-run time.
 
+## Nightly job
+
+`scripts/nightly.ts`, run by the LaunchAgent `scripts/com.tseitz.tunewrangler.nightly.plist`
+(install steps in its header) every 30 minutes and on every volume mount. Each poll passes a
+gate, in order: `logs/nightly/pause` absent → today's stages not all settled → on battery, lid
+open and ≥30% (`TUNEWRANGLER_NIGHTLY_MIN_BATTERY`) → `TUNEWRANGLER_DOWNLOADED_PATH` readable →
+`logs/nightly/run.lock` free. A skip writes `logs/nightly/gate.txt` and exits 0; an unreadable
+drive that isn't simply unplugged (macOS privacy block) notifies and exits 1.
+
+Stages, with per-day state in `logs/nightly/state.json`: **download** (`deno task py
+--sc-actions`; done only when `last_run.json` says the batch finished) → **rename** (`rM --auto`;
+exit 1 still counts, 75 retries) → **prune** (`--prune-playlist --apply`, never `--allow-bulk`)
+and **tag** (`rb:tag embed`, `suggest --new-tag-precision 0.5 --skip-applied`, `apply --yes
+--db-keep 7`; waits while Rekordbox is open). A failing stage is retried on later polls, up to 3
+attempts a day. Once download, rename and prune have settled, one macOS notification goes out
+and `logs/nightly/<date>.md` gets the report; output from every stage is in
+`logs/nightly/<date>.log` (kept 30 days). Rekordbox import stays manual, so a download is tagged
+on the first run after it's imported. Under launchd the real `deno` binary (in mise's install
+folder) needs Full Disk Access for the external drive; a deno upgrade changes that path.
+
 ## Architecture
 
 ### Deno/TypeScript (`src/`)
@@ -207,7 +233,7 @@ When changing `parser.ts`, run `deno task test` and inspect the corpus output fo
 - **`resume.py`** — Records each URL's terminal state (`done`/`unsupported`/`captcha_pending`/`manual_review`/`failed`) in `logs/soundcloud_dl/processed.json`.
 - **`playlist_cache.py`** — Caches playlist track lists in `logs/soundcloud_dl/playlist_cache.json` to skip API hits on re-runs.
 - **`track_index.py`** — `record_track()` saves what SoundCloud reported (uploader, `metadata_artist`, `label_name`, url) in `logs/soundcloud_dl/track_index.json`, keyed by the filename stem a download is saved under. `deno task rM` reads it.
-- **`playlist_prune.py`** — `deno task py --prune-playlist [--apply] [--allow-bulk]` removes tracks from `TUNEWRANGLER_SC_PLAYLIST_URL` once proven collected: a manifest `apply` entry links the track's URL to its approved name, and that name (any extension) is in `TUNEWRANGLER_DJMUSIC_PATH`. Dry run by default; backs up the full track list to `logs/soundcloud_dl/playlist_backups/` before changing anything; refuses to empty the playlist or remove >20 tracks / 25% without `--allow-bulk`. Runs as the playlist **owner** (`--authorize-owner`, token in `logs/soundcloud_dl/owner_token.json`) — a different account from the bot token everything else uses.
+- **`playlist_prune.py`** — `deno task py --prune-playlist [--apply] [--allow-bulk]` removes tracks from `TUNEWRANGLER_SC_PLAYLIST_URL` once proven collected: a manifest `apply` entry links the track's URL to its approved name, and that name (any extension) is in `TUNEWRANGLER_DJMUSIC_PATH`. Dry run by default; backs up the full track list to `logs/soundcloud_dl/playlist_backups/` before changing anything; refuses more than 20 removals of tracks never pruned before without `--allow-bulk` (emptying the playlist is fine). `logs/soundcloud_dl/prune_log.json` records each removal per playlist, so a track a stale SoundCloud client writes back counts as *returned* (exempt from the cap; 5+ in one run is flagged); `last_prune.json` records each run's result, errors included. Runs as the playlist **owner** (`--authorize-owner`, token in `logs/soundcloud_dl/owner_token.json`) — a different account from the bot token everything else uses.
 - **`comment_guard.py`** — `keep_one_comment()`: after a gate run, deletes extra copies of the bot's own comment on a track (a gate rerun posts its comment box again on every attempt), keeping the lowest comment id. Only deletes a comment whose text matches the *current* `TUNEWRANGLER_SC_COMMENT` — one posted under an older value is left alone. `--dedupe-comments [--apply]` (`dedupe_comments.py`) sweeps every track ever processed the same way; dry run by default.
 - **`gate_handlers/laylo.py`** — Laylo drops (`laylo.com`, a last-resort gate: any other gate on the track wins, and no SoundCloud follow/comment runs for it). RSVPs by email with `TUNEWRANGLER_SC_LAYLO_EMAIL` where the drop offers it, else by phone (`TUNEWRANGLER_SC_PHONE`, a Google Voice number forwarding texts to Gmail); either contact is only ever typed on laylo.com. Laylo's own API answer decides what follows the click: a texted code (entered from Gmail), an accepted RSVP, or nothing (left unrecorded for `manual_review`). The link then arrives by email or text; `gmail_inbox.py` reads it (Trash included) with the read-only token from `--authorize-gmail` (`logs/soundcloud_dl/gmail_token.json`). `laylo_drops.py` records each drop in `logs/soundcloud_dl/laylo_drops.json` once its RSVP is final, so a drop is never RSVP'd twice; it fetches the Dropbox link and keeps the whole folder under `<download dir>/laylo/<artist>-<slug>/` for review, copying in the one file matching the track (or the drop's only audio file). `--laylo-forget <drop url>` clears a record.
 
