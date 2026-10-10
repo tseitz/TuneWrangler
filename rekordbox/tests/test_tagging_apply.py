@@ -74,9 +74,13 @@ def _manifest(entries, vocab=VOCAB):
     return mf.Manifest("2026-10-08T00:00:00", mf.vocabulary_hash(vocab), {}, "note", entries)
 
 
-def _run(db, manifest, tmp_path, *, dry_run=False, selection=None, backup="ok", closed=None):
+def _run(db, manifest, tmp_path, *, dry_run=False, selection=None, backup=..., closed=None):
     path = tmp_path / "tag-manifest-x.json"
     calls = []
+    if backup is ...:
+        backup = tmp_path / "backup.zip"
+        backup.write_text("zip")
+        backup = str(backup)
 
     def assert_closed():
         calls.append("closed")
@@ -168,6 +172,7 @@ def test_rekordbox_opened_during_backup_rolls_back(tmp_path):
     with pytest.raises(RuntimeError, match="running"):
         _run(db, _manifest([_entry("1", ["Dub"])]), tmp_path, closed=closed)
     assert db.commits == 0 and db.rollbacks == 1
+    assert not (tmp_path / "backup.zip").exists()
 
 
 def test_backup_failure_aborts(tmp_path):
@@ -227,6 +232,7 @@ def test_log_exists_before_commit_so_a_failed_commit_leaves_a_pending_log(tmp_pa
     assert len(logs) == 1
     log = json.loads(logs[0].read_text())
     assert log["status"] == "pending" and {r["tag"] for r in log["rows"]} == {"Dub", "Autotagged"}
+    assert (tmp_path / "backup.zip").exists()
 
 
 def test_undo_leaves_reviewed_tracks_unless_forced(tmp_path):
@@ -260,3 +266,18 @@ def test_malformed_undo_log_is_a_clear_error(tmp_path):
         ap.undo(
             FakeDb({}), bad, create_backup=lambda: "ok", assert_closed=lambda: None, dry_run=True
         )
+
+
+def test_previously_applied_reads_only_committed_logs(tmp_path):
+    db = FakeDb({"1": _content()})
+    _run(db, _manifest([_entry("1", ["Dub"])]), tmp_path)
+    pending = {"status": "pending", "rows": [{"id": "r9", "content_id": "2", "tag": "Dub"}]}
+    (tmp_path / "tag-manifest-y.applied-20261009-120000.json").write_text(json.dumps(pending))
+
+    assert ap.previously_applied(tmp_path) == {"1"}
+
+
+def test_previously_applied_is_loud_on_a_corrupt_log(tmp_path):
+    (tmp_path / "tag-manifest-x.applied-20261008-120000.json").write_text("{")
+    with pytest.raises(ap.ApplyError, match="not a readable apply log"):
+        ap.previously_applied(tmp_path)

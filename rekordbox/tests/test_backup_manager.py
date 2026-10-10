@@ -13,6 +13,7 @@ from rekordbox_smart_playlists.core.config import Config
 @pytest.fixture(autouse=True)
 def rekordbox_closed(monkeypatch):
     monkeypatch.setattr(bm, "get_rekordbox_pid", lambda: 0)
+    monkeypatch.setattr(bm, "get_rekordbox_agent_pid", lambda: 0)
 
 
 @pytest.fixture
@@ -263,3 +264,38 @@ def test_failed_archive_leaves_no_partial_zip(manager, monkeypatch):
 
     assert manager.create_backup("before_test") is None
     assert not list(manager.backup_base.iterdir())
+
+
+def _snapshots(manager):
+    return sorted(p.name for p in manager.backup_base.iterdir())
+
+
+def test_snapshot_copies_master_db_and_rotation_keeps_the_newest_by_name(manager, monkeypatch):
+    for stamp, mtime in (("20260101_000000", 3_000), ("20260102_000000", 2_000)):
+        old = manager.backup_base / f"nightly_{stamp}.db"
+        old.write_text("old")
+        os.utime(old, (mtime, mtime))
+    other = manager.backup_base / "nightly_notes.db"
+    other.write_text("not a snapshot")
+
+    target = manager.snapshot_db("nightly")
+    assert target.read_text() == "original"
+    assert len(_snapshots(manager)) == 4
+
+    manager.rotate_snapshots("nightly", keep=2)
+    assert _snapshots(manager) == sorted(["nightly_20260102_000000.db", target.name, other.name])
+
+
+def test_snapshot_refused_while_rekordbox_runs(manager, monkeypatch):
+    monkeypatch.setattr(bm, "get_rekordbox_pid", lambda: 4242)
+    with pytest.raises(bm.RekordboxRunningError):
+        manager.snapshot_db("nightly")
+    assert _snapshots(manager) == []
+
+
+def test_snapshot_discarded_when_rekordbox_opens_during_the_copy(manager, monkeypatch):
+    pids = iter([0, 4242])
+    monkeypatch.setattr(bm, "get_rekordbox_pid", lambda: next(pids))
+    with pytest.raises(bm.RekordboxRunningError):
+        manager.snapshot_db("nightly")
+    assert _snapshots(manager) == []

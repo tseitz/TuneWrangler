@@ -7,6 +7,7 @@ validation, and safety features.
 
 import json
 import os
+import re
 import shutil
 import zipfile
 from dataclasses import dataclass
@@ -49,6 +50,10 @@ class BackupValidationError(BackupError):
     pass
 
 
+class RekordboxRunningError(BackupError):
+    pass
+
+
 BACKUP_CREATED_BY = "rekordbox-smart-playlists"
 # Snapshots taken before a tag batch; rotation never deletes them.
 PINNED_BACKUP_NAME = "before_tag_apply"
@@ -70,7 +75,9 @@ def _is_own_backup(path: Path) -> bool:
 def assert_rekordbox_closed() -> None:
     """A copy of master.db taken while Rekordbox has it open can be inconsistent."""
     if get_rekordbox_pid() or get_rekordbox_agent_pid():
-        raise BackupError("Rekordbox is running. Close it before backing up or restoring.")
+        raise RekordboxRunningError(
+            "Rekordbox is running. Close it before backing up or restoring."
+        )
 
 
 def _log_leftover(function, path, exc) -> None:
@@ -186,6 +193,40 @@ class BackupManager:
         finally:
             if partial_path is not None:
                 partial_path.unlink(missing_ok=True)
+
+    def snapshot_db(self, prefix: str) -> Path:
+        """Copies master.db alone. Rotate with rotate_snapshots once the write it guards lands."""
+        assert_rekordbox_closed()
+        source = self.pioneer_library / "rekordbox" / "master.db"
+        if not source.is_file():
+            raise BackupError(f"master.db not found: {source}")
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        target = self.backup_base / f"{prefix}_{stamp}.db"
+        partial = self.backup_base / f".{prefix}_{stamp}.partial.db"
+        try:
+            shutil.copy2(source, partial)
+            # A copy taken while Rekordbox writes can be torn.
+            assert_rekordbox_closed()
+            os.replace(partial, target)
+        finally:
+            partial.unlink(missing_ok=True)
+        logger.info(f"master.db copied to {target}")
+        return target
+
+    def rotate_snapshots(self, prefix: str, keep: int) -> None:
+        """Keeps the newest `keep` snapshots named `prefix`. Sorted by the name's timestamp:
+        Drive sync can touch mtimes."""
+        if keep < 1:
+            raise BackupError("keep must be at least 1")
+        pattern = re.compile(rf"{re.escape(prefix)}_(\d{{8}}_\d{{6}})\.db")
+        snapshots = sorted(
+            (p for p in self.backup_base.iterdir() if pattern.fullmatch(p.name)),
+            key=lambda p: p.name,
+            reverse=True,
+        )
+        for old in snapshots[keep:]:
+            old.unlink()
+            logger.debug(f"Removed old snapshot: {old.name}")
 
     def _create_backup_structure(self, temp_dir: Path, backup_name: str) -> bool:
         """

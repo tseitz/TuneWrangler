@@ -345,6 +345,7 @@ def suggest(
     created_at: datetime,
     progress: Callable[[str], None] = print,
     new_tag_precision: float | None = None,
+    exclude: frozenset[str] = frozenset(),
 ) -> tuple[mf.Manifest, Stats, int]:
     tagged = [t for t in library if in_training_pool(t)]
     if not tagged:
@@ -352,7 +353,7 @@ def suggest(
             "no tagged tracks with an existing file; is the music drive mounted?"
         )
     pool, x_pool, _ = ev.align_pool(tagged, cache)
-    untagged = [t for t in library if not has_lane_tag(t, vocab)]
+    untagged = [t for t in library if not has_lane_tag(t, vocab) and t.content_id not in exclude]
     usable, _ = ev.usable(untagged, cache)
     cands = newest_first(usable, limit)
     cands, idx = ev.usable(cands, cache)

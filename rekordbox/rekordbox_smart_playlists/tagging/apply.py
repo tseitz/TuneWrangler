@@ -14,6 +14,7 @@ from .suggest import EXPERIMENTAL_BASS, HALFTIME, LANE_EXTRAS, SCORED_TAGS
 
 ALLOWED_TAGS = frozenset(SCORED_TAGS) | {EXPERIMENTAL_BASS, HALFTIME}
 BACKUP_NAME = PINNED_BACKUP_NAME
+DB_SNAPSHOT_PREFIX = "tag_apply_master_db"
 
 logger = get_logger(__name__)
 
@@ -108,6 +109,24 @@ def _rollback(db: Any) -> None:
         log_exception(logger, e, "rolling back after a failed tag write")
 
 
+def _discard(backup: str) -> None:
+    """Nothing reached the DB, and a backup Rekordbox was opened during may be torn."""
+    Path(backup).unlink(missing_ok=True)
+
+
+def previously_applied(manifests_dir: Path) -> frozenset[str]:
+    """Tracks a committed apply ever tagged, so one the user stripped by hand stays stripped."""
+    ids: set[str] = set()
+    for log_path in sorted(manifests_dir.glob("*.applied-*.json")):
+        try:
+            log = json.loads(log_path.read_text())
+        except (OSError, ValueError) as e:
+            raise ApplyError(f"not a readable apply log: {log_path} ({e})") from e
+        if log.get("status") == "committed":
+            ids.update(r["content_id"] for r in _read_log(log_path))
+    return frozenset(ids)
+
+
 def apply_manifest(
     db: Any,
     manifest: mf.Manifest,
@@ -129,7 +148,8 @@ def apply_manifest(
         return result
 
     assert_closed()
-    if not create_backup():
+    backup = create_backup()
+    if not backup:
         raise ApplyError("backup failed; nothing was written")
     stamp = now()
     log_path = manifest_path.with_name(f"{manifest_path.stem}.applied-{stamp:%Y%m%d-%H%M%S}.json")
@@ -153,6 +173,11 @@ def apply_manifest(
             json.dump(log, f, indent=2)
         # The backup can take minutes, so Rekordbox may have been opened since.
         assert_closed()
+    except BaseException:
+        _rollback(db)
+        _discard(backup)
+        raise
+    try:
         db.commit()
     except BaseException:
         _rollback(db)
@@ -211,7 +236,8 @@ def undo(
         return [r["id"] for _, r in targets], gone
 
     assert_closed()
-    if not create_backup():
+    backup = create_backup()
+    if not backup:
         raise ApplyError("backup failed; nothing was removed")
     try:
         for row, _ in targets:
@@ -219,6 +245,11 @@ def undo(
         for content_id in sorted({r["content_id"] for _, r in targets}):
             db.mark_track_info_updated(content_id)
         assert_closed()
+    except BaseException:
+        _rollback(db)
+        _discard(backup)
+        raise
+    try:
         db.commit()
     except BaseException:
         _rollback(db)

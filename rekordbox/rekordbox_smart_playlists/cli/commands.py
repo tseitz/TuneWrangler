@@ -9,7 +9,12 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
 
-from ..core.backup_manager import BackupError, BackupManager, assert_rekordbox_closed
+from ..core.backup_manager import (
+    BackupError,
+    BackupManager,
+    RekordboxRunningError,
+    assert_rekordbox_closed,
+)
 from ..core.config import Config, ConfigurationError
 from ..core.database import DatabaseError, RekordboxDatabase
 from ..core.playlist_manager import ExistingPlaylistStrategy, PlaylistManager
@@ -22,6 +27,9 @@ from ..tagging import models as tag_models
 from ..tagging import report as tag_report
 from ..tagging import suggest as tag_suggest
 from ..utils.logging import get_logger, log_error, log_exception, log_success
+
+# Same meaning as rM's: nothing changed, a scheduler should retry later.
+EXIT_TRY_LATER = 75
 
 logger = get_logger(__name__)
 
@@ -679,6 +687,11 @@ class TagCommand(BaseCommand):
             help="Threshold for Experimental Bass (and Halftime, which follows it); "
             "defaults to --min-precision",
         )
+        suggest_parser.add_argument(
+            "--skip-applied",
+            action="store_true",
+            help="Leave out tracks an earlier tag apply already tagged (the nightly job)",
+        )
 
         apply_parser = subparsers.add_parser(
             "apply", help="Add a manifest's proposed tags to Rekordbox (add-only, backs up first)"
@@ -691,6 +704,12 @@ class TagCommand(BaseCommand):
         apply_parser.add_argument("--seed", type=int, default=0, help="Seed for --sample")
         apply_parser.add_argument(
             "--yes", action="store_true", help="Write to Rekordbox (default is a dry run)"
+        )
+        apply_parser.add_argument(
+            "--db-keep",
+            type=_positive_int,
+            help="Back up master.db alone and keep the newest N such copies, instead of the "
+            "pinned full-library zip (the nightly job)",
         )
         undo_parser = subparsers.add_parser(
             "undo", help="Remove exactly the rows a tag apply wrote, from its apply log"
@@ -746,6 +765,9 @@ class TagCommand(BaseCommand):
                 return self._undo(args)
             logger.error(f"Unknown tag action: {args.tag_action}")
             return 1
+        except RekordboxRunningError as e:
+            log_error(logger, str(e))
+            return EXIT_TRY_LATER
         except (
             ConfigurationError,
             tag_models.ModelIntegrityError,
@@ -810,10 +832,14 @@ class TagCommand(BaseCommand):
                 args.manifest,
                 self._vocab(),
                 selection,
-                create_backup=self._tag_backup,
+                create_backup=lambda: self._apply_backup(args.db_keep),
                 assert_closed=assert_rekordbox_closed,
                 dry_run=self._dry(args),
             )
+        # Only after a commit: an aborted apply discards its snapshot, and rotating first would
+        # cost an older good one each time.
+        if result.log_path and args.db_keep is not None:
+            BackupManager(self.config).rotate_snapshots(tag_apply.DB_SNAPSHOT_PREFIX, args.db_keep)
         verb = "Would add" if self._dry(args) else "Added"
         for content_id, tags in result.writes:
             print(f"  {content_id}: {', '.join(tags)}")
@@ -846,6 +872,11 @@ class TagCommand(BaseCommand):
         print(f"{verb} {len(removed)} tag rows; {len(gone)} already gone or changed")
         return 0
 
+    def _apply_backup(self, db_keep: int | None) -> str | None:
+        if db_keep is None:
+            return self._tag_backup()
+        return str(BackupManager(self.config).snapshot_db(tag_apply.DB_SNAPSHOT_PREFIX))
+
     def _tag_backup(self) -> str | None:
         # Exempt from rotation: it's the snapshot to go back to if a batch goes wrong.
         return BackupManager(self.config).create_backup(tag_apply.BACKUP_NAME, cleanup=False)
@@ -866,6 +897,11 @@ class TagCommand(BaseCommand):
             None if args.all else args.limit,
             now,
             new_tag_precision=args.new_tag_precision,
+            exclude=(
+                tag_apply.previously_applied(tagging_dir / "manifests")
+                if args.skip_applied
+                else frozenset()
+            ),
         )
         path = tagging_dir / "manifests" / f"tag-manifest-{now:%Y%m%d-%H%M%S}.json"
         tag_manifest.write_manifest(manifest, path)
