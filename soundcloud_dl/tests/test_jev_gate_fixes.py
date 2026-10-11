@@ -281,12 +281,13 @@ def test_an_empty_choice_is_an_idle_turn_not_an_unknown_key(caplog) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(("confidence", "expected"), [(0.09, ""), (0.14, ""), (0.4, "did")])
-async def test_a_pick_below_the_floor_is_an_idle_turn(confidence, expected) -> None:
+@pytest.mark.parametrize("confidence", [0.06, 0.4])
+async def test_a_low_confidence_pick_is_still_acted_on(confidence) -> None:
+    # backstaged's right answer, its Instagram button, came back at 0.06 with two options.
     handler = _handler()
     handler._client, _ = _client_answering("did", confidence)
     page = types.SimpleNamespace(url="https://x.example/")
-    assert await handler._ask_choice(page, {"did": _el("did")}) == expected
+    assert await handler._ask_choice(page, {"did": _el("did")}) == "did"
 
 
 # --- #5: a cycle of chosen keys ---------------------------------------------------------
@@ -742,19 +743,6 @@ async def test_variant_prefixed_classes_are_not_shown() -> None:
     assert unlock["disabled"] is False
     assert "disabled" not in unlock["cls"]
     assert unlock["cls"].split() == ["inline-flex", "bg-primary", "h-9"]
-
-
-@pytest.mark.requires_browser
-@pytest.mark.asyncio
-@pytest.mark.skipif(
-    not (_DEBUG_HTML / "jev_pilot.html").exists(),
-    reason="saved backstaged end-state page is in the gitignored logs/ dir",
-)
-async def test_the_saved_backstaged_end_state_shows_unlock_for_free_as_enabled() -> None:
-    els = await _snapshot_of((_DEBUG_HTML / "jev_pilot.html").read_text(), offline=True)
-    unlock = next(e for e in els if e["text"] == "Unlock for free")
-    assert unlock["disabled"] is False
-    assert "disabled" not in unlock["cls"].lower()
 
 
 @pytest.mark.asyncio

@@ -128,11 +128,6 @@ _POPUP_DOWNLOAD_POLL_SECONDS = 0.25
 # Viewport heights of drift before the page is judged to have left the gate behind.
 _SCROLL_DRIFT_FACTOR = 1.5
 
-# Picks this unsure are noise, not a decision: valorizd's language switcher was chosen at
-# 0.04-0.10 on every cycle, and droploud's "Login to autocomplete" at 0.09. Real picks in a
-# successful run go as low as 0.4.
-_MIN_CONFIDENCE = 0.15
-
 # A repeated cycle of at least two different controls, seen three times running. One key repeated
 # is no cycle: a carousel's identical Next buttons are legitimately clicked in a row.
 _MAX_CYCLE_LEN = 6
@@ -647,11 +642,6 @@ class JudgmentGateHandler(GateHandler):
         logger.info(
             "[%s] jev choice=%r confidence=%.2f", self.gate_name, answer.choice, answer.confidence
         )
-        if answer.confidence < _MIN_CONFIDENCE:
-            logger.info(
-                "[%s] confidence below %.2f; not acting on it", self.gate_name, _MIN_CONFIDENCE
-            )
-            return ""
         return answer.choice
 
     async def _maybe_pause(self, action: str, target: dict[str, Any]) -> None:
