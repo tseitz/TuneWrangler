@@ -416,6 +416,8 @@ class JudgmentGateHandler(GateHandler):
         self._warned_collisions: set[str] = set()
         self._warned_covered: set[str] = set()
         self._recentred: set[str] = set()
+        # What was visible when the last click was on a section header, else None.
+        self._header_prior: set[str] | None = None
         self._chosen: list[str] = []
         self._drive_folder: str | None = None
         self._busy_spent_ms = 0
@@ -557,8 +559,13 @@ class JudgmentGateHandler(GateHandler):
     ) -> str:
         # Only what a person could actually click. Offering the off-screen carousel slides
         # would let the model pick a button that silently does nothing.
+        # A form is the container, not a control: clicking it lands on whatever sits at its
+        # centre. On backstaged that was a step header, so picking the form toggled a section
+        # and read as progress, turn after turn.
         offered = {
-            k: self._redact(el) for k, el in _on_screen(snapshot).items() if not _is_sign_in(el)
+            k: self._redact(el)
+            for k, el in _on_screen(snapshot).items()
+            if not _is_sign_in(el) and not (el["tag"] == "form" and not el["step"])
         }
         # Collapsing an open section never advances a gate, and on backstaged re-picking the
         # open step's header collapsed the step that held the real button, round and round.
@@ -566,6 +573,16 @@ class JudgmentGateHandler(GateHandler):
         # is still reachable.
         closed = {k: el for k, el in offered.items() if not el.get("expanded", False)}
         offered = closed or offered
+        # A header just opened and showed controls that were not there before: the step it
+        # opened is what to do now. Left on offer, the other closed headers kept scoring
+        # above the revealed Connect button and the run opened them in turn.
+        if self._header_prior is not None:
+            revealed = any(
+                not el.get("disclosure") and k not in self._header_prior
+                for k, el in offered.items()
+            )
+            if revealed:
+                offered = {k: el for k, el in offered.items() if not el.get("disclosure")}
         # A control already clicked to no effect is a dead end — Hypeddit's SoundCloud Next
         # stays on screen after its page is finished, and the model kept re-picking it at
         # 0.94+ while the gate sat still. Withholding them is cheaper and more reliable than
@@ -595,6 +612,11 @@ class JudgmentGateHandler(GateHandler):
                 "[%s] nothing actionable on screen — not asking jev this turn", self.gate_name
             )
             return ""
+        logger.info(
+            "[%s] offered to jev: %s",
+            self.gate_name,
+            "; ".join(f"{k!r}={el['text'][:30]!r}" for k, el in (live or offered).items()),
+        )
         client = self._get_client()
         response = await client.system_one(
             state={
@@ -1670,6 +1692,11 @@ class JudgmentGateHandler(GateHandler):
             # have left the gate at the top of the next turn, by which point the target
             # that caused it is out of scope.
             last_key = target["key"]
+            self._header_prior = (
+                {k for k, el in snapshot.items() if el["visible"]}
+                if target.get("disclosure")
+                else None
+            )
             await self._maybe_pause(kind, target)
 
             try:

@@ -541,3 +541,253 @@ async def test_another_sites_page_is_not_judged_by_droplouds_brand() -> None:
     chrome = await _chrome_at("https://other-gate.com/track/1", _DROPLOUD_PAGE)
     assert chrome["promo_follow"] is False
     assert chrome["promo_link"] is False
+
+
+@pytest.mark.asyncio
+async def test_after_a_header_opens_a_step_the_other_headers_are_withheld() -> None:
+    """Backstaged: opening "Repost on SoundCloud" reveals Connect SoundCloud, and with the
+    other closed header still on offer the run opened the headers in turn instead."""
+    handler = _handler()
+    handler._client, sent = _client_answering("connect", 0.9)
+    page = types.SimpleNamespace(url="https://backstaged.io/d/x")
+    before = {
+        "insta_hdr": _header("insta_hdr", expanded=False),
+        "repost_hdr": _header("repost_hdr", expanded=False),
+        "insta_btn": _el("insta_btn", text="Follow on Instagram"),
+    }
+    after = {
+        "insta_hdr": _header("insta_hdr", expanded=False),
+        "repost_hdr": _header("repost_hdr", expanded=True),
+        "connect": _el("connect", text="Connect SoundCloud"),
+    }
+    handler._header_prior = {k for k, e in before.items() if e["visible"]}
+
+    await handler._ask_choice(page, after)
+
+    assert [e["key"] for e in sent["state"]["elements"]] == ["connect"]
+
+
+@pytest.mark.asyncio
+async def test_headers_stay_on_offer_when_opening_one_revealed_nothing() -> None:
+    handler = _handler()
+    handler._client, sent = _client_answering("repost_hdr", 0.9)
+    page = types.SimpleNamespace(url="https://backstaged.io/d/x")
+    snap = {
+        "insta_hdr": _header("insta_hdr", expanded=False),
+        "repost_hdr": _header("repost_hdr", expanded=False),
+        "btn": _el("btn"),
+    }
+    handler._header_prior = set(snap)
+
+    await handler._ask_choice(page, snap)
+
+    assert [e["key"] for e in sent["state"]["elements"]] == ["insta_hdr", "repost_hdr", "btn"]
+
+
+@pytest.mark.asyncio
+async def test_a_header_click_in_the_run_loop_withholds_headers_on_the_next_turn(
+    monkeypatch,
+) -> None:
+    """The two-turn shape from the backstaged retest, through the real loop."""
+    clicked = False
+    closed = [
+        _header("insta_hdr", expanded=False),
+        _header("repost_hdr", expanded=False),
+        _el("insta_btn", text="Follow on Instagram"),
+    ]
+    opened = [
+        _header("insta_hdr", expanded=False),
+        _header("repost_hdr", expanded=True),
+        _el("connect", text="Connect SoundCloud"),
+    ]
+
+    async def evaluate(_js, *_args):
+        return opened if clicked else closed
+
+    handle = MagicMock()
+
+    async def click(**_kwargs):
+        nonlocal clicked
+        clicked = True
+
+    handle.click = click
+    handle.is_visible = AsyncMock(return_value=True)
+    handle.scroll_into_view_if_needed = AsyncMock()
+    handle.evaluate = AsyncMock()
+    handle.as_element = MagicMock(return_value=handle)
+    page = MagicMock()
+    page.evaluate = evaluate
+    page.evaluate_handle = AsyncMock(return_value=handle)
+    page.wait_for_timeout = AsyncMock()
+    page.url = "https://backstaged.io/d/x"
+
+    offered: list[list[str]] = []
+
+    class _Stop(Exception):  # noqa: N818
+        pass
+
+    async def system_one(**kwargs):
+        offered.append([e["key"] for e in kwargs["state"]["elements"]])
+        if len(offered) > 1:
+            raise _Stop
+        answer = types.SimpleNamespace(choice="repost_hdr", confidence=0.5)
+        return types.SimpleNamespace(choices={"next_action": answer})
+
+    monkeypatch.setattr(
+        "soundcloud_dl.gate_handlers.judgment.read_requirements", AsyncMock(return_value=[])
+    )
+    monkeypatch.setattr(
+        "soundcloud_dl.gate_handlers.judgment.detect_captcha", AsyncMock(return_value=None)
+    )
+    handler = _handler()
+    handler._client = types.SimpleNamespace(system_one=system_one)
+
+    with pytest.raises(_Stop):
+        await handler._run_steps(page, {})
+
+    assert offered[0] == ["insta_hdr", "repost_hdr", "insta_btn"]
+    assert offered[1] == ["connect"]
+
+
+@pytest.mark.asyncio
+async def test_a_non_header_click_clears_the_header_memory_in_the_run_loop(monkeypatch) -> None:
+    """Header, then a plain control, then a turn that shows something new. The memory of the
+    header click must not outlive the click after it, or the third turn loses its headers."""
+    clicks = 0
+    states = [
+        [_header("hdr_a", expanded=False), _header("hdr_b", expanded=False), _el("plain")],
+        # Opening hdr_b reveals nothing new, so the closed header stays on offer.
+        [_header("hdr_a", expanded=False), _header("hdr_b", expanded=True), _el("plain")],
+        [
+            _header("hdr_a", expanded=False),
+            _header("hdr_b", expanded=False),
+            _el("plain"),
+            _el("new_control"),
+        ],
+    ]
+
+    async def evaluate(_js, *_args):
+        return states[min(clicks, len(states) - 1)]
+
+    handle = MagicMock()
+
+    async def click(**_kwargs):
+        nonlocal clicks
+        clicks += 1
+
+    handle.click = click
+    handle.is_visible = AsyncMock(return_value=True)
+    handle.scroll_into_view_if_needed = AsyncMock()
+    handle.evaluate = AsyncMock()
+    handle.as_element = MagicMock(return_value=handle)
+    page = MagicMock()
+    page.evaluate = evaluate
+    page.evaluate_handle = AsyncMock(return_value=handle)
+    page.wait_for_timeout = AsyncMock()
+    page.url = "https://backstaged.io/d/x"
+
+    offered: list[list[str]] = []
+    picks = iter(["hdr_b", "plain"])
+
+    class _Stop(Exception):  # noqa: N818
+        pass
+
+    async def system_one(**kwargs):
+        offered.append([e["key"] for e in kwargs["state"]["elements"]])
+        try:
+            choice = next(picks)
+        except StopIteration:
+            raise _Stop from None
+        answer = types.SimpleNamespace(choice=choice, confidence=0.5)
+        return types.SimpleNamespace(choices={"next_action": answer})
+
+    monkeypatch.setattr(
+        "soundcloud_dl.gate_handlers.judgment.read_requirements", AsyncMock(return_value=[])
+    )
+    monkeypatch.setattr(
+        "soundcloud_dl.gate_handlers.judgment.detect_captcha", AsyncMock(return_value=None)
+    )
+    handler = _handler()
+    handler._client = types.SimpleNamespace(system_one=system_one)
+
+    with pytest.raises(_Stop):
+        await handler._run_steps(page, {})
+
+    assert offered == [
+        ["hdr_a", "hdr_b", "plain"],
+        ["hdr_a", "plain"],
+        ["hdr_a", "hdr_b", "plain", "new_control"],
+    ]
+
+
+# --- backstaged: the enabled Unlock button, a form is not a control, the offered log -----
+
+_UNLOCK_FORM = """
+<!doctype html><html><body>
+  <form>
+    <p>Support TRINIST in 2 steps to unlock</p>
+    <button type="submit" id="unlock"
+      class="inline-flex disabled:pointer-events-none disabled:opacity-50 hover:bg-primary/85
+             [&_svg]:pointer-events-none focus-visible:ring-2 bg-primary h-9">
+      <svg class="lucide lucide-lock"></svg>Unlock for free</button>
+  </form>
+</body></html>
+"""
+
+
+@pytest.mark.requires_browser
+@pytest.mark.asyncio
+async def test_variant_prefixed_classes_are_not_shown() -> None:
+    unlock = next(e for e in await _snapshot_of(_UNLOCK_FORM) if e["id"] == "unlock")
+    assert unlock["disabled"] is False
+    assert "disabled" not in unlock["cls"]
+    assert unlock["cls"].split() == ["inline-flex", "bg-primary", "h-9"]
+
+
+@pytest.mark.requires_browser
+@pytest.mark.asyncio
+@pytest.mark.skipif(
+    not (_DEBUG_HTML / "jev_pilot.html").exists(),
+    reason="saved backstaged end-state page is in the gitignored logs/ dir",
+)
+async def test_the_saved_backstaged_end_state_shows_unlock_for_free_as_enabled() -> None:
+    els = await _snapshot_of((_DEBUG_HTML / "jev_pilot.html").read_text(), offline=True)
+    unlock = next(e for e in els if e["text"] == "Unlock for free")
+    assert unlock["disabled"] is False
+    assert "disabled" not in unlock["cls"].lower()
+
+
+@pytest.mark.asyncio
+async def test_a_form_is_not_offered_but_a_form_with_a_step_is() -> None:
+    handler = _handler()
+    handler._client, sent = _client_answering("unlock", 0.9)
+    page = types.SimpleNamespace(url="https://backstaged.io/d/x")
+    snapshot = {
+        "form": _el("form", tag="form", text="Support TRINIST in 2 steps"),
+        "stepped": _el("stepped", tag="form", step="follow"),
+        "unlock": _el("unlock", text="Unlock for free"),
+    }
+
+    await handler._ask_choice(page, snapshot)
+
+    assert [e["key"] for e in sent["state"]["elements"]] == ["stepped", "unlock"]
+
+
+@pytest.mark.asyncio
+async def test_each_ask_logs_the_offered_keys_with_a_little_text(caplog) -> None:
+    handler = _handler()
+    handler._client, _ = _client_answering("unlock", 0.9)
+    page = types.SimpleNamespace(url="https://backstaged.io/d/x")
+    snapshot = {
+        "unlock": _el("unlock", text="Unlock for free"),
+        "long": _el("long", text="x" * 80 + "\nsecond line"),
+    }
+
+    with caplog.at_level(logging.INFO):
+        await handler._ask_choice(page, snapshot)
+
+    line = next(r.getMessage() for r in caplog.records if "offered to jev" in r.getMessage())
+    assert "'unlock'='Unlock for free'" in line
+    assert "'long'='" + "x" * 30 + "'" in line
+    assert "x" * 31 not in line
+    assert "\n" not in line

@@ -189,7 +189,12 @@ SNAPSHOT_JS = _js("""
       tag: el.tagName.toLowerCase(),
       // An SVG <a> matches the 'a' selector but its className is an SVGAnimatedString, not
       // a string. Every reader here calls .lower().split() on it.
-      cls: typeof el.className === 'string' ? el.className : (el.getAttribute('class') || ''),
+      // Variant-prefixed utility classes are dropped: Tailwind's `disabled:opacity-50` sits on
+      // every shadcn button, enabled or not, and the model read it as the control being
+      // disabled (backstaged's enabled "Unlock for free" was never picked). A real state
+      // class has no colon, and every reader here matches whole tokens.
+      cls: (typeof el.className === 'string' ? el.className : (el.getAttribute('class') || ''))
+        .split(/\\s+/).filter((c) => c && !c.includes(':')).join(' '),
       href: el.getAttribute('href') || '',
       type: ((toggle || el).getAttribute('type') || '').toLowerCase(),
       // Without this a tick is invisible to the snapshot diff, so _did_it_move reports
