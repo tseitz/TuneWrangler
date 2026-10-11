@@ -190,9 +190,9 @@ When changing `parser.ts`, run `deno task test` and inspect the corpus output fo
 
 `scripts/nightly.ts`, run by the LaunchAgent `scripts/com.tseitz.tunewrangler.nightly.plist`
 (install steps in its header) every 30 minutes and on every volume mount. Each poll passes a
-gate, in order: `logs/nightly/pause` absent → today's stages not all settled → on battery, lid
-open and ≥30% (`TUNEWRANGLER_NIGHTLY_MIN_BATTERY`) → `TUNEWRANGLER_DOWNLOADED_PATH` readable →
-`logs/nightly/run.lock` free. A skip writes `logs/nightly/gate.txt` and exits 0; an unreadable
+gate, in order: `logs/nightly/pause` absent → on AC power (never on battery; lid can be shut) →
+`TUNEWRANGLER_DOWNLOADED_PATH` readable → `logs/nightly/run.lock` free → today's stages not all
+settled. A skip writes `logs/nightly/gate.txt` and exits 0; an unreadable
 drive that isn't simply unplugged (macOS privacy block) notifies and exits 1.
 
 Stages, with per-day state in `logs/nightly/state.json`: **download** (`deno task py

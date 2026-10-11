@@ -8,8 +8,7 @@ import {
   lineAfter,
   MAX_DEFERRALS,
   notificationTitle,
-  parsePower,
-  powerDeferral,
+  onBattery,
   renameOutcome,
   reportLines,
   runnable,
@@ -95,15 +94,9 @@ Deno.test("the notification doesn't wait on tagging, which waits for Rekordbox t
   assertEquals(notificationTitle(state), "TuneWrangler: prune failed");
 });
 
-Deno.test("power: defer on battery with the lid closed or a low battery, never on AC", () => {
-  const closedOnBattery = parsePower(
-    `| |   "AppleClamshellState" = Yes`,
-    `Now drawing from 'Battery Power'\n -InternalBattery-0 (id=1)	80%; discharging`,
-  );
-  assertEquals(closedOnBattery, { onAC: false, lidClosed: true, batteryPct: 80 });
-  assertEquals(powerDeferral(closedOnBattery, 30), "lid closed on battery");
-  assertEquals(powerDeferral({ onAC: false, lidClosed: false, batteryPct: 20 }, 30), "battery 20% < 30%");
-  assertEquals(powerDeferral({ onAC: true, lidClosed: true, batteryPct: 5 }, 30), null);
+Deno.test("power: run on AC whatever the lid, never on battery", () => {
+  assertEquals(onBattery("Now drawing from 'AC Power'\n -InternalBattery-0 (id=1)\t100%; charged"), false);
+  assertEquals(onBattery("Now drawing from 'Battery Power'\n -InternalBattery-0 (id=1)\t95%; discharging"), true);
 });
 
 Deno.test("output lines are matched at the start of a line only", () => {

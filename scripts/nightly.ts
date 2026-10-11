@@ -23,8 +23,7 @@ import {
   type NightlyState,
   notificationTitle,
   type Outcome,
-  parsePower,
-  powerDeferral,
+  onBattery,
   renameOutcome,
   reportLines,
   runnable,
@@ -38,7 +37,6 @@ const REPO = new URL("..", import.meta.url).pathname;
 const LOG_DIR = join(REPO, "logs/nightly");
 const STATE_FILE = join(LOG_DIR, "state.json");
 const SC_LOGS = join(REPO, "logs/soundcloud_dl");
-const MIN_BATTERY = Number(Deno.env.get("TUNEWRANGLER_NIGHTLY_MIN_BATTERY") ?? "30");
 const KEEP_LOG_DAYS = 30;
 
 const force = Deno.args.includes("--force");
@@ -243,13 +241,8 @@ async function main(): Promise<void> {
     if (!(e instanceof Deno.errors.NotFound)) throw e;
   }
 
-  if (!force && Deno.build.os === "darwin") {
-    const power = parsePower(
-      await capture("/usr/sbin/ioreg", ["-r", "-k", "AppleClamshellState", "-d", "4"]),
-      await capture("/usr/bin/pmset", ["-g", "batt"]),
-    );
-    const deferral = powerDeferral(power, MIN_BATTERY);
-    if (deferral) await gate(deferral);
+  if (!force && Deno.build.os === "darwin" && onBattery(await capture("/usr/bin/pmset", ["-g", "batt"]))) {
+    await gate("on battery");
   }
 
   const downloaded = Deno.env.get("TUNEWRANGLER_DOWNLOADED_PATH");

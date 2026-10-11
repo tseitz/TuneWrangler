@@ -106,33 +106,9 @@ export function coreSettled(state: NightlyState): boolean {
   return settled(state.stages.download) && settled(state.stages.rename) && settled(state.stages.prune);
 }
 
-export interface Power {
-  onAC: boolean;
-  lidClosed: boolean;
-  batteryPct: number | null;
-}
-
-export function parsePower(ioreg: string, pmset: string): Power {
-  const lid = ioreg.match(/"AppleClamshellState" = (Yes|No)/)?.[1];
-  const pct = pmset.match(/(\d+)%/)?.[1];
-  return {
-    onAC: pmset.includes("'AC Power'"),
-    lidClosed: lid === "Yes",
-    batteryPct: pct === undefined ? null : Number(pct),
-  };
-}
-
-/**
- * A closed-lid wake on battery is DarkWake: the job freezes in seconds-long slices for hours
- * (measured in tegan-trades' nightly, 2026-08-01). On AC a closed lid is a desk setup.
- */
-export function powerDeferral(power: Power, minBattery: number): string | null {
-  if (power.onAC) return null;
-  if (power.lidClosed) return "lid closed on battery";
-  if (power.batteryPct !== null && power.batteryPct < minBattery) {
-    return `battery ${power.batteryPct}% < ${minBattery}%`;
-  }
-  return null;
+/** Runs only on AC power (Tegan, 2026-10-10). On AC a closed lid is a desk setup. */
+export function onBattery(pmsetBatt: string): boolean {
+  return !pmsetBatt.includes("'AC Power'");
 }
 
 export function lineAfter(output: string, prefix: string): string | null {
