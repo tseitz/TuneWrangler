@@ -138,6 +138,28 @@ def all_track_urls() -> list[str]:
     return list(seen)
 
 
+def normalize_track_url(url: str) -> str:
+    return url.split("?", maxsplit=1)[0].rstrip("/")
+
+
+def load_settled() -> dict[str, str]:
+    """Normalized track URL -> "done" or "unsupported", across every playlist.
+
+    A verdict belongs to the track, not the playlist it was seen in: moving the run to a
+    different playlist must not re-run gates already settled elsewhere. "done" wins over
+    "unsupported" when playlists disagree.
+    """
+    settled: dict[str, str] = {}
+    for entry in _read_raw().values():
+        for url, state in _coerce_to_state_map(entry).items():
+            if state not in _SKIP_STATES:
+                continue
+            key = normalize_track_url(url)
+            if settled.get(key) != "done":
+                settled[key] = state
+    return settled
+
+
 def record_state(playlist_url: str, track_url: str, state: TrackState, reason: str = "") -> None:
     """Set the state for one track in this playlist; overwrites prior state.
 

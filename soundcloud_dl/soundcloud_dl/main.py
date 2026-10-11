@@ -67,7 +67,9 @@ from soundcloud_dl.resume import (
     is_given_up_on,
     load_attempts,
     load_reasons,
+    load_settled,
     load_states,
+    normalize_track_url,
     record_state,
     should_skip,
 )
@@ -383,10 +385,18 @@ def _get_tracks_to_process(
         return tracks
     states = load_states(playlist_url)
     attempts = load_attempts(playlist_url)
+    settled = load_settled()
+
+    def elsewhere(t: TrackItem) -> bool:
+        state = settled.get(normalize_track_url(t.url))
+        return state == "done" or (state == "unsupported" and not retry_unsupported)
+
     if retry_unsupported:
-        to_process = [t for t in tracks if states.get(t.url) != "done"]
+        to_process = [t for t in tracks if states.get(t.url) != "done" and not elsewhere(t)]
     else:
-        to_process = [t for t in tracks if not should_skip(t.url, states, attempts)]
+        to_process = [
+            t for t in tracks if not should_skip(t.url, states, attempts) and not elsewhere(t)
+        ]
     skipped = len(tracks) - len(to_process)
     if skipped:
         logger.info("Resume: skipping %d already-done tracks.", skipped)
@@ -690,8 +700,8 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         return TrackOutcome("manual_review", f"stuck at {e.last_step_id}")
     except GateNotSupportedError as e:
         terminal = "unsupported"
-        logger.warning("UNSUPPORTED | %s | no handler for gate: %s", track_label, e)
-        return TrackOutcome("unsupported", f"no handler: {e}")
+        logger.warning("UNSUPPORTED | %s | %s", track_label, e)
+        return TrackOutcome("unsupported", str(e)[:_MAX_REASON_CHARS])
     except SoundCloudPageError as e:
         terminal = "no_gate"
         # SC page issues (no gate button found, "FREE DL" text not a real gate link,

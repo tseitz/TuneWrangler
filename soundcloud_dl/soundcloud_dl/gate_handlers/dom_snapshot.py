@@ -50,12 +50,15 @@ const stepSuffix = (el) => {
     .slice(0, 24);
   return ':' + tail + '@' + hash(sub);
 };
+// An accordion header and the real action inside its panel share their text (backstaged's
+// "Follow on Instagram"). Presence only, never the value: the header flips true/false as it
+// opens, and a key that changed with it would read as the element vanishing.
 const elKey = (el) => {
   if (el.id) return el.id;
   const step = el.getAttribute('data-step');
   if (step) return 'data-step=' + step + stepSuffix(el);
   const parts = [
-    el.tagName.toLowerCase(),
+    el.tagName.toLowerCase() + (el.hasAttribute('aria-expanded') ? '[disclosure]' : ''),
     el.getAttribute('href') || '',
     el.getAttribute('name') || '',
     (el.innerText || el.value || '').trim().slice(0, 40),

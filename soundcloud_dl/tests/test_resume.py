@@ -188,3 +188,65 @@ def test_reasons_survive_an_entry_written_before_they_existed(tmp_processed_file
     # And recording a fresh one does not lose the neighbouring record.
     resume.record_state(playlist, "https://soundcloud.com/u/b", "failed", reason="boom")
     assert resume.load_states(playlist)["https://soundcloud.com/u/a"] == "failed"
+
+
+_OLD = "https://soundcloud.com/u/sets/old"
+_NEW = "https://soundcloud.com/u/sets/new"
+
+
+def test_an_unsupported_verdict_carries_over_to_another_playlist(
+    tmp_processed_file: Path,
+) -> None:
+    from soundcloud_dl.main import _get_tracks_to_process
+    from soundcloud_dl.playlist import TrackItem
+
+    gone = TrackItem(url="https://soundcloud.com/u/gone")
+    fresh = TrackItem(url="https://soundcloud.com/u/fresh")
+    resume.record_state(_OLD, gone.url, "unsupported")
+
+    assert _get_tracks_to_process([gone, fresh], _NEW) == [fresh]
+
+
+def test_a_done_verdict_carries_over_even_with_retry_unsupported(
+    tmp_processed_file: Path,
+) -> None:
+    from soundcloud_dl.main import _get_tracks_to_process
+    from soundcloud_dl.playlist import TrackItem
+
+    got = TrackItem(url="https://soundcloud.com/u/got")
+    resume.record_state(_OLD, got.url, "done")
+
+    assert _get_tracks_to_process([got], _NEW) == []
+    assert _get_tracks_to_process([got], _NEW, retry_unsupported=True) == []
+
+
+def test_retry_unsupported_retries_an_unsupported_track_from_another_playlist(
+    tmp_processed_file: Path,
+) -> None:
+    from soundcloud_dl.main import _get_tracks_to_process
+    from soundcloud_dl.playlist import TrackItem
+
+    gone = TrackItem(url="https://soundcloud.com/u/gone")
+    resume.record_state(_OLD, gone.url, "unsupported")
+
+    assert _get_tracks_to_process([gone], _NEW, retry_unsupported=True) == [gone]
+
+
+def test_track_urls_compare_without_query_or_trailing_slash(tmp_processed_file: Path) -> None:
+    from soundcloud_dl.main import _get_tracks_to_process
+    from soundcloud_dl.playlist import TrackItem
+
+    resume.record_state(_OLD, "https://soundcloud.com/u/gone?in=u/sets/old", "unsupported")
+    seen = TrackItem(url="https://soundcloud.com/u/gone/")
+
+    assert _get_tracks_to_process([seen], _NEW) == []
+
+
+def test_a_retryable_state_elsewhere_does_not_block_a_track(tmp_processed_file: Path) -> None:
+    from soundcloud_dl.main import _get_tracks_to_process
+    from soundcloud_dl.playlist import TrackItem
+
+    stuck = TrackItem(url="https://soundcloud.com/u/stuck")
+    resume.record_state(_OLD, stuck.url, "failed")
+
+    assert _get_tracks_to_process([stuck], _NEW) == [stuck]

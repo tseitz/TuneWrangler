@@ -49,6 +49,9 @@ class _Page:
     async def query_selector(self, selector):
         return self.toggle if "RSVP by EMAIL" in selector else None
 
+    async def query_selector_all(self, _selector):
+        return []
+
     async def wait_for_selector(self, *_a, **_k):
         return None
 
@@ -423,6 +426,42 @@ async def test_an_rsvp_laylo_never_acknowledged_is_not_recorded(monkeypatch):
     assert laylo_drops.load(KEY) is None
 
 
+async def test_a_code_screen_with_no_ack_seen_still_gets_its_code_entered(monkeypatch):
+    _submits(monkeypatch, [], ack=None, code_problem="code step reached")
+
+    class _CodeScreen(_Page):
+        async def query_selector(self, selector):
+            return _Toggle() if "one-time-code" in selector else None
+
+    handler = _handler()
+    await handler.run(_CodeScreen())
+    assert handler.review_reason == "code step reached"
+
+
+async def test_a_lone_numeric_field_is_not_a_code_screen(monkeypatch):
+    _submits(monkeypatch, [], ack=None, code_problem="must not reach the code step")
+
+    class _CountryCode(_Page):
+        async def query_selector_all(self, _selector):
+            return [_Toggle()]
+
+    handler = _handler()
+    await handler.run(_CountryCode())
+    assert "never acknowledged" in handler.review_reason
+
+
+async def test_four_visible_code_boxes_are_a_code_screen(monkeypatch):
+    _submits(monkeypatch, [], ack=None, code_problem="code step reached")
+
+    class _SixBoxes(_Page):
+        async def query_selector_all(self, _selector):
+            return [_Toggle() for _ in range(6)]
+
+    handler = _handler()
+    await handler.run(_SixBoxes())
+    assert handler.review_reason == "code step reached"
+
+
 async def test_a_known_number_is_accepted_without_a_code(monkeypatch):
     _submits(monkeypatch, [], code_problem="must not be asked for a code", ack="rsvp")
 
@@ -439,6 +478,7 @@ async def test_a_known_number_is_accepted_without_a_code(monkeypatch):
 class _Resp:
     def __init__(self, url, body):
         self.url = url
+        self.status = 200
         self._body = body
 
     async def text(self):
@@ -469,6 +509,17 @@ async def test_lay_los_answer_decides_what_follows_the_click(responses, ack):
     for read in handler._ack_reads:
         await read
     assert handler._ack == ack
+
+
+async def test_every_laylo_response_after_the_click_is_logged(caplog):
+    handler = _handler()
+    handler._armed = True
+    with caplog.at_level("INFO", logger="soundcloud_dl.gate_handlers.laylo"):
+        handler._on_response(_Resp("https://laylo.com/api/drop-pages/v/173?phone=5550001111", "{}"))
+        handler._on_response(_Resp("https://evil.example/x", "{}"))
+    assert "200 https://laylo.com/api/drop-pages/v/173" in caplog.text
+    assert "evil.example" not in caplog.text
+    assert "5550001111" not in caplog.text
 
 
 async def test_nothing_is_typed_into_a_field_that_has_left_laylo():

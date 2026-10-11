@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import re
 import urllib.parse
 from typing import TYPE_CHECKING
 
@@ -30,6 +31,20 @@ def host_is(host: str, domain: str) -> bool:
     _approve — whose SoundCloud selector ends in a bare input[type=submit].
     """
     return host == domain or host.endswith(f".{domain}")
+
+
+_DRIVE_FOLDER_PATH_RE = re.compile(r"^/drive/(u/\d+/)?folders/")
+
+
+def drive_folder_url(url: str) -> str | None:
+    """The URL if it is a Google Drive folder, else None. A single file is not one."""
+    try:
+        parsed = urllib.parse.urlparse(url)
+    except ValueError:
+        return None
+    if host_of(url) == "drive.google.com" and _DRIVE_FOLDER_PATH_RE.match(parsed.path):
+        return url
+    return None
 
 
 _SC_ALLOW = (

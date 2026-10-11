@@ -107,3 +107,17 @@ class InfluencePlannerHandler(JevHandler):
     # after one Allow the gate moves on to its comment step.
     auto_approve_oauth = False
     oauth_approve_once = True
+
+
+class BackstagedHandler(JevHandler):
+    """Backstaged, whose Follow on Instagram header and button share their text.
+
+    Registered for its OAuth policy. Without a registration the host falls through to
+    judgment_handler_for, which approves every SoundCloud consent screen it is shown; this
+    gate asks for an account grant, so it gets one approval and then stops, like
+    gaterush and InfluencePlanner.
+    """
+
+    gate_slug = "backstaged_jev"
+    auto_approve_oauth = False
+    oauth_approve_once = True

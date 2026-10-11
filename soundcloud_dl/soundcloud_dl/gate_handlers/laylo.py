@@ -69,6 +69,8 @@ _CODE_BOX = ", ".join(
     f'input{attr}:not([name="phone"])'
     for attr in ('[autocomplete="one-time-code"]', '[inputmode="numeric"]', '[name*="code" i]')
 )
+_ONE_TIME_CODE_BOX = 'input[autocomplete="one-time-code"]'
+_MIN_CODE_BOXES = 4
 
 # The click lands a moment before the hook sees it, and Gmail can stamp a text just ahead of
 # our clock.
@@ -135,6 +137,10 @@ class LayloHandler(JevHandler):
     def _on_response(self, response: Response) -> None:
         # Laylo's API is the only reliable witness: the page reads "Check your texts"
         # whether the RSVP went through, needs a code, or was silently dropped.
+        if self._armed and is_laylo_host(response.url):
+            url = urlparse(response.url)
+            where = f"{url.scheme}://{url.netloc}{url.path}"
+            logger.info("[%s] laylo response %s %s", self.gate_name, response.status, where)
         if self._armed and _is_ack_response(response.url):
             self._ack_reads.append(asyncio.create_task(self._read_ack(response)))
 
@@ -258,6 +264,13 @@ class LayloHandler(JevHandler):
         el = await page.query_selector(selector)
         return el if el is not None and await el.is_visible() else None
 
+    async def _code_screen_up(self, page: Page) -> bool:
+        if await self._visible(page, _ONE_TIME_CODE_BOX) is not None:
+            return True
+        boxes = await page.query_selector_all(_CODE_BOX)
+        shown = [b for b in boxes if await b.is_visible()]
+        return len(shown) >= _MIN_CODE_BOXES
+
     async def _choose_channel(self, page: Page) -> str | None:
         """Email where the drop offers it and an address is set, else phone. None: neither.
 
@@ -316,6 +329,9 @@ class LayloHandler(JevHandler):
             ack = await self._await_ack()
         finally:
             page.remove_listener("response", self._on_response)
+        if ack is None and channel == "sms" and await self._code_screen_up(page):
+            logger.info("[%s] no ack seen, but the code screen is up", self.gate_name)
+            ack = "code"
         if ack is None:
             self.review_reason = (
                 "laylo: Laylo never acknowledged the RSVP (a headless run is often dropped)"

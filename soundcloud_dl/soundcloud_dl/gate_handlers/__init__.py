@@ -29,11 +29,16 @@ _DEPRIORITISED_DOMAINS: dict[str, str] = {
 
 
 def _reason_for_host(url: str, domains: dict[str, str]) -> str | None:
-    host = (urlparse(url).hostname or "").lower()
+    # A trailing dot is the same host in DNS and still routes to the same server.
+    host = (urlparse(url).hostname or "").lower().rstrip(".")
     for domain, reason in domains.items():
         if host == domain or host.endswith(f".{domain}"):
             return reason
     return None
+
+
+def _on_host(url: str, domain: str) -> bool:
+    return _reason_for_host(url, {domain: domain}) is not None
 
 
 def is_laylo_host(url: str) -> bool:
@@ -85,7 +90,7 @@ async def detect_handler_from_page(page: Page) -> type[GateHandler] | None:
     return None
 
 
-def get_handler_for_url(url: str) -> type[GateHandler]:  # noqa: PLR0911
+def get_handler_for_url(url: str) -> type[GateHandler]:  # noqa: C901, PLR0911
     """
     Return the GateHandler subclass for the given gate URL.
 
@@ -95,6 +100,13 @@ def get_handler_for_url(url: str) -> type[GateHandler]:  # noqa: PLR0911
     Raises GateNotSupportedError if no handler matches.
     """
     lower = url.lower()
+
+    # First, and by host: the substring checks below match a query string, and backstaged's
+    # handler is the one that must not auto-approve consent.
+    if _on_host(url, "backstaged.io"):
+        from soundcloud_dl.gate_handlers.jev import BackstagedHandler  # noqa: PLC0415
+
+        return BackstagedHandler
 
     # The YAML handlers for hypeddit, toneden, pumpyoursound and followeb are still here and
     # still pass their tests, but nothing routes to them. Re-pointing a host at its YAML brings

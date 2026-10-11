@@ -27,6 +27,7 @@ from soundcloud_dl.downloads import (
     save_bytes,
     save_download,
 )
+from soundcloud_dl.gate_handlers import GateNotSupportedError
 from soundcloud_dl.gate_handlers.base import GateHandler, StepResult, StuckGate
 from soundcloud_dl.gate_handlers.captcha import CaptchaEncountered, detect_captcha
 from soundcloud_dl.gate_handlers.dom_snapshot import (
@@ -45,6 +46,7 @@ from soundcloud_dl.gate_handlers.oauth_consent import (
     looks_like_consent,
     stop_reason,
 )
+from soundcloud_dl.gate_handlers.oauth_popup import drive_folder_url
 from soundcloud_dl.gate_handlers.unlock import (
     find_download_target,
     is_download_element,
@@ -125,6 +127,20 @@ _POPUP_DOWNLOAD_POLL_SECONDS = 0.25
 
 # Viewport heights of drift before the page is judged to have left the gate behind.
 _SCROLL_DRIFT_FACTOR = 1.5
+
+# Picks this unsure are noise, not a decision: valorizd's language switcher was chosen at
+# 0.04-0.10 on every cycle, and droploud's "Login to autocomplete" at 0.09. Real picks in a
+# successful run go as low as 0.4.
+_MIN_CONFIDENCE = 0.15
+
+# A repeated cycle of at least two different controls, seen three times running. One key repeated
+# is no cycle: a carousel's identical Next buttons are legitimately clicked in a row.
+_MAX_CYCLE_LEN = 6
+_CYCLE_LAPS = 3
+
+# Controls re-centred per run because a fixed bar sat over them. Scrolling cannot get a
+# control out from under a dialog, so each key is tried once and the run is capped.
+_MAX_RECENTRES = 3
 
 # Requirement blocks accumulate across turns and are resent to a paid API every turn. A
 # gate that varies its wording each turn would otherwise grow the prompt without limit.
@@ -258,6 +274,54 @@ def _on_screen(snapshot: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]
     return clear or near or body or visible
 
 
+_SIGN_IN_TEXT_RE = re.compile(r"\b(log[ -]?in|sign[ -]?in)\b", re.IGNORECASE)
+_SIGN_IN_PATH_RE = re.compile(r"(^|/)(log-?in|sign-?in)(/|$)", re.IGNORECASE)
+# A gate that asks you to connect a streaming account is part of the gate, not a sign-in
+# to the gate's own site.
+_PROVIDER_RE = re.compile(
+    r"soundcloud|spotify|instagram|youtube|tiktok|twitter|facebook|deezer|mixcloud|twitch"
+    r"|google|apple|amazon|tidal|beatport|bandcamp|discord",
+    re.IGNORECASE,
+)
+
+
+def _is_sign_in(el: dict[str, Any]) -> bool:
+    """A control that signs in to the gate's own site, which leads off the gate.
+
+    Droploud's "Login to autocomplete matching steps" was chosen at 0.09 confidence and
+    the login-wall guard then ended the run. Text and href both count, since an icon-only
+    link has no text. A provider only exempts by the control's text or the href's host: the
+    href's query can carry anything, a redirect target included.
+    """
+    text = el.get("text") or ""
+    href = el.get("href") or ""
+    try:
+        parsed = urllib.parse.urlparse(href)
+    except ValueError:
+        return False
+    if _PROVIDER_RE.search(text) or _PROVIDER_RE.search(parsed.hostname or ""):
+        return False
+    return bool(_SIGN_IN_TEXT_RE.search(text) or _SIGN_IN_PATH_RE.search(parsed.path))
+
+
+def _repeating_cycle(history: list[str]) -> list[str] | None:
+    """The cycle of chosen keys the run is going round, or None.
+
+    The same block of 2 to _MAX_CYCLE_LEN keys, with more than one distinct key, closing the
+    history three laps running. Valorizd's run went A A N P six times over: each lap had one
+    turn that changed the page, so the idle counter reset every time and all 25 turns went.
+    Two laps is not enough: a progressing gate can show the same Continue / Verify pair twice.
+    """
+    for size in range(2, _MAX_CYCLE_LEN + 1):
+        if len(history) < _CYCLE_LAPS * size:
+            break
+        tail = history[-_CYCLE_LAPS * size :]
+        laps = [tail[k * size : (k + 1) * size] for k in range(_CYCLE_LAPS)]
+        if all(lap == laps[0] for lap in laps) and len(set(laps[0])) > 1:
+            return laps[0]
+    return None
+
+
 def _reachable(el: dict[str, Any]) -> bool:
     """On screen and not under a dialog: a click would actually land on it."""
     return el["visible"] and not el.get("covered", False)
@@ -351,6 +415,9 @@ class JudgmentGateHandler(GateHandler):
         self._download_last_attempt_turn: dict[str, int] = {}
         self._warned_collisions: set[str] = set()
         self._warned_covered: set[str] = set()
+        self._recentred: set[str] = set()
+        self._chosen: list[str] = []
+        self._drive_folder: str | None = None
         self._busy_spent_ms = 0
         # Constructed lazily so importing this module never requires TYPESAFE_API_KEY.
         self._client: AsyncTypeSafeClient | None = None
@@ -412,7 +479,11 @@ class JudgmentGateHandler(GateHandler):
             if el["key"] in self._warned_collisions:
                 continue
             self._warned_collisions.add(el["key"])
-            log = logger.warning if el["step"] else logger.debug
+            log = logger.debug
+            if el["step"]:
+                log = logger.warning
+            elif el["visible"] and el["text"].strip() and _is_control(el):
+                log = logger.info
             log(
                 "[%s] two elements share the key %r; only the first is offered (%r)",
                 self.gate_name,
@@ -483,7 +554,9 @@ class JudgmentGateHandler(GateHandler):
     ) -> str:
         # Only what a person could actually click. Offering the off-screen carousel slides
         # would let the model pick a button that silently does nothing.
-        offered = {k: self._redact(el) for k, el in _on_screen(snapshot).items()}
+        offered = {
+            k: self._redact(el) for k, el in _on_screen(snapshot).items() if not _is_sign_in(el)
+        }
         # A control already clicked to no effect is a dead end — Hypeddit's SoundCloud Next
         # stays on screen after its page is finished, and the model kept re-picking it at
         # 0.94+ while the gate sat still. Withholding them is cheaper and more reliable than
@@ -543,6 +616,11 @@ class JudgmentGateHandler(GateHandler):
         logger.info(
             "[%s] jev choice=%r confidence=%.2f", self.gate_name, answer.choice, answer.confidence
         )
+        if answer.confidence < _MIN_CONFIDENCE:
+            logger.info(
+                "[%s] confidence below %.2f; not acting on it", self.gate_name, _MIN_CONFIDENCE
+            )
+            return ""
         return answer.choice
 
     async def _maybe_pause(self, action: str, target: dict[str, Any]) -> None:
@@ -657,6 +735,10 @@ class JudgmentGateHandler(GateHandler):
             if self._caught:
                 pending.cancel()
                 logger.info("[%s] a popup took the download; letting it land", self.gate_name)
+                return None
+            if self._drive_folder is not None:
+                pending.cancel()
+                logger.info("[%s] a Drive folder opened; not waiting for a file", self.gate_name)
                 return None
             await asyncio.sleep(_POPUP_DOWNLOAD_POLL_SECONDS)
         return pending.result()
@@ -816,6 +898,10 @@ class JudgmentGateHandler(GateHandler):
         i: int,
     ) -> dict[str, Any] | None:
         """Turn the model's choice into a snapshot element, or record why it could not be."""
+        if not choice:
+            logger.info("[%s] turn %d: nothing chosen; counting an idle turn", self.gate_name, i)
+            results[f"el_{i}_no_choice"] = StepResult.SKIPPED
+            return None
         if choice == _ALREADY_UNLOCKED:
             target = find_download_target(snapshot)
             if target is None:
@@ -1167,6 +1253,37 @@ class JudgmentGateHandler(GateHandler):
     def on_new_page(self, page: Page) -> None:
         """Watch a popup too: ToneDen serves the file from one, not from the gate page."""
         self._watch_downloads(page)
+        self._watch_drive_folder(page)
+
+    def _watch_drive_folder(self, page: Page) -> None:
+        """Remember a Google Drive folder opening in a popup.
+
+        Droploud hands some files over as a folder. The popup is closed as unrecognised
+        before the next turn looks, so the run ground on to a stuck gate that had passed.
+        """
+
+        def note(url: str) -> None:
+            if (folder := drive_folder_url(url)) is not None:
+                self._drive_folder = folder
+
+        def on_navigated(frame: Any) -> None:  # noqa: ANN401
+            if frame == page.main_frame:
+                note(frame.url)
+
+        note(page.url)
+        page.on("framenavigated", on_navigated)
+
+    def _raise_if_drive_folder(self, page: Page) -> None:
+        """End the run once the gate's file turns out to be a Drive folder.
+
+        Not one file a download can capture; the folder URL goes in the reason so it can
+        be fetched by hand. GateNotSupportedError is what records a track as unsupported.
+        """
+        folder = self._drive_folder or drive_folder_url(page.url)
+        if folder is None:
+            return
+        msg = f"Google Drive folder, fetch by hand: {folder}"
+        raise GateNotSupportedError(msg)
 
     def _watch_downloads(self, page: Page) -> None:
         """Catch a download whenever it fires, not only inside expect_download around a click.
@@ -1281,6 +1398,8 @@ class JudgmentGateHandler(GateHandler):
         with contextlib.suppress(Exception):
             await page.bring_to_front()
         self._raise_if_consent_declined(page)
+        # Before the file-host adoption below, which would otherwise carry on from the folder.
+        self._raise_if_drive_folder(page)
         # First: a handoff to a file host is another host, which the login-wall guard reads
         # as leaving the gate.
         self._adopt_file_host(page)
@@ -1327,7 +1446,7 @@ class JudgmentGateHandler(GateHandler):
         return True
 
     async def _give_up(
-        self, results: dict[str, StepResult], fallback: str
+        self, page: Page, results: dict[str, StepResult], fallback: str
     ) -> dict[str, StepResult]:
         """Last chance to collect a download the gate started, then end the run.
 
@@ -1336,6 +1455,7 @@ class JudgmentGateHandler(GateHandler):
         """
         if await self._collect_download(results, _MAX_ITERATIONS):
             return results
+        self._raise_if_drive_folder(page)
         raise StuckGate(self.gate_name, last_step_id=self._terminal_reason(fallback))
 
     async def _wait_while_busy(self, page: Page) -> None:
@@ -1368,6 +1488,7 @@ class JudgmentGateHandler(GateHandler):
         await self._note_requirements(page, i)
         snapshot = await self._snapshot(page)
         snapshot = await self._bring_gate_into_view(page, snapshot)
+        snapshot = await self._uncover_gate_controls(page, snapshot)
         await self._log_turn(page, i, snapshot)
         return snapshot
 
@@ -1402,6 +1523,46 @@ class JudgmentGateHandler(GateHandler):
             await el.scroll_into_view_if_needed()
         except Exception:  # noqa: BLE001
             logger.debug("[%s] could not scroll %s into view", self.gate_name, below[0])
+            return snapshot
+        await page.wait_for_timeout(_SETTLE_POLL_MS)
+        return await self._snapshot(page)
+
+    async def _uncover_gate_controls(
+        self, page: Page, snapshot: dict[str, dict[str, Any]]
+    ) -> dict[str, dict[str, Any]]:
+        """Centre a gate control that a fixed bar is sitting on, so it can be offered.
+
+        Droploud's top bar floats over the page. After a click scrolled the page a little,
+        the gate's own buttons sat under it and were withheld as covered, which left the
+        model nothing but the promo links around the card. The drift is far short of what
+        _reanchor_scroll undoes, so nothing else moved it back.
+        """
+        if len(self._recentred) >= _MAX_RECENTRES:
+            return snapshot
+        stuck = [
+            k
+            for k, el in snapshot.items()
+            if el["visible"]
+            and el.get("covered", False)
+            and el.get("onscreen", True)
+            and not el.get("chrome", False)
+            and _is_control(el)
+            and k not in self._recentred
+        ]
+        if not stuck:
+            return snapshot
+        key = stuck[0]
+        self._recentred.add(key)
+        el = await self._find_element_by_key(page, key)
+        if el is None:
+            return snapshot
+        logger.info(
+            "[%s] %r is under another element; scrolling it to the middle", self.gate_name, key
+        )
+        try:
+            await el.evaluate("e => e.scrollIntoView({ block: 'center', inline: 'nearest' })")
+        except Exception:  # noqa: BLE001
+            logger.debug("[%s] could not centre %s", self.gate_name, key, exc_info=True)
             return snapshot
         await page.wait_for_timeout(_SETTLE_POLL_MS)
         return await self._snapshot(page)
@@ -1485,8 +1646,15 @@ class JudgmentGateHandler(GateHandler):
             if target is None:
                 idle_turns += 1
                 if idle_turns >= _MAX_IDLE_TURNS:
-                    return await self._give_up(results, f"jev_iter_{i}_no_progress")
+                    return await self._give_up(page, results, f"jev_iter_{i}_no_progress")
                 continue
+
+            self._chosen.append(target["key"])
+            if (cycle := _repeating_cycle(self._chosen)) is not None:
+                logger.info(
+                    "[%s] turn %d: going round in circles through %s", self.gate_name, i, cycle
+                )
+                return await self._give_up(page, results, f"jev_iter_{i}_repeating_{len(cycle)}")
 
             kind = self._action_kind(target, download_key=download_key)
             # Remembered across the turn boundary: a click that navigates is only seen to
@@ -1524,6 +1692,6 @@ class JudgmentGateHandler(GateHandler):
                 dead_keys.add(target["key"])
             idle_turns = 0 if changed else idle_turns + 1
             if idle_turns >= _MAX_IDLE_TURNS:
-                return await self._give_up(results, f"jev_iter_{i}_no_progress")
+                return await self._give_up(page, results, f"jev_iter_{i}_no_progress")
 
-        return await self._give_up(results, f"jev_cap_{_MAX_ITERATIONS}")
+        return await self._give_up(page, results, f"jev_cap_{_MAX_ITERATIONS}")
