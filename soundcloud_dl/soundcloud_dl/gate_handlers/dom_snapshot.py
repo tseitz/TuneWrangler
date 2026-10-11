@@ -98,8 +98,47 @@ const SECTION_SEL = 'article, section, aside, main, dialog, [role="dialog"],'
 // Fine print sits inside the gate card. Gaterush's Terms link, clicked while a step
 // verified, left the page and threw away every step already done.
 const LEGAL_RE = /^(terms( of (service|use))?|privacy( policy)?|dmca|cookies?( policy)?|imprint)$/i;
+// The gate site advertising its own socials. Droploud's "Follow us on Instagram
+// @droploud.official" card sits beside the gate, and the model kept picking its Follow
+// button over the gate's own "I did it". Kept narrow: only the site's own handle counts, so
+// the artist's links stay offered. SoundCloud and Spotify are left out because a gate may
+// genuinely ask for those.
+const PROMO_HOSTS = ['instagram.com', 'twitter.com', 'x.com', 'tiktok.com', 'facebook.com',
+  'youtube.com'];
+const brandLabel = () => {
+  const parts = location.hostname.toLowerCase().replace(/^www\\./, '').split('.');
+  if (parts.length < 2) return '';
+  let label = parts[parts.length - 2];
+  if (label.length <= 3 && parts.length >= 3) label = parts[parts.length - 3];
+  return label.length >= 4 ? label : '';
+};
+const isOwnPromo = (el) => {
+  const brand = brandLabel();
+  if (!brand) return false;
+  const href = el.getAttribute('href');
+  if (href) {
+    try {
+      const u = new URL(href, location.href);
+      const host = u.hostname.toLowerCase().replace(/^www\\./, '');
+      const social = PROMO_HOSTS.some((d) => host === d || host.endsWith('.' + d));
+      if (social && u.pathname.toLowerCase().replace(/[^a-z0-9]/g, '').includes(brand)) {
+        return true;
+      }
+    } catch (e) { /* an unparsable href is not a social link */ }
+  }
+  let e = el.parentElement;
+  for (let depth = 0; e !== null && depth < 6; depth += 1, e = e.parentElement) {
+    // A promo card is tight: climbing into a container that also holds the gate would
+    // brand the gate's own buttons with the card next to them.
+    const text = e.innerText || '';
+    if (text.length > 300 || e.querySelectorAll('__SELECTOR__').length > 3) return false;
+    if (text.toLowerCase().includes('@' + brand) && /\\bfollow us\\b/i.test(text)) return true;
+  }
+  return false;
+};
 const isChrome = (el) => {
   if (el.closest(CHROME_SEL) !== null) return true;
+  if (isOwnPromo(el)) return true;
   if (el.tagName === 'A' && LEGAL_RE.test((el.innerText || '').trim())) return true;
   const band = el.closest('header, footer');
   return band !== null && band.closest(SECTION_SEL) === null;
@@ -159,6 +198,9 @@ SNAPSHOT_JS = _js("""
       disabled: el.disabled === true || el.hasAttribute('disabled')
         || el.getAttribute('aria-disabled') === 'true',
       visible: isVisible(el),
+      // A section header that shows or hides a step. Collapsing one never advances a gate.
+      disclosure: el.hasAttribute('aria-expanded'),
+      expanded: el.getAttribute('aria-expanded') === 'true',
       chrome: isChrome(el),
       onscreen: onScreen(el),
       covered: isCovered(el),

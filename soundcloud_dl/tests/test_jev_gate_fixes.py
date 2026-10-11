@@ -432,3 +432,112 @@ async def test_a_drive_folder_stops_the_wait_for_a_download() -> None:
     assert await handler._download_unless_a_popup_took_it(pending) is None
     await asyncio.sleep(0)
     assert pending.cancelled()
+
+
+# --- backstaged: an open section header is not a way forward ---------------------------
+
+
+@pytest.mark.requires_browser
+@pytest.mark.asyncio
+async def test_the_snapshot_marks_section_headers_and_whether_they_are_open() -> None:
+    html = (
+        '<button id="open" aria-expanded="true">One</button>'
+        '<button id="shut" aria-expanded="false">Two</button>'
+        '<button id="plain">Connect SoundCloud</button>'
+    )
+    by_id = {e["id"]: e for e in await _snapshot_of(html) if e["id"]}
+    assert (by_id["open"]["disclosure"], by_id["open"]["expanded"]) == (True, True)
+    assert (by_id["shut"]["disclosure"], by_id["shut"]["expanded"]) == (True, False)
+    assert (by_id["plain"]["disclosure"], by_id["plain"]["expanded"]) == (False, False)
+
+
+def _header(key: str, *, expanded: bool) -> dict:
+    return _el(key, disclosure=True, expanded=expanded)
+
+
+@pytest.mark.asyncio
+async def test_an_open_section_header_is_not_offered_but_a_closed_one_is() -> None:
+    handler = _handler()
+    handler._client, sent = _client_answering("shut", 0.9)
+    page = types.SimpleNamespace(url="https://backstaged.io/d/x")
+    snapshot = {
+        "open": _header("open", expanded=True),
+        "shut": _header("shut", expanded=False),
+        "real": _el("real", text="Follow on Instagram"),
+    }
+
+    await handler._ask_choice(page, snapshot)
+
+    assert [e["key"] for e in sent["state"]["elements"]] == ["shut", "real"]
+    shut = sent["questions"]["next_action"].criteria["shut"]
+    assert "section header, closed" in shut
+    assert "section header" not in sent["questions"]["next_action"].criteria["real"]
+
+
+@pytest.mark.asyncio
+async def test_an_open_header_is_still_offered_when_nothing_else_is() -> None:
+    handler = _handler()
+    handler._client, sent = _client_answering("open", 0.9)
+    page = types.SimpleNamespace(url="https://x.example/")
+
+    await handler._ask_choice(page, {"open": _header("open", expanded=True)})
+
+    assert [e["key"] for e in sent["state"]["elements"]] == ["open"]
+    assert "section header, open" in sent["questions"]["next_action"].criteria["open"]
+
+
+# --- droploud: the site's own Instagram card is not the gate ---------------------------
+
+_DROPLOUD_PAGE = """
+<!doctype html><html><body>
+  <section>
+    <p>Follow @secret_stvsh on Instagram</p>
+    <button id="artist">@secret_stvsh</button>
+    <a id="artist_link" href="https://www.instagram.com/secret_stvsh/">profile</a>
+    <button id="did">I did it</button>
+  </section>
+  <section>
+    <p>FOLLOW @droploud AND @BADMOUTHRECS ON SOUNDCLOUD</p>
+    <button id="sc_step">Connect SoundCloud</button>
+    <a id="sc_link" href="https://soundcloud.com/droploud">droploud</a>
+  </section>
+  <div id="card">
+    <p>Droploud</p><h2>Follow us on Instagram</h2><p>@droploud.official</p>
+    <button id="promo_follow">Follow</button>
+  </div>
+  <a id="promo_link" href="https://www.instagram.com/droploud.official/"></a>
+</body></html>
+"""
+
+
+async def _chrome_at(url: str, html: str) -> dict[str, bool]:
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch()
+        page = await browser.new_page()
+        await page.route("**/*", lambda route: route.fulfill(body=html, content_type="text/html"))
+        await page.goto(url)
+        els = await snapshot_elements(page)
+        await browser.close()
+    return {e["id"]: e["chrome"] for e in els if e["id"]}
+
+
+@pytest.mark.requires_browser
+@pytest.mark.asyncio
+async def test_the_gate_sites_own_social_promo_is_chrome_but_the_artists_links_are_not() -> None:
+    chrome = await _chrome_at("https://droploud.com/track/1", _DROPLOUD_PAGE)
+    assert chrome["promo_follow"] is True
+    assert chrome["promo_link"] is True
+    assert chrome["artist"] is False
+    assert chrome["artist_link"] is False
+    assert chrome["did"] is False
+    # A gate may genuinely ask for the site's own SoundCloud.
+    assert chrome["sc_step"] is False
+    assert chrome["sc_link"] is False
+
+
+@pytest.mark.requires_browser
+@pytest.mark.asyncio
+async def test_another_sites_page_is_not_judged_by_droplouds_brand() -> None:
+    chrome = await _chrome_at("https://other-gate.com/track/1", _DROPLOUD_PAGE)
+    assert chrome["promo_follow"] is False
+    assert chrome["promo_link"] is False

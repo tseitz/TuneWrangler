@@ -540,6 +540,9 @@ class JudgmentGateHandler(GateHandler):
         desc = f"<{el['tag']}> text={el['text']!r} class={el['cls']!r} href={el['href']!r}"
         if el.get("type"):
             desc += f" type={el['type']!r}"
+        if el.get("disclosure"):
+            state = "open" if el.get("expanded") else "closed"
+            desc += f" [section header, {state}: shows or hides a step; does not complete it]"
         # Without the state, an unticked consent box and a ticked one read identically, and
         # the model has no reason to prefer the one still blocking the continue button.
         if el.get("type") in ("checkbox", "radio"):
@@ -557,6 +560,12 @@ class JudgmentGateHandler(GateHandler):
         offered = {
             k: self._redact(el) for k, el in _on_screen(snapshot).items() if not _is_sign_in(el)
         }
+        # Collapsing an open section never advances a gate, and on backstaged re-picking the
+        # open step's header collapsed the step that held the real button, round and round.
+        # Kept if nothing else is on offer, so a gate that mislabels a button as expanded
+        # is still reachable.
+        closed = {k: el for k, el in offered.items() if not el.get("expanded", False)}
+        offered = closed or offered
         # A control already clicked to no effect is a dead end — Hypeddit's SoundCloud Next
         # stays on screen after its page is finished, and the model kept re-picking it at
         # 0.94+ while the gate sat still. Withholding them is cheaper and more reliable than
