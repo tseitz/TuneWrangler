@@ -603,8 +603,10 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
         downloaded = handler.downloaded
         # Meta-gate redirect: if the handler navigated us to a different gate
         # (e.g. fanlink.tv → toneden.io), run the real gate handler on the same page.
+        # Not once a file is saved: a gate stuck after that would record the track stuck,
+        # and every rerun repeats its follows and downloads it again.
         post_url = page.url
-        if post_url and post_url != final_url:
+        if post_url and post_url != final_url and not downloaded:
             try:
                 real_handler_cls = get_handler_for_url(post_url)
                 if real_handler_cls is not handler_cls:

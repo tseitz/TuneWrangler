@@ -1,7 +1,7 @@
 import { assertEquals } from "jsr:@std/assert@^1";
 import { join } from "@std/path";
 import { applyManifest } from "./applyManifest.ts";
-import { Manifest, ManifestEntry } from "./manifest.ts";
+import { DUPLICATE_REASON, Manifest, ManifestEntry } from "./manifest.ts";
 
 async function tone(path: string): Promise<void> {
   const args = ["-v", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=0.2", "-y", path];
@@ -165,4 +165,26 @@ Deno.test("apply refuses a src that reaches outside its folder through a symlink
   assertEquals([result.applied, result.failures.length], [0, 1]);
   assertEquals(await listNames(outside), ["Blosso - Galvanize.wav"]);
   assertEquals(await listNames(collection), []);
+});
+
+Deno.test("a duplicate still in the Collection is backed up and cleared; one no longer there is left", async () => {
+  const [source, collection, backup] = await Promise.all([Deno.makeTempDir(), Deno.makeTempDir(), Deno.makeTempDir()]);
+  await tone(join(collection, "Blosso - Galvanize.aiff"));
+  for (const name of ["Blosso - Galvanize.wav", "Dmtree - On My Mind.wav"]) await tone(join(source, name));
+  const duplicate = (src: string): ManifestEntry => ({ ...entry(src, "skip"), reasons: [DUPLICATE_REASON] });
+  const manifest: Manifest = {
+    version: 1,
+    generated_at: new Date().toISOString(),
+    source_dir: source,
+    move_dir: collection,
+    cache_dir: collection,
+    entries: [duplicate("Blosso - Galvanize.wav"), duplicate("Dmtree - On My Mind.wav")],
+  };
+
+  const result = await applyManifest(manifest, { backupDir: backup });
+
+  assertEquals([result.applied, result.cleared, result.skipped, result.failures.length], [0, 1, 1, 0]);
+  assertEquals(await listNames(source), ["Dmtree - On My Mind.wav"]);
+  assertEquals(await listNames(result.runBackupDir!), ["Blosso - Galvanize.wav"]);
+  assertEquals(await listNames(collection), ["Blosso - Galvanize.aiff"]);
 });

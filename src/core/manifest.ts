@@ -20,6 +20,10 @@ export interface SoundcloudFacts {
   label_name: string | null;
 }
 
+/** A duplicate skip always carries this reason first — distinguishes it from the .m4s hard-skip
+ * path, which is not judged. */
+export const DUPLICATE_REASON = "duplicate of an existing track in the DJ collection";
+
 export const SOURCES = ["downloaded", "soundcloud", "bandcamp", "beatport", "itunes"] as const;
 export type Source = typeof SOURCES[number];
 

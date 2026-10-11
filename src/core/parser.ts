@@ -75,6 +75,9 @@ export function parseBandcampSong(song: DownloadedSong): DownloadedSong {
   song.removeAnd(...(song.remix ? ["artist", "album"] as const : ["artist"] as const));
   song.lastCheck();
   if (song.album.toLowerCase() === song.title.toLowerCase()) song.album = "";
+  // A release named after its lead track ("No God - Bass Pit") would repeat the title.
+  const repeated = ` - ${song.title}`.toLowerCase();
+  if (song.album.toLowerCase().endsWith(repeated)) song.album = song.album.slice(0, -repeated.length);
 
   song.finalFilename = song.album
     ? `${song.artist} - ${song.album} - ${song.title}${song.extension}`

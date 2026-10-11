@@ -112,8 +112,8 @@ def collection_stems(path: str | None) -> set[str]:
 def linked_names(manifest_dirs: list[Path]) -> tuple[dict[str, Proof], set[str]]:
     """SoundCloud URL → approved name, from every manifest entry that carries a URL.
 
-    Also returns the URLs of entries the rename skipped because the Collection already had
-    them — those are not proof of anything, but are worth naming in the report.
+    A duplicate skip counts too: the rename found that name already in the Collection. Its
+    URL is also returned on its own, for the report when the name is no longer there.
     """
     linked: dict[str, Proof] = {}
     duplicates: set[str] = set()
@@ -139,6 +139,10 @@ def linked_names(manifest_dirs: list[Path]) -> tuple[dict[str, Proof], set[str]]
                     and DUPLICATE_REASON in (entry.get("reasons") or [])[:1]
                 ):
                     duplicates.add(key)
+                    # Skipped because the Collection already had it: the same proof as an
+                    # apply, once plan_prune finds the name there.
+                    if isinstance(proposed, str) and proposed and key not in linked:
+                        linked[key] = Proof(name=proposed, manifest=path.name)
     return linked, duplicates
 
 

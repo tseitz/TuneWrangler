@@ -1,8 +1,8 @@
-import { backupFile, cacheMusic, checkIfDuplicate, logWithBreak, renameAndMove } from "./utils/common.ts";
+import { backupFile, cacheMusic, checkIfDuplicate, logWithBreak, removeAnyForm, renameAndMove } from "./utils/common.ts";
 import { Song } from "./models/Song.ts";
 import { buildSong } from "./sources.ts";
 import { tagsFromFilename } from "./tagging.ts";
-import { entryKey, Manifest, sourceDirFor } from "./manifest.ts";
+import { DUPLICATE_REASON, entryKey, Manifest, sourceDirFor } from "./manifest.ts";
 import { startBackupRun } from "./utils/backups.ts";
 
 export interface MoveFailure {
@@ -12,6 +12,8 @@ export interface MoveFailure {
 
 export interface ApplyResult {
   applied: number;
+  /** Sources already in the Collection: backed up, then removed so they stop coming back. */
+  cleared: number;
   skipped: number;
   failures: MoveFailure[];
   /** Null when nothing moved: an empty run folder would push a real one out of `rM --prune --keep`. */
@@ -54,12 +56,15 @@ export async function applyManifest(manifest: Manifest, { backupDir }: { backupD
 
   const cache = await cacheMusic(withTrailingSlash(manifest.cache_dir));
 
-  const moves: { key: string; dir: string; src: string; backupName: string; song: Song }[] = [];
+  type Op = { key: string; dir: string; src: string; backupName: string; song: Song };
+  const moves: Op[] = [];
+  const clears: Op[] = [];
   const failures: MoveFailure[] = [];
   let skipped = 0;
 
   for (const entry of manifest.entries) {
-    if (entry.decision !== "apply") {
+    const duplicateSkip = entry.decision === "skip" && entry.reasons[0] === DUPLICATE_REASON;
+    if (entry.decision !== "apply" && !duplicateSkip) {
       skipped++;
       continue;
     }
@@ -90,16 +95,24 @@ export async function applyManifest(manifest: Manifest, { backupDir }: { backupD
       Object.assign(song, tagsFromFilename(entry.proposed));
     }
 
+    const op = { key: entryKey(entry), dir, src: entry.src, backupName: backupNameFor(entry), song };
+    // Re-checked now, not trusted from the dry run: the Collection may have changed since.
     if (checkIfDuplicate(song, cache)) {
-      logWithBreak(`***Duplicate, skipping: ${song.finalFilename}***`);
+      logWithBreak(`***Duplicate, clearing from ${dir}: ${entry.src}***`);
+      clears.push(op);
+      continue;
+    }
+    if (duplicateSkip) {
       skipped++;
       continue;
     }
     cache.add(song);
-    moves.push({ key: entryKey(entry), dir, src: entry.src, backupName: backupNameFor(entry), song });
+    moves.push(op);
   }
 
-  if (moves.length === 0) return { applied: 0, skipped, failures, runBackupDir: null };
+  if (moves.length === 0 && clears.length === 0) {
+    return { applied: 0, cleared: 0, skipped, failures, runBackupDir: null };
+  }
 
   const runBackupDir = await startBackupRun(backupDir, "rename-music");
   const moveFailures = await settleMoves(
@@ -108,10 +121,17 @@ export async function applyManifest(manifest: Manifest, { backupDir }: { backupD
     ),
     moves.map(({ key }) => key),
   );
+  const clearFailures = await settleMoves(
+    clears.map(({ dir, src, backupName }) =>
+      backupFile(dir, runBackupDir, src, backupName).then(() => removeAnyForm(`${dir}${src}`))
+    ),
+    clears.map(({ key }) => key),
+  );
   return {
     applied: moves.length - moveFailures.length,
+    cleared: clears.length - clearFailures.length,
     skipped,
-    failures: [...failures, ...moveFailures],
+    failures: [...failures, ...moveFailures, ...clearFailures],
     runBackupDir,
   };
 }

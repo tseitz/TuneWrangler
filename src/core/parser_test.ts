@@ -50,6 +50,7 @@ const bandcampCases: [string, string][] = [
     "Bukez Finezt - Cam'Ron - Oh Boy.aiff",
   ],
   ["Alex Unger - Jet Fuel (feat. parkbreezy).aiff", "Alex Unger x parkbreezy - Jet Fuel.aiff"],
+  ["Substance - No God - Bass Pit - 02 Bass Pit.aiff", "Substance - No God - Bass Pit.aiff"],
 ];
 
 for (const [src, want] of bandcampCases) {

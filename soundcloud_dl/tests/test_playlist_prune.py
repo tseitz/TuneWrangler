@@ -78,7 +78,7 @@ def _manifest(folder: Path, entries: list[dict[str, Any]]) -> None:
     (folder / "m.json").write_text(json.dumps({"entries": entries}), encoding="utf-8")
 
 
-def test_only_applied_entries_count_as_proof(tmp_path: Path) -> None:
+def test_applied_and_duplicate_entries_count_as_proof(tmp_path: Path) -> None:
     def sc(n: int) -> dict[str, str]:
         return {"url": f"https://soundcloud.com/a/t{n}"}
 
@@ -92,7 +92,8 @@ def test_only_applied_entries_count_as_proof(tmp_path: Path) -> None:
         ],
     )
     linked, duplicates = prune.linked_names([tmp_path])
-    assert set(linked) == {"https://soundcloud.com/a/t1"}
+    assert set(linked) == {"https://soundcloud.com/a/t1", "https://soundcloud.com/a/t3"}
+    assert linked["https://soundcloud.com/a/t3"].name == "Three.wav"
     assert duplicates == {"https://soundcloud.com/a/t3"}
 
 

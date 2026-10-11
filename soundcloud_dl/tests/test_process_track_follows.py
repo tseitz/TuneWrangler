@@ -219,3 +219,34 @@ async def test_a_description_gate_is_opened_instead_of_a_bandcamp_buy_link(
     page = context.new_page.return_value
     page.goto.assert_awaited_once()
     assert page.goto.await_args.args[0] == hypeddit
+
+
+@pytest.mark.asyncio
+async def test_a_saved_download_is_done_even_when_the_page_moved_to_another_gate(
+    released, monkeypatch
+):
+    page_holder: dict = {}
+
+    class _First(GateHandler):
+        def __init__(self, **_kwargs):
+            self.downloaded = False
+
+        async def run(self, page):
+            self.downloaded = True
+            page.url = "https://meta.gate/next"
+            return {}
+
+    class _Meta(GateHandler):
+        def __init__(self, **_kwargs):
+            self.downloaded = False
+
+        async def run(self, _page):
+            page_holder["ran"] = True
+            return {}
+
+    monkeypatch.setattr(
+        main_mod, "get_handler_for_url", lambda u: _Meta if "meta.gate" in u else _First
+    )
+    outcome = await main_mod._process_track(_context(), TRACK, sc_actions=True)
+    assert outcome.state == "done"
+    assert "ran" not in page_holder

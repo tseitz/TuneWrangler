@@ -46,6 +46,7 @@ import { acquireRunLock } from "../core/utils/runLock.ts";
 import { scoreConfidence } from "../core/confidence.ts";
 import { applySoundcloudCredits, factsFor, loadSoundcloudIndex } from "../core/soundcloudFacts.ts";
 import {
+  DUPLICATE_REASON,
   entryKey,
   Manifest,
   ManifestEntry,
@@ -78,9 +79,6 @@ const MANIFEST_DIR = "./logs/tunewrangler/manifests";
 const LOCK_PATH = "./logs/tunewrangler/rm.lock";
 const EX_TEMPFAIL = 75;
 
-/** A duplicate skip always carries this reason first (see buildEntry) — distinguishes it from
- * the .m4s hard-skip path, which is not judged. */
-const DUPLICATE_REASON = "duplicate of an existing track in the DJ collection";
 
 /** Without claude's second opinion, --auto only applies what arrives on its own; purchases wait. */
 const AUTO_SOURCES: readonly Source[] = ["downloaded", "soundcloud"];
@@ -345,7 +343,7 @@ async function runApply(manifestPath: string): Promise<void> {
   const result = await applyManifest(manifest, { backupDir });
   reportFailures(result.failures);
   console.log(
-    `\nApplied: ${result.applied}, failed: ${result.failures.length}, skipped (review/skip/duplicate): ${result.skipped}`,
+    `\nApplied: ${result.applied}, duplicates cleared: ${result.cleared}, failed: ${result.failures.length}, skipped (review/skip): ${result.skipped}`,
   );
   console.log(`Moved into: ${withTrailingSlash(manifest.move_dir)}`);
   if (result.runBackupDir) console.log(`Originals backed up to: ${result.runBackupDir}`);
