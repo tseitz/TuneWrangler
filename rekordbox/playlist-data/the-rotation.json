@@ -5,7 +5,9 @@
       "mainConditions": ["The Rotation"],
       "negativeConditions": ["Archive"],
       "base": "helpers/_lanes.json",
-      "playlists": []
+      "playlists": [
+        { "name": "Palate Cleanser", "operator": 1, "playlistType": "folder", "link": "helpers/_palate-cleanser.json" }
+      ]
     }
   ]
 }

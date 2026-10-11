@@ -1,0 +1,11 @@
+{
+  "data": [
+    {
+      "parent": "Palate Cleanser",
+      "mainConditions": ["PALATE CLEANSER"],
+      "negativeConditions": [],
+      "base": "helpers/_lanes.json",
+      "playlists": []
+    }
+  ]
+}

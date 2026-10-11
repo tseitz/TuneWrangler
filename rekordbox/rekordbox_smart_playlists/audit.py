@@ -31,8 +31,6 @@ UNIFORM_CONTEXTS: tuple[str, ...] = (
     "missy",
     "silent-disco",
     "ketamine-music",
-    "my-set",
-    "the-rotation",
     "weapons",
     "party-hits",
     "lanes",

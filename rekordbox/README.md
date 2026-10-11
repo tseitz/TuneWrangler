@@ -54,6 +54,10 @@ with a genre inside a lane name, for example Dub + GROOVY. Dub Deep is Dub witho
 Dub Trippy is separate from Dub Weird because a smart list cannot express Dub AND (WEIRD OR
 Trippy).
 
+My Set and The Rotation each hold a `Palate Cleanser` folder: `All` plus the same lane list,
+narrowed to PALATE CLEANSER (`helpers/_palate-cleanser.json`). The texture stays out of
+`_lanes.json`, so the auto-tagger never suggests it.
+
 ### Skipped lanes (`minTracks`)
 
 A lane is only created when it has at least `minTracks` matching tracks (Archive excluded) in

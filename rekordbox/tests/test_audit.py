@@ -489,9 +489,25 @@ def test_uniform_contexts_share_identical_core():
     sigs = {}
     for stem in UNIFORM_CONTEXTS:
         res = resolve_context(PLAYLIST_DATA / f"{stem}.json", PLAYLIST_DATA)
-        assert len(res.leaves) == 30, f"{stem} has {len(res.leaves)} leaves, expected 30"
+        assert len(res.leaves) == 33, f"{stem} has {len(res.leaves)} leaves, expected 33"
         sigs[stem] = _signature(res.leaves)
     assert len(set(sigs.values())) == 1, "lane roots do not share an identical core"
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("stem", ["my-set", "the-rotation"])
+def test_palate_cleanser_roots_repeat_every_lane_in_their_folder(stem):
+    core = _signature(resolve_context(PLAYLIST_DATA / "daytime.json", PLAYLIST_DATA).leaves)
+    leaves = resolve_context(PLAYLIST_DATA / f"{stem}.json", PLAYLIST_DATA).leaves
+    top = [leaf for leaf in leaves if len(leaf.path) == 1]
+    folder = [leaf for leaf in leaves if leaf.path[1:] == ("Palate Cleanser",)]
+
+    assert len(top) + len(folder) == len(leaves)
+    assert _signature(top) == core
+    assert sorted(leaf.name for leaf in folder) == sorted(name for _, name in core)
+    all_cleansers = next(leaf for leaf in folder if leaf.name == "All")
+    assert "PALATE CLEANSER" in all_cleansers.conditions
+    assert top[0].path[0] in all_cleansers.conditions
 
 
 @pytest.mark.integration
@@ -499,6 +515,7 @@ def test_library_total_is_within_expected_range():
     total = sum(
         len(resolve_context(f, PLAYLIST_DATA).leaves) for f in _context_files(PLAYLIST_DATA)
     )
-    # 16 lane roots * 30 + Gigs 7 + Recent Additions 4 + Go Through 3 = 494. Upper
-    # bound: the audit can't see minTracks, which skips the redundant lane at runtime.
-    assert total == 494, f"unexpected library total: {total}"
+    # 16 lane roots * 33 + 2 Palate Cleanser folders * 33 + Gigs 7 + Recent Additions 4
+    # + Go Through 3 = 608. Upper bound: the audit can't see minTracks, which skips the
+    # redundant lane at runtime.
+    assert total == 608, f"unexpected library total: {total}"
