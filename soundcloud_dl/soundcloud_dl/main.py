@@ -445,6 +445,25 @@ def gate_template_vars(handler_cls: type) -> dict[str, str]:
     return {"email": DOWNLOAD_EMAIL, "name": DOWNLOAD_NAME, "comment": DOWNLOAD_COMMENT}
 
 
+def _known_gate_url(track: TrackItem) -> str | None:
+    """The gate a track's API data names, without opening its page; None means scrape it."""
+    if (
+        track.purchase_url
+        and avoid_reason(track.purchase_url) is not None
+        and (described := gate_in_description(track.description))
+    ):
+        return described
+    return track.purchase_url or None
+
+
+def _laylo_ahead(tracks: list[TrackItem]) -> bool:
+    """RSVPs from headless Chrome were taken and never delivered, so a Laylo gate gets a window."""
+    ahead = any((gate := _known_gate_url(t)) is not None and is_rsvp_gate(gate) for t in tracks)
+    if ahead and not HEADED:
+        logger.info("A Laylo gate is in this batch; running Chrome headed")
+    return ahead
+
+
 def is_rsvp_gate(gate_url: str) -> bool:
     try:
         return bool(getattr(get_handler_for_url(gate_url), "rsvp_gate", False))
@@ -518,19 +537,14 @@ async def _process_track(  # noqa: C901, PLR0911, PLR0912, PLR0915
             logger.info("DOWNLOAD_SUCCESS | %s | native SC download", track_label)
             return TrackOutcome("done")
 
-        if (
-            track.purchase_url
-            and avoid_reason(track.purchase_url) is not None
-            and (described := gate_in_description(track.description))
-        ):
-            gate_url = described
+        gate_url = _known_gate_url(track)
+        if gate_url is not None and gate_url != track.purchase_url:
             logger.info(
                 "Buy link %s is skipped or a last resort; using description gate %s",
                 track.purchase_url,
                 gate_url,
             )
-        elif track.purchase_url:
-            gate_url = track.purchase_url
+        elif gate_url is not None:
             logger.info("Using purchase_url from API: %s", gate_url)
         else:
             gate_url = await get_gate_url(context, track.url)  # type: ignore[arg-type]
@@ -786,8 +800,9 @@ async def _run_phase2(
 
     # --pause forces a window regardless of config, and the login guard below has to ask
     # about the browser it actually got, not the one the config asked for.
-    headed = bool(pause or HEADED)
-    async with attached_browser(headed=True if pause else None) as context:
+    forced = pause or _laylo_ahead(to_process)
+    headed = bool(forced or HEADED)
+    async with attached_browser(headed=True if forced else None) as context:
         await _ensure_logged_in(context, headed=headed)
         # Before any track, so follows an earlier run held for a tab that has since been
         # dealt with do not sit on the account indefinitely.

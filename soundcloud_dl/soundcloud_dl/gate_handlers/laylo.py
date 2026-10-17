@@ -150,14 +150,31 @@ class LayloHandler(JevHandler):
         except (PlaywrightError, UnicodeDecodeError):
             logger.debug("[%s] unreadable %s", self.gate_name, response.url, exc_info=True)
             return
+        flat = body.replace(" ", "")
         if "Code added to request" in body:
             self._ack = "code"
             self._code_asked.set()
-        elif "/rsvp" in response.url and '"success":true' in body.replace(" ", ""):
+        elif "/rsvp" in response.url and response.ok:
+            if '"success":false' in flat:
+                return
+            # A drop with a Spotify pre-save answered without the success flag, and its email
+            # still came. Logged so the next such answer shows what it was.
+            if '"success":true' not in flat:
+                logger.info(
+                    "[%s] RSVP answer without a success flag: %s",
+                    self.gate_name,
+                    self._masked(body[:500]),
+                )
             self._ack = self._ack or "rsvp"
         else:
             return
         self._acked.set()
+
+    def _masked(self, text: str) -> str:
+        for value in self._typed_values():
+            if value:
+                text = text.replace(value, "***")
+        return text
 
     async def _await_ack(self) -> str | None:
         with contextlib.suppress(TimeoutError):

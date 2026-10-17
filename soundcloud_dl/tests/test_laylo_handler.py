@@ -480,9 +480,10 @@ async def test_a_known_number_is_accepted_without_a_code(monkeypatch):
 
 
 class _Resp:
-    def __init__(self, url, body):
+    def __init__(self, url, body, status=200):
         self.url = url
-        self.status = 200
+        self.status = status
+        self.ok = 200 <= status < 300  # noqa: PLR2004
         self._body = body
 
     async def text(self):
@@ -503,6 +504,9 @@ class _Resp:
         ),
         ([("https://evil.example/rsvp", '{"success":true}')], None),
         ([("https://events.laylo.com/actions/rsvp/rsvp", '{"success":false}')], None),
+        # So Dope's drop, 2026-10-16: the RSVP went through and the email came, without
+        # the success flag in the answer.
+        ([("https://events.laylo.com/actions/rsvp/rsvp", '{"presave":true}')], "rsvp"),
     ],
 )
 async def test_lay_los_answer_decides_what_follows_the_click(responses, ack):
@@ -513,6 +517,27 @@ async def test_lay_los_answer_decides_what_follows_the_click(responses, ack):
     for read in handler._ack_reads:
         await read
     assert handler._ack == ack
+
+
+async def test_a_failed_rsvp_answer_is_not_an_ack():
+    handler = _handler()
+    handler._armed = True
+    handler._on_response(_Resp("https://events.laylo.com/actions/rsvp/rsvp", "{}", status=500))
+    for read in handler._ack_reads:
+        await read
+    assert handler._ack is None
+
+
+async def test_an_rsvp_answer_without_the_success_flag_is_logged_masked(caplog):
+    handler = _handler()
+    handler._armed = True
+    body = f'{{"presave":true,"phone":"{PHONE}"}}'
+    with caplog.at_level("INFO", logger="soundcloud_dl.gate_handlers.laylo"):
+        handler._on_response(_Resp("https://events.laylo.com/actions/rsvp/rsvp", body))
+        for read in handler._ack_reads:
+            await read
+    assert '"presave":true' in caplog.text
+    assert PHONE not in caplog.text
 
 
 async def test_every_laylo_response_after_the_click_is_logged(caplog):
