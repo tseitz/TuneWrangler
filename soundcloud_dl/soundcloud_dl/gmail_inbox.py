@@ -31,7 +31,9 @@ _VOICE_DOMAIN = "txt.voice.google.com"
 # Narrowing only. Gmail's from: also matches the display name, so the address on each
 # message is checked again by _sender_domain.
 _QUERY_TEXTS = f"from:{_VOICE_DOMAIN}"
-_QUERY_LAYLO_MAIL = "from:laylo.com"
+# Not from:laylo.com: an artist can have Laylo mail from their own domain. The word is in
+# every Laylo email's footer.
+_QUERY_LAYLO_MAIL = "laylo"
 # The number Laylo texted SPAG's link from. More are learned from drop records.
 LAYLO_SENDERS = frozenset({"2134748783"})
 _SUBJECT_NUMBER = re.compile(r"from\s+(.+)$", re.IGNORECASE)
@@ -65,9 +67,26 @@ def _is_text(message: TextMessage) -> bool:
     return message.sender_domain == _VOICE_DOMAIN
 
 
-def _is_laylo_mail(message: TextMessage) -> bool:
+def _is_laylo_mail(message: TextMessage, artist: str | None) -> bool:
     domain = message.sender_domain
-    return domain == "laylo.com" or domain.endswith(".laylo.com")
+    if domain == "laylo.com" or domain.endswith(".laylo.com"):
+        return True
+    # Mail from an artist's own domain carries no Laylo signature. Its links routing through
+    # the RSVP'd drop's own <artist>.laylo.co, and no other artist's, is the closest thing to
+    # proof there is.
+    return artist is not None and _laylo_co_hosts(message.body) == {f"{artist}.laylo.co"}
+
+
+def _laylo_co_hosts(body: str) -> set[str]:
+    hosts = set()
+    for url in _URL.findall(body):
+        try:
+            host = urlparse(url).hostname or ""
+        except ValueError:
+            continue
+        if host.endswith(".laylo.co"):
+            hosts.add(host)
+    return hosts
 
 
 def extract_link(body: str) -> str | None:
@@ -109,14 +128,14 @@ def email_download_link(body: str) -> str | None:
 
 
 def pick_email(
-    messages: list[TextMessage], since_epoch: float, used_ids: set[str]
+    messages: list[TextMessage], since_epoch: float, used_ids: set[str], artist: str | None = None
 ) -> TextMessage | None:
     """The oldest Laylo email since the RSVP that carries a Dropbox link and is not taken."""
     since_ms = int(since_epoch * 1000)
     fresh = [
         m
         for m in messages
-        if _is_laylo_mail(m)
+        if _is_laylo_mail(m, artist)
         and m.received_ms >= since_ms
         and m.gmail_id not in used_ids
         and email_download_link(m.body)
@@ -282,10 +301,11 @@ async def wait_for_text(  # noqa: PLR0913
     )
 
 
-async def wait_for_email(
+async def wait_for_email(  # noqa: PLR0913
     since_epoch: float,
     used_ids: set[str],
     *,
+    artist: str | None = None,
     timeout_s: float = 180.0,
     poll_s: float = 10.0,
     transport: httpx.AsyncBaseTransport | None = None,
@@ -293,7 +313,7 @@ async def wait_for_email(
     """Poll Gmail for Laylo's confirmation email carrying the link, or give up."""
     return await _poll(
         since_epoch,
-        lambda msgs: pick_email(msgs, since_epoch, used_ids),
+        lambda msgs: pick_email(msgs, since_epoch, used_ids, artist),
         "email with a link",
         timeout_s=timeout_s,
         poll_s=poll_s,

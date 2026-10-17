@@ -182,7 +182,10 @@ async def test_an_email_rsvp_is_recorded_at_once_and_reads_the_email(monkeypatch
     # As gmail_inbox hands it over: the HTML with its entities already undone.
     mail = f'<p>Access confirmed. <a href="{LINK}">{LINK}</a></p>'
 
-    async def email(*_a, **_k):
+    asked = {}
+
+    async def email(*_a, **k):
+        asked.update(k)
         return TextMessage(gmail_id="e1", received_ms=0, subject="You're confirmed", body=mail)
 
     async def no_text(*_a, **_k):
@@ -203,6 +206,7 @@ async def test_an_email_rsvp_is_recorded_at_once_and_reads_the_email(monkeypatch
     assert record.channel == "email"
     assert record.link == LINK
     assert record.gmail_id == "e1"
+    assert asked["artist"] == "spagheddy"
 
 
 async def test_a_submitted_drop_is_never_rsvped_again(monkeypatch):

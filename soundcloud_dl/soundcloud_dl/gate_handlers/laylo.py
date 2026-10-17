@@ -364,7 +364,9 @@ class LayloHandler(JevHandler):
         await self._finish(key, record)
         return results
 
-    async def _await_link(self, record: laylo_drops.DropRecord) -> laylo_drops.DropRecord | None:
+    async def _await_link(
+        self, key: str, record: laylo_drops.DropRecord
+    ) -> laylo_drops.DropRecord | None:
         """The record with its link filled in from Gmail, or None (review_reason says why)."""
         assert record.submitted_at is not None  # noqa: S101
         if time.time() > record.submitted_at + _LINK_WINDOW_S:
@@ -372,7 +374,9 @@ class LayloHandler(JevHandler):
             return None
         used = laylo_drops.used_gmail_ids()
         if record.channel == "email":
-            mail = await wait_for_email(record.submitted_at, used)
+            host, _, path = key.partition("/")
+            artist = (path.partition("/")[0] or None) if host == "laylo.com" else None
+            mail = await wait_for_email(record.submitted_at, used, artist=artist)
             if mail is None:
                 self.review_reason = "laylo: no email with a link yet; the next run checks"
                 return None
@@ -397,7 +401,7 @@ class LayloHandler(JevHandler):
 
     async def _finish(self, key: str, record: laylo_drops.DropRecord) -> None:
         if record.link is None:
-            linked = await self._await_link(record)
+            linked = await self._await_link(key, record)
             if linked is None:
                 return
             record = linked

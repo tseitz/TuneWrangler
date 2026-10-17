@@ -237,3 +237,73 @@ def test_a_text_not_forwarded_by_google_voice_is_never_taken(sender):
 
     assert pick_message([_msg("spoof", 1_000_005, SPAG_BODY, sender)], 1_000_000, set()) is None
     assert pick_code([_msg("spoof", 1_000_005, CODE_BODY, sender)], 1_000_000) is None
+
+
+# FRAXURE's confirmation, 2026-10-16: Laylo mailing from the artist's own domain (trimmed).
+FRAXURE_MAIL = "FRAXURE <peter@info.fraxureaudio.com>"
+FRAXURE_HTML = (
+    "<p>Here is your download link: "
+    "https://www.dropbox.com/scl/fi/fkc8/260821-fraxure-twopercent-different.wav?rlkey=b8c&dl=0</p>"
+    '<a href="https://fraxure.laylo.co/e/W5XzY/u?url=https%3A%2F%2Flaylo.com%2Fd%2F9acd">'
+    "different - Free Download</a>"
+)
+
+
+def test_an_artist_domain_email_routed_through_the_drops_artist_is_taken():
+    from soundcloud_dl.gmail_inbox import pick_email
+
+    mail = _msg("fx", 1_000_005, FRAXURE_HTML, FRAXURE_MAIL)
+    assert pick_email([mail], 1_000_000, set(), artist="fraxure").gmail_id == "fx"
+
+
+@pytest.mark.parametrize(
+    ("host", "artist"),
+    [
+        ("fraxure.laylo.co", None),
+        ("fraxure.laylo.co", "agaudio"),
+        ("notfraxure.laylo.co", "fraxure"),
+        ("fraxure.laylo.co.attacker.example", "fraxure"),
+    ],
+)
+def test_an_artist_domain_email_for_another_drop_is_never_taken(host, artist):
+    from soundcloud_dl.gmail_inbox import pick_email
+
+    body = FRAXURE_HTML.replace("fraxure.laylo.co", host)
+    mail = _msg("fx", 1_000_005, body, FRAXURE_MAIL)
+    assert pick_email([mail], 1_000_000, set(), artist=artist) is None
+
+
+def test_one_email_naming_several_artists_is_taken_for_none_of_them():
+    from soundcloud_dl.gmail_inbox import pick_email
+
+    body = FRAXURE_HTML + ' <a href="https://agaudio.laylo.co/e/x">x</a>'
+    mail = _msg("fx", 1_000_005, body, FRAXURE_MAIL)
+    assert pick_email([mail], 1_000_000, set(), artist="fraxure") is None
+    assert pick_email([mail], 1_000_000, set(), artist="agaudio") is None
+
+
+def test_an_unparseable_link_in_another_email_does_not_stop_the_search():
+    import html
+
+    from soundcloud_dl.gmail_inbox import pick_email
+
+    junk = _msg("junk", 1_000_002, "laylo https://[oops", "<news@example.com>")
+    ag = _msg("ag", 1_000_020, html.unescape(AG_HTML), LAYLO_MAIL)
+    assert pick_email([junk, ag], 1_000_000, set(), artist="fraxure").gmail_id == "ag"
+
+
+async def test_the_email_search_is_not_limited_to_laylos_own_address(monkeypatch):
+    from soundcloud_dl.gmail_inbox import wait_for_email
+
+    monkeypatch.setattr(gmail_inbox, "load_gmail_access_token", lambda: "tok")
+    seen = {}
+    inner = _gmail_transport([])
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/messages"):
+            seen["q"] = request.url.params.get("q")
+        return inner.handle_request(request)
+
+    await wait_for_email(1_000_000, set(), timeout_s=0, transport=httpx.MockTransport(handler))
+    assert "from:laylo.com" not in seen["q"]
+    assert seen["q"].startswith("laylo ")
