@@ -195,16 +195,16 @@ gate, in order: `logs/nightly/pause` absent → on AC power (never on battery; l
 settled. A skip writes `logs/nightly/gate.txt` and exits 0; an unreadable
 drive that isn't simply unplugged (macOS privacy block) notifies and exits 1.
 
-Stages, with per-day state in `logs/nightly/state.json`: **download** (`deno task py
---sc-actions`; done only when `last_run.json` says the batch finished) → **rename** (`rM --auto`;
-exit 1 still counts, 75 retries) → **prune** (`--prune-playlist --apply`, never `--allow-bulk`)
-and **tag** (`rb:tag embed`, `suggest --new-tag-precision 0.5 --skip-applied`, `apply --yes
---db-keep 7`; waits while Rekordbox is open). A failing stage is retried on later polls, up to 3
-attempts a day. Once download, rename and prune have settled, one macOS notification goes out
-and `logs/nightly/<date>.md` gets the report; output from every stage is in
-`logs/nightly/<date>.log` (kept 30 days). Rekordbox import stays manual, so a download is tagged
-on the first run after it's imported. Under launchd the real `deno` binary (in mise's install
-folder) needs Full Disk Access for the external drive; a deno upgrade changes that path.
+Stages, with per-day state in `logs/nightly/state.json`: **download** (`deno task py --sc-actions`
+with the playlist cache off; done only when `last_run.json` says the batch finished) → **rename**
+(`rM --auto`; exit 1 still counts, 75 retries) → **prune** (`--prune-playlist --apply`, never
+`--allow-bulk`) and **tag** (`rb:tag embed`, `suggest --new-tag-precision 0.5 --skip-applied`,
+`apply --yes --db-keep 7`; waits while Rekordbox is open). A failing stage is retried on later
+polls, up to 3 attempts a day. Once download, rename and prune have settled, one macOS notification
+goes out and `logs/nightly/<date>.md` gets the report; output from every stage is in
+`logs/nightly/<date>.log` (kept 30 days). Rekordbox import stays manual, so a download is tagged on
+the first run after it's imported. Under launchd the real `deno` binary (in mise's install folder)
+needs Full Disk Access for the external drive; a deno upgrade changes that path.
 
 ## Architecture
 

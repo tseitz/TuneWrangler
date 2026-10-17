@@ -116,12 +116,13 @@ interface RunResult {
 const HOUR = 3_600_000;
 
 /** A wedged child would hold the run lock, and every later poll would skip, forever. */
-async function task(log: Deno.FsFile, args: string[], timeoutMs: number): Promise<RunResult> {
+async function task(log: Deno.FsFile, args: string[], timeoutMs: number, env?: Record<string, string>): Promise<RunResult> {
   const enc = new TextEncoder();
   await log.write(enc.encode(`\n$ deno task ${args.join(" ")}   (${new Date().toISOString()})\n`));
   const child = new Deno.Command(Deno.execPath(), {
     args: ["task", ...args],
     cwd: REPO,
+    env,
     stdin: "null",
     stdout: "piped",
     stderr: "piped",
@@ -151,7 +152,8 @@ type StageResult = [Outcome, number | null, string | null];
 async function download(log: Deno.FsFile): Promise<StageResult> {
   if (await chromeBusy()) return ["retry", null, "Chrome debug port busy (a manual run?)"];
   const startedAt = new Date();
-  const { code } = await task(log, ["py", "--sc-actions"], 3 * HOUR);
+  // The cached track list never expires; a stale one hides every track added since.
+  const { code } = await task(log, ["py", "--sc-actions"], 3 * HOUR, { TUNEWRANGLER_SC_PLAYLIST_CACHE: "0" });
   const lastRun = await readJson<LastRun>(join(SC_LOGS, "last_run.json"));
   return [downloadOutcome(code, lastRun, startedAt), code, lastRun?.error ?? null];
 }
