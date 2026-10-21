@@ -96,17 +96,17 @@ def _by_id(manifest):
 
 def test_min_precision_gates_proposed_and_review_band():
     tracks = [_track("hi", []), _track("mid", []), _track("lo", [])]
-    est = {"House": _est([0.9, 0.6, 0.3])}
+    est = {"Dub": _est([0.9, 0.6, 0.3])}
     styles = [[("House", 0.9)]] * 3
     manifest, stats = _assemble(tracks, est, styles)
     entries = _by_id(manifest)
-    assert entries["hi"].proposed == ["House"] and entries["hi"].decision == "apply"
+    assert entries["hi"].proposed == ["Dub"] and entries["hi"].decision == "apply"
     assert entries["mid"].proposed == [] and entries["mid"].decision == "review"
     assert entries["mid"].suggestions[0].decision == "review"
     assert "lo" not in entries and stats.dropped_no_suggestion == 1
 
     manifest, _ = _assemble(tracks, est, styles, min_precision=0.5)
-    assert _by_id(manifest)["mid"].proposed == ["House"]
+    assert _by_id(manifest)["mid"].proposed == ["Dub"]
 
 
 def test_halftime_needs_experimental_bass_and_halftime_top_style():
@@ -115,8 +115,8 @@ def test_halftime_needs_experimental_bass_and_halftime_top_style():
     styles = [[("Electronic---Halftime", 0.5)], [("Electronic---Dubstep", 0.5)], [("Electronic---Halftime", 0.5)]]
     manifest, _ = _assemble(tracks, est, styles, min_precision=0.65)
     entries = _by_id(manifest)
-    assert entries["both"].proposed == [sg.EXPERIMENTAL_BASS, sg.HALFTIME]
-    assert entries["eb-only"].proposed == [sg.EXPERIMENTAL_BASS]
+    assert entries["both"].proposed == [sg.EXPERIMENTAL_BASS, sg.HALFTIME, sg.WEIRD]
+    assert entries["eb-only"].proposed == [sg.EXPERIMENTAL_BASS, sg.WEIRD]
     assert "ht-only" not in entries
 
 
@@ -224,6 +224,38 @@ def test_new_tag_precision_applies_to_experimental_bass_only():
         tracks, est, styles, "h", 0.8, datetime(2026, 10, 8), new_tag_precision=0.5
     )[0]
     entry = manifest.entries[0]
-    assert entry.proposed == [sg.EXPERIMENTAL_BASS, sg.HALFTIME]
+    assert entry.proposed == [sg.EXPERIMENTAL_BASS, sg.HALFTIME, sg.WEIRD]
     assert {s.tag: s.decision for s in entry.suggestions}["Dub"] == "review"
     assert manifest.thresholds[sg.EXPERIMENTAL_BASS] == 0.5
+
+
+def test_dnb_tags_need_a_dnb_tempo():
+    def at(cid, bpm):
+        return dataclasses.replace(_track(cid, []), bpm=bpm)
+
+    tracks = [at("full", 174.0), at("half", 87.0), at("house", 136.0), at("unknown", 0.0)]
+    est = {"DnB": _est([0.95] * 4), "Jungle": _est([0.95] * 4), "Dub": _est([0.95] * 4)}
+    entries = _by_id(_assemble(tracks, est, [[("Electronic---Dub", 0.5)]] * 4)[0])
+    assert entries["full"].proposed == ["DnB", "Jungle", "Dub"]
+    assert entries["half"].proposed == ["DnB", "Jungle", "Dub"]
+    assert entries["house"].proposed == ["Dub"]
+    assert {s.tag for s in entries["unknown"].suggestions} == {"Dub"}
+
+
+def test_house_needs_higher_precision_than_the_default():
+    tracks = [_track("hi", []), _track("mid", [])]
+    est = {"House": _est([0.92, 0.85]), "Dub": _est([0.85, 0.85])}
+    manifest, _ = _assemble(tracks, est, [[("House", 1)]] * 2)
+    entries = _by_id(manifest)
+    assert entries["hi"].proposed == ["House", "Dub"]
+    assert entries["mid"].proposed == ["Dub"]
+    assert manifest.thresholds["House"] == 0.9
+
+
+def test_weird_follows_experimental_bass_only_when_it_is_applied():
+    tracks = [_track("eb", []), _track("review", [])]
+    est = {sg.EXPERIMENTAL_BASS: _est([0.7, 0.6])}
+    manifest, _ = _assemble(tracks, est, [[("Electronic---Dubstep", 0.5)]] * 2, min_precision=0.65)
+    entries = _by_id(manifest)
+    assert entries["eb"].proposed == [sg.EXPERIMENTAL_BASS, sg.WEIRD]
+    assert entries["review"].proposed == []

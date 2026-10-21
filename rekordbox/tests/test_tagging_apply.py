@@ -7,7 +7,7 @@ import pytest
 from rekordbox_smart_playlists.tagging import apply as ap
 from rekordbox_smart_playlists.tagging import manifest as mf
 
-VOCAB = frozenset({"Dub", "House", "WEIRD", "GROOVY", "Halftime"})
+VOCAB = frozenset({"Dub", "House", "WEIRD", "Vibes", "GROOVY", "Halftime"})
 TAGS = {"Dub": "1", "House": "2", "Experimental Bass": "3", "Halftime": "4", "Autotagged": "9"}
 
 
@@ -144,7 +144,7 @@ def test_tracks_tagged_since_suggest_archived_or_deleted_are_skipped(tmp_path):
 def test_validation_refuses_before_any_write(tmp_path):
     db = FakeDb({"1": _content()})
     with pytest.raises(ap.ApplyError, match="may not write"):
-        _run(db, _manifest([_entry("1", ["WEIRD"])]), tmp_path)
+        _run(db, _manifest([_entry("1", ["Vibes"])]), tmp_path)
     with pytest.raises(ap.ApplyError, match="lane tags changed"):
         _run(db, _manifest([_entry("1", ["Dub"])], vocab=VOCAB | {"Feels"}), tmp_path)
     with pytest.raises(ap.ApplyError, match="matches 0 tags"):

@@ -10,9 +10,9 @@ from ..core.backup_manager import PINNED_BACKUP_NAME
 from ..utils.logging import get_logger, log_exception
 from . import manifest as mf
 from .library import ARCHIVE_TAG, AUTOTAG_MARKER, EXCLUDED
-from .suggest import EXPERIMENTAL_BASS, HALFTIME, LANE_EXTRAS, SCORED_TAGS
+from .suggest import EXPERIMENTAL_BASS, HALFTIME, LANE_EXTRAS, SCORED_TAGS, WEIRD
 
-ALLOWED_TAGS = frozenset(SCORED_TAGS) | {EXPERIMENTAL_BASS, HALFTIME}
+ALLOWED_TAGS = frozenset(SCORED_TAGS) | {EXPERIMENTAL_BASS, HALFTIME, WEIRD}
 BACKUP_NAME = PINNED_BACKUP_NAME
 DB_SNAPSHOT_PREFIX = "tag_apply_master_db"
 

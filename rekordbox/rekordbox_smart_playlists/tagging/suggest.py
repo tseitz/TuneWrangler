@@ -28,6 +28,10 @@ LANE_EXTRAS = frozenset({EXPERIMENTAL_BASS})
 REVIEW_PRECISION = 0.5
 DEFAULT_APPLY_PRECISION = 0.8
 MIN_SUPPORT = 20
+# House at 0.8 mostly misfires on UKG, which shares its tempo.
+TAG_PRECISION = {"House": 0.9}
+DNB_TAGS = frozenset({"DnB", "DnB Liquid", "Jungle"})
+DNB_BPM = ((160.0, 185.0), (80.0, 92.5))
 LIQUID = "DnB Liquid"
 PARENT_OF_LIQUID = "DnB"
 HIPHOP_PREFIX = "Hip Hop"
@@ -226,7 +230,11 @@ def _row(est: TagEstimate, i: int) -> tuple[float, float, str]:
 def _apply_threshold(tag: str, min_precision: float, new_tag_precision: float | None) -> float:
     if tag == EXPERIMENTAL_BASS and new_tag_precision is not None:
         return new_tag_precision
-    return min_precision
+    return max(min_precision, TAG_PRECISION.get(tag, 0.0))
+
+
+def _dnb_tempo(bpm: float) -> bool:
+    return any(lo <= bpm <= hi for lo, hi in DNB_BPM)
 
 
 def _judge(
@@ -262,12 +270,17 @@ def assemble(
         eb = estimates.get(EXPERIMENTAL_BASS)
         suggestions: list[mf.Suggestion] = []
         for tag, est in estimates.items():
+            if tag in DNB_TAGS and not _dnb_tempo(track.bpm):
+                continue
             if (s := _judge(tag, est, i, min_precision, new_tag_precision, is_hiphop)) is not None:
                 suggestions.append(s)
         proposed = [s.tag for s in suggestions if s.decision == "apply"]
         if eb and EXPERIMENTAL_BASS in proposed and top and top[0][0] == HALFTIME_STYLE:
             suggestions.append(mf.Suggestion(HALFTIME, *_row(eb, i), "apply"))
             proposed.append(HALFTIME)
+        if eb and EXPERIMENTAL_BASS in proposed:
+            suggestions.append(mf.Suggestion(WEIRD, *_row(eb, i), "apply"))
+            proposed.append(WEIRD)
         downgraded = any(
             s.decision == "review"
             and s.est_precision >= _apply_threshold(s.tag, min_precision, new_tag_precision)
@@ -303,6 +316,7 @@ def assemble(
             EXPERIMENTAL_BASS: _apply_threshold(
                 EXPERIMENTAL_BASS, min_precision, new_tag_precision
             ),
+            **{t: _apply_threshold(t, min_precision, None) for t in TAG_PRECISION},
         },
         note=NOTE,
         entries=[e for _, e in entries],
