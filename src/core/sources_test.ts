@@ -148,6 +148,17 @@ Deno.test("buildSong: a slash in the artist tag can't reach the file name", () =
   assertEquals(song.finalFilename, "AC x DC - B - T.m4a");
 });
 
+Deno.test("buildSong: a colon in any tag can't reach the file name", () => {
+  const tags = { artist: "SP:MC", album: "Port Zero: Shipment 3", title: "Kaya for Incurzion:" };
+  const song = buildSong("itunes", "SP_MC/Port Zero_ Shipment 3/01 T.m4a", "/i/", tags);
+  assertEquals(song.finalFilename, "SPMC - Port Zero Shipment 3 - Kaya for Incurzion.m4a");
+});
+
+Deno.test("buildSong: En:vy is named En-vy, not merged into Envy", () => {
+  const song = buildSong("itunes", "En_vy/Medieval - Single/01 Medieval.m4a", "/i/", { artist: "En:vy", album: "Medieval - Single", title: "Medieval" });
+  assertEquals(song.finalFilename, "En-vy - Medieval.m4a");
+});
+
 Deno.test("listSourceFiles: an itunes folder inside the Downloaded root isn't reported as ignored", async () => {
   const downloaded = `${await Deno.makeTempDir()}/`;
   await touch(`${downloaded}itunes/Music/A/B/01 T.m4a`);

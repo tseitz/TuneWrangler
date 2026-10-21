@@ -140,13 +140,18 @@ function newDownloadedSong(src: string, dir: string): DownloadedSong {
   }
 }
 
+/** Finder shows ":" as "/", and some tools refuse it. */
+function withoutColons(text: string): string {
+  return text.replaceAll(":", "").replace(/\s+/g, " ").trim();
+}
+
 function buildFromTags(src: string, dir: string, tags: EntryTags): Song {
   const folder = dirname(src);
   const song = new Song(basename(src), folder === "." ? dir : `${dir}${folder}/`);
 
   // A "/" in a tag would put a path separator in the proposed name.
-  const artist = tags.artist.replaceAll(/\s?\/\s?/g, " x ");
-  song.album = fixItunesLabeling(tags.album);
+  const artist = withoutColons(tags.artist.replaceAll(/\s?\/\s?/g, " x ").replaceAll("En:vy", "En-vy"));
+  song.album = fixItunesLabeling(withoutColons(tags.album));
   song.checkRemix();
   if (song.remix) {
     song.album = artist;
@@ -156,7 +161,7 @@ function buildFromTags(src: string, dir: string, tags: EntryTags): Song {
     if (!song.artist && song.getDashCount() >= 1) song.artist = song.grabFirst();
   }
   song.checkWith();
-  song.title = fixItunesLabeling(tags.title);
+  song.title = fixItunesLabeling(withoutColons(tags.title));
 
   song.checkFeat();
   // A remix's album slot holds the original artists; otherwise it's the release's own title.
