@@ -320,18 +320,21 @@ class FakeSession:
         self.calls.append("rollback")
 
 
-def _run_create(monkeypatch, results, preflight_errors=()):
+def _run_create(
+    monkeypatch, results, preflight_errors=(), existing_roots=(), existing="overwrite"
+):
     session = FakeSession()
     manager = SimpleNamespace(
         existing_strategy=None,
+        _skip_parents=set(),
         preflight=lambda config_file: list(preflight_errors),
-        find_existing_root_folders=lambda config_file: [],
+        find_existing_root_folders=lambda config_file: list(existing_roots),
         create_playlists_from_directory=lambda directory: results,
     )
     monkeypatch.setattr(commands, "RekordboxDatabase", lambda config: session)
     monkeypatch.setattr(commands, "PlaylistManager", lambda db, config: manager)
     command = commands.PlaylistCommand(Config(backup_before_changes=False))
-    args = argparse.Namespace(file=None, skip_backup=True, existing="overwrite")
+    args = argparse.Namespace(file=None, skip_backup=True, existing=existing)
     return command._create_playlists(args), session.calls
 
 
@@ -359,3 +362,22 @@ def test_preflight_failure_stops_before_any_change(monkeypatch):
 
     assert code == 1
     assert calls == []
+
+
+def test_nothing_to_overwrite_never_asks(monkeypatch):
+    monkeypatch.setattr("builtins.input", pytest.fail)
+
+    code, _ = _run_create(monkeypatch, [PlaylistCreationResult(True, "All")], existing=None)
+
+    assert code == 0
+
+
+def test_existing_folder_is_named_before_asking(monkeypatch, capsys):
+    root = {"name": "Halloween 2026", "playlist": None, "child_count": 11}
+    monkeypatch.setattr("builtins.input", lambda prompt: "2")
+
+    _run_create(monkeypatch, [], existing_roots=[root], existing=None)
+
+    out = capsys.readouterr().out
+    assert "Halloween 2026 (11 child playlist(s))" in out
+    assert "Skip this folder" in out

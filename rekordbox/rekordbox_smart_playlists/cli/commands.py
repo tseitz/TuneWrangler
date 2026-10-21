@@ -8,6 +8,7 @@ import argparse
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from ..core.backup_manager import (
     BackupError,
@@ -99,7 +100,7 @@ class PlaylistCommand(BaseCommand):
             default=None,
             help=(
                 "How to handle existing playlists: overwrite, skip, or prompt for each "
-                "(default: prompt interactively at start)"
+                "(default: ask, only when a folder already exists)"
             ),
         )
 
@@ -152,6 +153,28 @@ class PlaylistCommand(BaseCommand):
             log_exception(logger, e, f"playlist {args.playlist_action}")
             return 1
 
+    def _existing_strategy(
+        self, args: argparse.Namespace, existing_roots: list[dict[str, Any]]
+    ) -> ExistingPlaylistStrategy:
+        if args.existing:
+            return ExistingPlaylistStrategy(args.existing)
+        if not existing_roots:
+            return ExistingPlaylistStrategy.SKIP_ALL
+        if self.config.dry_run:
+            print("[DRY RUN] Would ask about the folders above. Defaulting to skip.\n")
+            return ExistingPlaylistStrategy.SKIP_ALL
+        noun = "this folder" if len(existing_roots) == 1 else "these folders"
+        print(f"  1. Overwrite {noun}")
+        print(f"  2. Skip {noun}")
+        print("  3. Ask for each")
+        choice = input("Choose (1/2/3) [default: 3]: ").strip()
+        print()
+        if choice == "1":
+            return ExistingPlaylistStrategy.OVERWRITE_ALL
+        if choice == "2":
+            return ExistingPlaylistStrategy.SKIP_ALL
+        return ExistingPlaylistStrategy.PROMPT_EACH
+
     def _create_playlists(self, args: argparse.Namespace) -> int:
         """Create playlists from configuration files."""
         logger.info("Creating playlists...")
@@ -178,31 +201,6 @@ class PlaylistCommand(BaseCommand):
             with RekordboxDatabase(self.config) as db:
                 playlist_manager = PlaylistManager(db, self.config)
 
-                # Determine strategy for handling existing playlists
-                if args.existing:
-                    strategy = ExistingPlaylistStrategy(args.existing)
-                elif self.config.dry_run:
-                    print(
-                        "[DRY RUN] Would prompt for existing playlist strategy. "
-                        "Defaulting to skip.\n"
-                    )
-                    strategy = ExistingPlaylistStrategy.SKIP_ALL
-                else:
-                    print("\nHow would you like to handle existing playlists?")
-                    print("  1. Overwrite all existing playlists")
-                    print("  2. Skip all existing playlists")
-                    print("  3. Prompt for each existing playlist")
-                    choice = input("Choose (1/2/3) [default: 3]: ").strip()
-                    if choice == "1":
-                        strategy = ExistingPlaylistStrategy.OVERWRITE_ALL
-                    elif choice == "2":
-                        strategy = ExistingPlaylistStrategy.SKIP_ALL
-                    else:
-                        strategy = ExistingPlaylistStrategy.PROMPT_EACH
-                    print()
-
-                playlist_manager.existing_strategy = strategy
-
                 config_file_arg = args.file if args.file else None
                 preflight_errors = playlist_manager.preflight(config_file_arg)
                 if preflight_errors:
@@ -211,11 +209,9 @@ class PlaylistCommand(BaseCommand):
                         print(f"  - {error}")
                     return 1
 
-                # Check for existing root folders and handle based on strategy
                 existing_roots = playlist_manager.find_existing_root_folders(config_file_arg)
-
                 if existing_roots:
-                    print(f"Found {len(existing_roots)} existing root folder(s):")
+                    print("Already in Rekordbox:")
                     for root in existing_roots:
                         child_str = (
                             f"{root['child_count']} child playlist(s)"
@@ -225,6 +221,10 @@ class PlaylistCommand(BaseCommand):
                         print(f"  - {root['name']} ({child_str})")
                     print()
 
+                strategy = self._existing_strategy(args, existing_roots)
+                playlist_manager.existing_strategy = strategy
+
+                if existing_roots:
                     if self.config.dry_run:
                         print("[DRY RUN] Would handle existing folders based on strategy.\n")
                     elif strategy == ExistingPlaylistStrategy.OVERWRITE_ALL:
@@ -238,16 +238,8 @@ class PlaylistCommand(BaseCommand):
                             print(f"  Skipping '{root['name']}'.")
                         print()
                     else:
-                        # PROMPT_EACH
                         for root in existing_roots:
-                            child_count = root["child_count"]
-                            child_str = (
-                                f"{child_count} child playlist(s)" if child_count else "empty"
-                            )
-                            response = input(
-                                f"'{root['name']}' already exists ({child_str}). "
-                                "Overwrite or skip? (o/S): "
-                            )
+                            response = input(f"Overwrite '{root['name']}'? (o/S): ")
                             if response.lower() in ["o", "overwrite"]:
                                 deleted = playlist_manager.delete_root_folder(root["playlist"])
                                 print(f"  Deleted '{root['name']}' ({deleted} playlist(s)).")
