@@ -515,7 +515,7 @@ def test_library_total_is_within_expected_range():
     total = sum(
         len(resolve_context(f, PLAYLIST_DATA).leaves) for f in _context_files(PLAYLIST_DATA)
     )
-    # 16 lane roots * 33 + 2 Palate Cleanser folders * 33 + Gigs 7 + Recent Additions 4
-    # + Go Through 3 = 608. Upper bound: the audit can't see minTracks, which skips the
+    # 17 lane roots * 33 + 3 Palate Cleanser folders * 33 + Gigs 7 + Recent Additions 4
+    # + Go Through 3 = 674. Upper bound: the audit can't see minTracks, which skips the
     # redundant lane at runtime.
-    assert total == 608, f"unexpected library total: {total}"
+    assert total == 674, f"unexpected library total: {total}"

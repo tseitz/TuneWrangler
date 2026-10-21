@@ -283,6 +283,7 @@ class PlaylistManager:
                     main_conditions,
                     negative_conditions,
                     category_min_tracks=category_data.get("minTracks"),
+                    category_date_added=category_data.get("dateAdded"),
                 )
                 results.append(result)
 
@@ -356,6 +357,7 @@ class PlaylistManager:
         main_conditions: set[str],
         negative_conditions: set[str],
         category_min_tracks: int | None = None,
+        category_date_added: dict[str, str] | None = None,
     ) -> PlaylistCreationResult:
         """
         Create a single smart playlist.
@@ -417,6 +419,7 @@ class PlaylistManager:
                 main_conditions,
                 negative_conditions,
                 category_min_tracks,
+                category_date_added,
             )
 
         parent_name = getattr(parent_playlist, "Name", "Unknown")
@@ -430,7 +433,9 @@ class PlaylistManager:
             )
 
         # Create smart list with conditions
-        smart_list = self._build_smart_list(playlist_config, main_conditions, negative_conditions)
+        smart_list = self._build_smart_list(
+            playlist_config, main_conditions, negative_conditions, category_date_added
+        )
         if not smart_list:
             return PlaylistCreationResult(
                 success=False,
@@ -475,6 +480,7 @@ class PlaylistManager:
         inherited_main_conditions: set[str],
         inherited_negative_conditions: set[str],
         category_min_tracks: int | None = None,
+        category_date_added: dict[str, str] | None = None,
     ) -> PlaylistCreationResult:
         """
         Create a folder-type playlist by processing linked configuration.
@@ -586,6 +592,7 @@ class PlaylistManager:
                         final_main_conditions,
                         final_negative_conditions,
                         category_min_tracks=category_min_tracks,
+                        category_date_added=category_date_added,
                     )
                     linked_results.append(result)
 
@@ -653,6 +660,7 @@ class PlaylistManager:
         playlist_config: dict[str, Any],
         main_conditions: set[str],
         negative_conditions: set[str],
+        category_date_added: dict[str, str] | None = None,
     ) -> SmartList | None:
         """
         Build SmartList object from playlist configuration.
@@ -700,6 +708,10 @@ class PlaylistManager:
             date_created = playlist_config.get("dateCreated")
             if date_created:
                 self._add_date_condition(smart_list, date_created)
+
+            for date_added in (category_date_added, playlist_config.get("dateAdded")):
+                if date_added:
+                    self._add_date_added_condition(smart_list, date_added)
 
             return smart_list
 
@@ -772,6 +784,12 @@ class PlaylistManager:
         except Exception as e:
             log_exception(logger, e, "adding date condition")
             return False
+
+    def _add_date_added_condition(self, smart_list: SmartList, date_added: dict[str, str]) -> None:
+        """Rekordbox's "Date Added" column; both bounds are exclusive."""
+        operators = {"after": Operator.GREATER, "before": Operator.LESS}
+        for key, date in date_added.items():
+            smart_list.add_condition(Property.STOCK_DATE, operators[key], date)
 
     def find_existing_root_folders(
         self, config_file: str | Path | None = None

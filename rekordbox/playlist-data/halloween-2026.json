@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "parent": "Halloween 2026",
+      "mainConditions": ["Halloween"],
+      "negativeConditions": ["Archive"],
+      "dateAdded": { "after": "2025-10-31" },
+      "minTracks": 5,
+      "base": "helpers/_lanes.json",
+      "playlists": [
+        { "name": "Palate Cleanser", "operator": 1, "playlistType": "folder", "link": "helpers/_palate-cleanser.json" }
+      ]
+    }
+  ]
+}

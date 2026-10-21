@@ -5,6 +5,7 @@ Validation utilities for configuration, file paths, and data structures.
 import logging
 import os
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -210,6 +211,7 @@ def validate_playlist_category(category: dict[str, Any], index: int) -> list[str
                     errors.append(f"{prefix}: 'mainConditions[{j}]' must be a string")
 
     errors.extend(_validate_min_tracks(category, prefix))
+    errors.extend(_validate_date_added(category, prefix))
 
     if "negativeConditions" in category:
         if not isinstance(category["negativeConditions"], list):
@@ -278,6 +280,7 @@ def validate_playlist_item(playlist: dict[str, Any], prefix: str) -> list[str]:
         errors.append(f"{prefix}: 'doesNotContain' needs operator 1 (ALL)")
 
     errors.extend(_validate_min_tracks(playlist, prefix))
+    errors.extend(_validate_date_added(playlist, prefix))
 
     # Validate rating field
     if "rating" in playlist:
@@ -322,6 +325,21 @@ def _validate_min_tracks(item: dict[str, Any], prefix: str) -> list[str]:
         return []
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         return [f"{prefix}: 'minTracks' must be a non-negative integer"]
+    return []
+
+
+def _validate_date_added(item: dict[str, Any], prefix: str) -> list[str]:
+    value = item.get("dateAdded")
+    if value is None:
+        return []
+    message = f"{prefix}: 'dateAdded' must map 'after' and/or 'before' to a YYYY-MM-DD date"
+    if not isinstance(value, dict) or not value or set(value) - {"after", "before"}:
+        return [message]
+    for date in value.values():
+        try:
+            datetime.strptime(date, "%Y-%m-%d")
+        except (TypeError, ValueError):
+            return [message]
     return []
 
 

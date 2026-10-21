@@ -30,6 +30,8 @@ under it, and `Archive` is always excluded. `_order.json` sets the folder order.
 - **Situations**: Daytime, Pool Party, Morningtime Vibes, Sunrise, Chillin, Nighttime, Late Night,
   Ketamine Music, Silent Disco, Crispy Speakers, Missy.
 - **Tiers**: My Set and The Rotation. These are roots, not nested inside situations.
+- **Halloween 2026**: the Halloween tag, added after 2025-10-31 (`dateAdded`), laid out like My
+  Set. Root `minTracks: 5`, since one year of a single tag is small.
 - **Lanes**: a root with no tag, so its lanes span the whole library.
 - **Weapons and Party Hits** are a lane in every root *and* a root of their own. The root form
   gives `Weapons -> Dub Groovy`, for pulling weapons inside a lane on an XDJ-RR. Their roots set
@@ -150,6 +152,7 @@ Files starting with `_` are inheritance bases, not playlists.
 | `negativeConditions` | string[] | Tags excluded (NOT CONTAINS) from every playlist |
 | `base` | string | Path to a base JSON file whose playlists are prepended (relative to `playlist-data/`) |
 | `minTracks` | int | Replaces `minTracks` on lanes that set one; others never skip |
+| `dateAdded` | object | `{"after": "YYYY-MM-DD"}` and/or `"before"` (exclusive), on every playlist |
 | `playlists` | object[] | Array of playlist definitions |
 | `playlists[].name` | string | Playlist name in Rekordbox |
 | `playlists[].operator` | int | `1` = ALL (AND), `2` = ANY (OR), `5` = Rating range |
@@ -160,6 +163,7 @@ Files starting with `_` are inheritance bases, not playlists.
 | `playlists[].link` | string | Path to linked JSON file (relative to `playlist-data/`) |
 | `playlists[].minTracks` | int | Skip this playlist when fewer tracks match |
 | `playlists[].dateCreated` | object | Date filter with `time_period`, `time_unit`, `operator` |
+| `playlists[].dateAdded` | object | Same as the root `dateAdded`, for one playlist |
 
 ## Configuration
 

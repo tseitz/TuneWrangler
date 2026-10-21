@@ -30,6 +30,7 @@ class FakeDb:
         self.tags = tags
         self.counts = counts or {}
         self.created: list[str] = []
+        self.smart_lists: list = []
 
     def get_tags(self):
         return self.tags
@@ -45,6 +46,7 @@ class FakeDb:
 
     def create_smart_playlist(self, name, smart_list, parent):
         self.created.append(name)
+        self.smart_lists.append(smart_list)
         return SimpleNamespace(Name=name)
 
 
@@ -143,6 +145,14 @@ def test_preflight_reports_missing_base(data_dir):
     assert any("Missing base file" in e for e in errors)
 
 
+def test_preflight_rejects_bad_date_added(data_dir):
+    _write(data_dir / "daytime.json", _root("Daytime", ["Daytime"], dateAdded={"after": "10/31"}))
+
+    errors = _manager(data_dir, ALL_TAGS)[0].preflight()
+
+    assert any("'dateAdded' must map" in e for e in errors)
+
+
 def _create(manager: PlaylistManager, data_dir: Path, name: str) -> list[PlaylistCreationResult]:
     return manager.create_playlists_from_file(data_dir / name)
 
@@ -191,6 +201,39 @@ def test_lane_matching_the_root_tag_is_skipped(data_dir):
 
     assert db.created == ["All"]
     assert any(r.skip_reason == "Weapons: same tracks as All" for r in results)
+
+
+def test_root_date_added_reaches_every_lane_and_linked_folder(data_dir):
+    _write(
+        data_dir / "helpers/_palate.json",
+        {"data": [{"parent": "Palate", "base": "helpers/_lanes.json", "playlists": []}]},
+    )
+    _write(
+        data_dir / "daytime.json",
+        _root(
+            "Daytime",
+            ["Daytime"],
+            dateAdded={"after": "2025-10-31"},
+            playlists=[
+                {
+                    "name": "Palate",
+                    "operator": 1,
+                    "playlistType": "folder",
+                    "link": "helpers/_palate.json",
+                }
+            ],
+        ),
+    )
+    # Daytime + Dub + NOT Archive + NOT GROOVY + Date Added = 5 conditions
+    manager, db = _manager(data_dir, ALL_TAGS, counts={5: 10})
+
+    _create(manager, data_dir, "daytime.json")
+
+    assert db.created == ["All", "Dub Deep", "All", "Dub Deep"]
+    assert all(
+        c.property == "stockDate" and c.value_left == "2025-10-31"
+        for c in [sl.conditions[-1] for sl in db.smart_lists]
+    )
 
 
 class FakePyrekordbox:
