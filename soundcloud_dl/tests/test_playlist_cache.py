@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import TYPE_CHECKING
 
 import pytest
@@ -106,6 +107,10 @@ def cache_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return path
 
 
+def _entry(tracks: list, age_minutes: float = 0) -> dict:
+    return {"saved_at": time.time() - age_minutes * 60, "tracks": tracks}
+
+
 def test_load_returns_none_when_cache_file_missing(cache_path: Path) -> None:
     assert not cache_path.exists()
     assert load_cached_tracks("https://soundcloud.com/u/sets/p") is None
@@ -145,12 +150,25 @@ def test_load_returns_none_on_corrupt_json(cache_path: Path) -> None:
 
 def test_load_skips_invalid_items_returns_valid_ones(cache_path: Path) -> None:
     payload = {
-        "https://soundcloud.com/u/sets/p": [
-            {"url": "https://x", "title": "ok", "downloadable": False, "metadata_artist": None, "description": None},
-            {"title": "no url"},  # invalid — skipped
-            "not a dict",  # invalid — skipped
-            {"url": "https://y", "downloadable": False, "metadata_artist": None, "description": None},
-        ]
+        "https://soundcloud.com/u/sets/p": _entry(
+            [
+                {
+                    "url": "https://x",
+                    "title": "ok",
+                    "downloadable": False,
+                    "metadata_artist": None,
+                    "description": None,
+                },
+                {"title": "no url"},  # invalid — skipped
+                "not a dict",  # invalid — skipped
+                {
+                    "url": "https://y",
+                    "downloadable": False,
+                    "metadata_artist": None,
+                    "description": None,
+                },
+            ]
+        )
     }
     cache_path.write_text(json.dumps(payload), encoding="utf-8")
     loaded = load_cached_tracks("https://soundcloud.com/u/sets/p")
@@ -158,7 +176,7 @@ def test_load_skips_invalid_items_returns_valid_ones(cache_path: Path) -> None:
 
 
 def test_load_returns_none_when_all_items_invalid(cache_path: Path) -> None:
-    payload = {"https://soundcloud.com/u/sets/p": [{"title": "no url"}, "garbage"]}
+    payload = {"https://soundcloud.com/u/sets/p": _entry([{"title": "no url"}, "garbage"])}
     cache_path.write_text(json.dumps(payload), encoding="utf-8")
     assert load_cached_tracks("https://soundcloud.com/u/sets/p") is None
 
@@ -173,7 +191,7 @@ def test_a_cache_written_before_the_download_fields_is_re_read(tmp_path, monkeyp
 
     path = tmp_path / "playlist_cache.json"
     path.write_text(
-        json.dumps({"https://x/p": [{"url": "https://sc/t", "title": "T", "artist": "A"}]})
+        json.dumps({"https://x/p": _entry([{"url": "https://sc/t", "title": "T", "artist": "A"}])})
     )
     monkeypatch.setattr(playlist_cache, "get_playlist_cache_file", lambda: path)
     assert playlist_cache.load_cached_tracks("https://x/p") is None
@@ -198,7 +216,7 @@ def test_the_download_fields_survive_a_cache_round_trip(tmp_path, monkeypatch):
 def test_a_cache_written_before_the_credit_fields_is_re_read(cache_path: Path) -> None:
     """Absent would read as "SoundCloud credits nobody" for every cached track."""
     stored = {"url": "https://sc/t", "title": "T", "artist": "A", "downloadable": False}
-    cache_path.write_text(json.dumps({"https://x/p": [stored]}), encoding="utf-8")
+    cache_path.write_text(json.dumps({"https://x/p": _entry([stored])}), encoding="utf-8")
     assert load_cached_tracks("https://x/p") is None
 
 
@@ -210,7 +228,7 @@ def test_the_credit_fields_survive_a_cache_round_trip(cache_path: Path) -> None:
 
 def test_a_cache_written_before_the_description_field_is_re_read(cache_path: Path) -> None:
     stored = {"url": "https://sc/t", "downloadable": False, "metadata_artist": None}
-    cache_path.write_text(json.dumps({"https://x/p": [stored]}), encoding="utf-8")
+    cache_path.write_text(json.dumps({"https://x/p": _entry([stored])}), encoding="utf-8")
     assert load_cached_tracks("https://x/p") is None
 
 
@@ -218,3 +236,26 @@ def test_the_description_survives_a_cache_round_trip(cache_path: Path) -> None:
     track = TrackItem(url="https://sc/t", description="FREE DL: https://hypeddit.com/a/b")
     save_cached_tracks("https://x/p", [track])
     assert load_cached_tracks("https://x/p") == [track]
+
+
+FULL_ITEM = {
+    "url": "https://sc/t",
+    "downloadable": False,
+    "metadata_artist": None,
+    "description": None,
+}
+
+
+def test_an_entry_inside_the_ttl_is_used(cache_path: Path) -> None:
+    cache_path.write_text(json.dumps({"https://x/p": _entry([FULL_ITEM], age_minutes=59)}))
+    assert load_cached_tracks("https://x/p") == [TrackItem(url="https://sc/t")]
+
+
+def test_an_entry_past_the_ttl_is_re_read(cache_path: Path) -> None:
+    cache_path.write_text(json.dumps({"https://x/p": _entry([FULL_ITEM], age_minutes=61)}))
+    assert load_cached_tracks("https://x/p") is None
+
+
+def test_an_entry_saved_before_expiry_existed_is_re_read(cache_path: Path) -> None:
+    cache_path.write_text(json.dumps({"https://x/p": [FULL_ITEM]}))
+    assert load_cached_tracks("https://x/p") is None

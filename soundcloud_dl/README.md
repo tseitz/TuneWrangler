@@ -161,6 +161,7 @@ scaffolds a starter YAML at `soundcloud_dl/gate_handlers/<gate-name>.yaml`.
 | `TUNEWRANGLER_SC_PAGE_LOAD_WAIT` | `3` | Seconds to wait after SoundCloud page load |
 | `TUNEWRANGLER_SC_RESUME` | `1` | Skip already-processed tracks |
 | `TUNEWRANGLER_SC_PLAYLIST_CACHE` | `1` | Cache playlist track list |
+| `TUNEWRANGLER_SC_PLAYLIST_CACHE_TTL_MINUTES` | `60` | Re-read a cached playlist older than this |
 
 ## Dev
 

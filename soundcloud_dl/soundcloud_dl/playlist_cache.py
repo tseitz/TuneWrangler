@@ -2,9 +2,10 @@
 
 import json
 import logging
+import time
 from typing import cast
 
-from soundcloud_dl.config import get_playlist_cache_file
+from soundcloud_dl.config import PLAYLIST_CACHE_TTL_MINUTES, get_playlist_cache_file
 from soundcloud_dl.playlist import TrackItem
 
 logger = logging.getLogger("soundcloud_dl.playlist_cache")
@@ -61,23 +62,32 @@ def _item_to_track(item: object) -> TrackItem | None:
     )
 
 
-def _get_stored_list(data: object, key: str) -> list | None:
-    """Get stored list for key from cache data; support normalized key match."""
+def _get_fresh_list(data: object, key: str) -> list | None:
+    """Get stored track list for key if unexpired; support normalized key match."""
     if not isinstance(data, dict):
         return None
     d = cast("dict[str, object]", data)
-    stored = d.get(key)
-    if isinstance(stored, list):
-        return stored
-    for k, v in d.items():
-        if _normalize_playlist_url(k) == key and isinstance(v, list):
-            return v
-    return None
+    entry = d.get(key)
+    if entry is None:
+        entry = next((v for k, v in d.items() if _normalize_playlist_url(k) == key), None)
+    if not isinstance(entry, dict):
+        return None
+    entry = cast("dict[str, object]", entry)
+    # A playlist changes between runs; a stale list downloads tracks that left it and
+    # misses ones that joined. Entries with no `saved_at` predate expiry and count as stale.
+    saved_at = entry.get("saved_at")
+    if not isinstance(saved_at, (int, float)) or (
+        time.time() - saved_at >= PLAYLIST_CACHE_TTL_MINUTES * 60
+    ):
+        logger.info("Playlist cache expired — re-reading from the API")
+        return None
+    tracks = entry.get("tracks")
+    return tracks if isinstance(tracks, list) else None
 
 
 def load_cached_tracks(playlist_url: str) -> list[TrackItem] | None:
     """
-    Load cached track list for this playlist URL, if present and valid.
+    Load cached track list for this playlist URL, if present, valid and unexpired.
 
     Returns None on cache miss, file error, or invalid data.
     """
@@ -91,8 +101,8 @@ def load_cached_tracks(playlist_url: str) -> list[TrackItem] | None:
         logger.warning("Could not load playlist cache %s: %s", path, e)
         return None
     key = _normalize_playlist_url(playlist_url)
-    stored = _get_stored_list(data, key)
-    if not isinstance(stored, list):
+    stored = _get_fresh_list(data, key)
+    if stored is None:
         return None
     # An entry written before a field existed reads it as absent, and absent is a wrong
     # answer: no `downloadable` retires every cached track to the gate flow, no
@@ -138,7 +148,7 @@ def save_cached_tracks(playlist_url: str, tracks: list[TrackItem]) -> None:
             data = {}
         if not isinstance(data, dict):
             data = {}
-        data[key] = payload
+        data[key] = {"saved_at": time.time(), "tracks": payload}
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         logger.debug("Cached %d tracks for playlist: %s", len(tracks), key)

@@ -129,6 +129,7 @@ RESUME_ENABLED = _resume not in ("0", "false", "no")
 
 _playlist_cache = os.getenv("TUNEWRANGLER_SC_PLAYLIST_CACHE", "1").strip().lower()
 PLAYLIST_CACHE_ENABLED = _playlist_cache not in ("0", "false", "no")
+PLAYLIST_CACHE_TTL_MINUTES = _parse_int_env("TUNEWRANGLER_SC_PLAYLIST_CACHE_TTL_MINUTES", 60)
 
 
 # ── Path helpers ───────────────────────────────────────────────────────────────
