@@ -97,6 +97,55 @@ def test_applied_and_duplicate_entries_count_as_proof(tmp_path: Path) -> None:
     assert duplicates == {"https://soundcloud.com/a/t3"}
 
 
+def test_a_duplicate_skip_is_proven_by_the_file_it_matched(tmp_path: Path) -> None:
+    dup = {"decision": "skip", "reasons": [prune.DUPLICATE_REASON]}
+    _manifest(
+        tmp_path,
+        [
+            # A same-run copy, renamed by the second opinion after the duplicate was found.
+            {"src": "One (Remix).wav", "proposed": "A - B x C - One.wav", "decision": "apply", "reasons": []},
+            {
+                **dup,
+                "src": "A - One (Remix).wav",
+                "source": "soundcloud",
+                "proposed": "A - One.wav",
+                "soundcloud": {"url": "https://soundcloud.com/a/t1"},
+                "duplicate_of": {"entry": "downloaded/One (Remix).wav"},
+            },
+            {
+                **dup,
+                "src": "Two.wav",
+                "proposed": "A - Two.wav",
+                "soundcloud": {"url": "https://soundcloud.com/a/t2"},
+                "duplicate_of": {"file": "A x D - Two.aiff"},
+            },
+        ],
+    )
+    linked, _ = prune.linked_names([tmp_path])
+    assert linked["https://soundcloud.com/a/t1"].name == "A - B x C - One.wav"
+    assert linked["https://soundcloud.com/a/t2"].name == "A x D - Two.aiff"
+
+
+def test_a_duplicate_of_an_entry_that_was_not_applied_proves_nothing(tmp_path: Path) -> None:
+    _manifest(
+        tmp_path,
+        [
+            {"src": "One.wav", "proposed": "A - One.wav", "decision": "review", "reasons": []},
+            {
+                "src": "One copy.wav",
+                "proposed": "A - One.wav",
+                "decision": "skip",
+                "reasons": [prune.DUPLICATE_REASON],
+                "soundcloud": {"url": "https://soundcloud.com/a/t1"},
+                "duplicate_of": {"entry": "downloaded/One.wav"},
+            },
+        ],
+    )
+    linked, duplicates = prune.linked_names([tmp_path])
+    assert "https://soundcloud.com/a/t1" not in linked
+    assert duplicates == {"https://soundcloud.com/a/t1"}
+
+
 def test_an_unreadable_manifest_stops_the_run(tmp_path: Path) -> None:
     (tmp_path / "bad.json").write_text("{half", encoding="utf-8")
     with pytest.raises(PruneError, match=r"bad\.json"):

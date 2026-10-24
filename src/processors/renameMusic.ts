@@ -28,22 +28,20 @@ import { parseArgs } from "@std/cli/parse-args";
 import {
   backupFile,
   cacheMusic,
-  checkIfDuplicate,
   getFolder,
   isProcessable,
   logWithBreak,
-  MusicCache,
   renameAndMove,
   setFinalDownloadedSongName,
 } from "../core/utils/common.ts";
-import { DownloadedSong, Song } from "../core/models/Song.ts";
+import { DownloadedSong } from "../core/models/Song.ts";
 import { parseDownloadedSong } from "../core/parser.ts";
-import { buildSong, isSkippedExtension, listSourceFiles, readSourceTags, type TaggedSourceFile } from "../core/sources.ts";
+import { isSkippedExtension, listSourceFiles, readSourceTags } from "../core/sources.ts";
 import { applyManifest, MoveFailure, settleMoves, withTrailingSlash } from "../core/applyManifest.ts";
 import { PATH_ENV_VARS, requireFolders } from "../config/paths.ts";
 import { TryLaterError } from "../core/utils/errors.ts";
 import { acquireRunLock } from "../core/utils/runLock.ts";
-import { scoreConfidence } from "../core/confidence.ts";
+import { type BuildResult, buildEntry } from "../core/buildEntry.ts";
 import { applySoundcloudCredits, factsFor, loadSoundcloudIndex } from "../core/soundcloudFacts.ts";
 import {
   DUPLICATE_REASON,
@@ -390,7 +388,7 @@ async function runLegacyMove(clear: boolean): Promise<void> {
     const song = new DownloadedSong(entry.src, startDir);
     if (song.dashCount > 0) parseDownloadedSong(song);
     setFinalDownloadedSongName(song);
-    cache.add(song);
+    cache.add(song, { file: song.finalFilename });
 
     logWithBreak(song.finalFilename);
     moveOps.push(
@@ -406,49 +404,6 @@ async function runLegacyMove(clear: boolean): Promise<void> {
   reportFailures(failures);
   console.log(`\nTotal moved: ${count - failures.length}, failed: ${failures.length}`);
   console.log(`Originals backed up to: ${runBackupDir}`);
-}
-
-interface BuildResult {
-  entry: ManifestEntry;
-  song: Song;
-}
-
-/**
- * Parse one file and produce a manifest entry (plus the song it was parsed from, so a
- * --judge pass can grade the same parse without re-deriving it), or null if the file should
- * be skipped (tags unreadable, parser threw, etc.).
- */
-function buildEntry(file: TaggedSourceFile, cache: MusicCache): BuildResult | null {
-  const key = entryKey(file);
-  console.log("Processing: ", key);
-  if (file.tagError) {
-    logWithBreak(`Skipping (could not read tags): ${key} - ${file.tagError}`);
-    return null;
-  }
-  try {
-    const song = buildSong(file.source, file.src, file.dir, file.tags);
-    const score = scoreConfidence(song, basename(file.src), { source: file.source, tags: file.tags });
-    const base = {
-      src: file.src,
-      ...(file.source === "downloaded" ? {} : { source: file.source }),
-      ...(file.tags ? { tags: file.tags } : {}),
-      proposed: song.finalFilename,
-      parser_output: song.finalFilename,
-      confidence: score.level,
-    };
-
-    if (checkIfDuplicate(song, cache)) {
-      return { song, entry: { ...base, reasons: [DUPLICATE_REASON, ...score.reasons], decision: "skip" } };
-    }
-
-    cache.add(song);
-    logWithBreak(`${song.finalFilename}  [${score.level}]`);
-
-    return { song, entry: { ...base, reasons: score.reasons, decision: score.decision } };
-  } catch (error) {
-    logWithBreak(`Skipping (parse error): ${key} - ${error instanceof Error ? error.message : error}`);
-    return null;
-  }
 }
 
 /** soundcloud_dl writes where TUNEWRANGLER_SC_DOWNLOAD_DIR says; rM reads <downloaded>soundcloud/. */

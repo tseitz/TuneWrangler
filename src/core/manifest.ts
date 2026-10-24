@@ -68,7 +68,12 @@ export interface ManifestEntry {
   /** Absent for any file soundcloud_dl did not download. */
   soundcloud?: SoundcloudFacts;
   suggestion?: EntrySuggestion;
+  /** Set on a duplicate skip. */
+  duplicate_of?: DuplicateOf;
 }
+
+/** A Collection file name, or the key of an earlier entry in the same manifest. */
+export type DuplicateOf = { file: string } | { entry: string };
 
 export interface Manifest {
   version: 1;
@@ -183,6 +188,9 @@ function validateEntry(entry: unknown, index: number, path: string): void {
   if (!isPlainFilename(e.proposed)) {
     throw new Error(`Manifest entry ${index} at ${path}: "${e.proposed}" must be a plain filename, not a path`);
   }
+  if (e.duplicate_of !== undefined && !isDuplicateOf(e.duplicate_of)) {
+    throw new Error(`Manifest entry ${index} at ${path} has invalid duplicate_of (needs a string file or entry)`);
+  }
   if (e.tags !== undefined && !isEntryTags(e.tags)) {
     throw new Error(`Manifest entry ${index} at ${path} has invalid tags (artist, album, title must be strings)`);
   }
@@ -249,6 +257,12 @@ function validateSuggestion(suggestion: unknown, index: number, path: string): v
   if (s.cost_usd !== undefined && (typeof s.cost_usd !== "number" || !Number.isFinite(s.cost_usd))) {
     throw new Error(`${where}.cost_usd (must be a finite number)`);
   }
+}
+
+function isDuplicateOf(value: unknown): value is DuplicateOf {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const v = value as Record<string, unknown>;
+  return typeof v.file === "string" || typeof v.entry === "string";
 }
 
 function isEntryTags(value: unknown): value is EntryTags {

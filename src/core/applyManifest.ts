@@ -106,7 +106,7 @@ export async function applyManifest(manifest: Manifest, { backupDir }: { backupD
       skipped++;
       continue;
     }
-    cache.add(song);
+    cache.add(song, { file: song.finalFilename });
     moves.push(op);
   }
 

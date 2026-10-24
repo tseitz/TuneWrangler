@@ -126,7 +126,13 @@ def linked_names(manifest_dirs: list[Path]) -> tuple[dict[str, Proof], set[str]]
             except (OSError, json.JSONDecodeError) as exc:
                 msg = f"Could not read manifest {path}: {exc}"
                 raise PruneError(msg) from exc
-            for entry in manifest.get("entries", []):
+            entries = manifest.get("entries", [])
+            applied = {
+                _entry_key(e): e["proposed"]
+                for e in entries
+                if e.get("decision") == "apply" and isinstance(e.get("proposed"), str)
+            }
+            for entry in entries:
                 url = (entry.get("soundcloud") or {}).get("url")
                 if not isinstance(url, str) or not url:
                     continue
@@ -141,9 +147,25 @@ def linked_names(manifest_dirs: list[Path]) -> tuple[dict[str, Proof], set[str]]
                     duplicates.add(key)
                     # Skipped because the Collection already had it: the same proof as an
                     # apply, once plan_prune finds the name there.
-                    if isinstance(proposed, str) and proposed and key not in linked:
-                        linked[key] = Proof(name=proposed, manifest=path.name)
+                    name = _duplicate_name(entry, applied)
+                    if name and key not in linked:
+                        linked[key] = Proof(name=name, manifest=path.name)
     return linked, duplicates
+
+
+def _entry_key(entry: dict[str, Any]) -> str:
+    return f"{entry.get('source') or 'downloaded'}/{entry.get('src')}"
+
+
+def _duplicate_name(entry: dict[str, Any], applied: dict[str, str]) -> str | None:
+    """The Collection name a duplicate skip matched; its own name only in older manifests."""
+    match = entry.get("duplicate_of")
+    if isinstance(match, dict):
+        # A same-run entry is read by key: its name can change after the match was made.
+        found = match.get("file") or applied.get(str(match.get("entry")))
+        return found if isinstance(found, str) and found else None
+    proposed = entry.get("proposed")
+    return proposed if isinstance(proposed, str) and proposed else None
 
 
 def plan_prune(

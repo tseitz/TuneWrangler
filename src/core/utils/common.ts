@@ -8,6 +8,7 @@ import { basename, dirname, extname, join } from "@std/path";
 import { Semaphore } from "../models/Semaphore.ts";
 import { id3Flags } from "../tagging.ts";
 import { normalizeUnicode } from "./unicode.ts";
+import type { DuplicateOf } from "../manifest.ts";
 
 const MAX_CONCURRENT_OPERATIONS = 10;
 const semaphore = new Semaphore(MAX_CONCURRENT_OPERATIONS);
@@ -50,7 +51,7 @@ export async function validateConfiguration(): Promise<boolean> {
  * Replaces the old array-based O(n) linear scan approach.
  */
 export class MusicCache {
-  private keys = new Set<string>();
+  private keys = new Map<string, DuplicateOf>();
 
   private static normalizeKey(artist: string, title: string): string {
     // Folded the same way the parser folds filenames, so "Reece Rosé" in an older file
@@ -59,12 +60,17 @@ export class MusicCache {
     return `${fold(artist)}|||${fold(title)}`;
   }
 
-  add(song: Song): void {
-    this.keys.add(MusicCache.normalizeKey(song.artist, song.title));
+  add(song: Song, origin: DuplicateOf): void {
+    this.keys.set(MusicCache.normalizeKey(song.artist, song.title), origin);
   }
 
   has(song: Song): boolean {
     return this.keys.has(MusicCache.normalizeKey(song.artist, song.title));
+  }
+
+  /** What an earlier add() for the same track came from. */
+  match(song: Song): DuplicateOf | undefined {
+    return this.keys.get(MusicCache.normalizeKey(song.artist, song.title));
   }
 
   get size(): number {
@@ -78,7 +84,7 @@ export async function cacheMusic(cacheDir: string): Promise<MusicCache> {
   for await (const cacheEntry of Deno.readDir(cacheDir)) {
     if (cacheEntry.isFile) {
       const song = new LocalSong(cacheEntry.name, cacheDir);
-      cache.add(song);
+      cache.add(song, { file: cacheEntry.name });
     }
   }
 

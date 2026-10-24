@@ -34,7 +34,7 @@ Deno.test("the duplicate check treats accented and plain spellings as the same t
   const cache = new MusicCache();
   const inCollection = new DownloadedSong("Reece Rosé x WAVHART - Strange.aiff", "/tmp/");
   Object.assign(inCollection, { artist: "Reece Rosé x WAVHART", title: "Strange" });
-  cache.add(inCollection);
+  cache.add(inCollection, { file: "a" });
 
   const download = new DownloadedSong("Reece Rose x WAVHART - Strange.wav", "/tmp/");
   Object.assign(download, { artist: "Reece Rose x WAVHART", title: "Strange" });
@@ -44,7 +44,7 @@ Deno.test("the duplicate check treats accented and plain spellings as the same t
   Object.assign(decomposed, { artist: "ØNLYBASH x Reece Rosé", title: "Bloody Money" });
   const plain = new DownloadedSong("a - y.wav", "/tmp/");
   Object.assign(plain, { artist: "ONLYBASH x Reece Rose", title: "Bloody Money" });
-  cache.add(decomposed);
+  cache.add(decomposed, { file: "b" });
   assertEquals(cache.has(plain), true);
 });
 
