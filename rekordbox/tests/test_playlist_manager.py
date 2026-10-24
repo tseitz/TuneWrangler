@@ -374,6 +374,7 @@ def test_nothing_to_overwrite_never_asks(monkeypatch):
 
 def test_existing_folder_is_named_before_asking(monkeypatch, capsys):
     root = {"name": "Halloween 2026", "playlist": None, "child_count": 11}
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
     monkeypatch.setattr("builtins.input", lambda prompt: "2")
 
     _run_create(monkeypatch, [], existing_roots=[root], existing=None)

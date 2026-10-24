@@ -5,6 +5,7 @@ Provides concrete command classes for playlist and backup operations.
 """
 
 import argparse
+import sys
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
@@ -33,6 +34,10 @@ from ..utils.logging import get_logger, log_error, log_exception, log_success
 EXIT_TRY_LATER = 75
 
 logger = get_logger(__name__)
+
+
+class NoTerminalError(Exception):
+    """A prompt is needed but stdin is not a terminal, so input() would die with EOFError."""
 
 
 class BaseCommand(ABC):
@@ -157,12 +162,16 @@ class PlaylistCommand(BaseCommand):
         self, args: argparse.Namespace, existing_roots: list[dict[str, Any]]
     ) -> ExistingPlaylistStrategy:
         if args.existing:
-            return ExistingPlaylistStrategy(args.existing)
+            strategy = ExistingPlaylistStrategy(args.existing)
+            if strategy == ExistingPlaylistStrategy.PROMPT_EACH:
+                self._require_terminal()
+            return strategy
         if not existing_roots:
             return ExistingPlaylistStrategy.SKIP_ALL
         if self.config.dry_run:
             print("[DRY RUN] Would ask about the folders above. Defaulting to skip.\n")
             return ExistingPlaylistStrategy.SKIP_ALL
+        self._require_terminal()
         noun = "this folder" if len(existing_roots) == 1 else "these folders"
         print(f"  1. Overwrite {noun}")
         print(f"  2. Skip {noun}")
@@ -174,6 +183,14 @@ class PlaylistCommand(BaseCommand):
         if choice == "2":
             return ExistingPlaylistStrategy.SKIP_ALL
         return ExistingPlaylistStrategy.PROMPT_EACH
+
+    @staticmethod
+    def _require_terminal() -> None:
+        if not sys.stdin.isatty():
+            raise NoTerminalError(
+                "Playlists already exist and there is no terminal to ask. "
+                "Pass --existing overwrite or --existing skip."
+            )
 
     def _create_playlists(self, args: argparse.Namespace) -> int:
         """Create playlists from configuration files."""
@@ -221,7 +238,11 @@ class PlaylistCommand(BaseCommand):
                         print(f"  - {root['name']} ({child_str})")
                     print()
 
-                strategy = self._existing_strategy(args, existing_roots)
+                try:
+                    strategy = self._existing_strategy(args, existing_roots)
+                except NoTerminalError as e:
+                    log_error(logger, str(e))
+                    return 1
                 playlist_manager.existing_strategy = strategy
 
                 if existing_roots:
