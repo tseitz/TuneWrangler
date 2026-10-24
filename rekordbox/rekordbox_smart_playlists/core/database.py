@@ -541,6 +541,29 @@ class RekordboxDatabase:
         # A VARCHAR column holding digits.
         content.TrackInfoUpdated = str(int(content.TrackInfoUpdated or 0) + 1)
 
+    def get_or_create_artist(self, name: str) -> Any:
+        """Unlike create_artist, raises instead of returning None. Not committed."""
+        self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
+        for row in self._db.get_artist(Name=name):
+            if not row.rb_local_deleted:
+                return row
+        return self._db.add_artist(name)
+
+    def get_or_create_album(self, name: str) -> Any:
+        """Unlike create_album, raises instead of returning None. Not committed."""
+        self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
+        for row in self._db.get_album(Name=name):
+            if not row.rb_local_deleted:
+                return row
+        return self._db.add_album(name)
+
+    def analysis_files(self, content_id: str) -> dict[Path, Any]:
+        self.ensure_connected()
+        assert self._db is not None  # ensured by ensure_connected()
+        return {Path(p): f for p, f in self._db.read_anlz_files(str(content_id)).items()}
+
     def get_track(self, content_id: str) -> Any | None:
         """One track by ID; errors propagate. pyrekordbox returns the row (or None), not a query,
         when filtering by ID."""

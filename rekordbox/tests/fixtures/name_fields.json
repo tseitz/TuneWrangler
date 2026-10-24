@@ -1,0 +1,8 @@
+[
+  { "stem": "Artist - Title", "artist": "Artist", "album": "", "title": "Title" },
+  { "stem": "Artist - Album - Title", "artist": "Artist", "album": "Album", "title": "Title" },
+  { "stem": "A - B - C - D", "artist": "A", "album": "B", "title": "C - D" },
+  { "stem": "SNEEK - Unknown - Kill or B Killed", "artist": "SNEEK", "album": "", "title": "Kill or B Killed" },
+  { "stem": "Just A Title", "artist": "", "album": "", "title": "Just A Title" },
+  { "stem": "dêtre - Lightspeed", "artist": "dêtre", "album": "", "title": "Lightspeed" }
+]

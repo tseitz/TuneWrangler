@@ -10,6 +10,7 @@ import sys
 from ..core.config import Config, load_config
 from ..utils.logging import get_logger, setup_logging
 from .commands import BackupCommand, PlaylistCommand, TagCommand
+from .sync_names import SyncNamesCommand
 
 logger = get_logger(__name__)
 
@@ -70,6 +71,11 @@ Examples:
 
     tag_parser = subparsers.add_parser("tag", help="Audio tagging exploration (read-only)")
     TagCommand.setup_parser(tag_parser)
+
+    sync_parser = subparsers.add_parser(
+        "sync-names", help="Report or fix drift between Collection file names and Rekordbox"
+    )
+    SyncNamesCommand.setup_parser(sync_parser)
 
     return parser
 
@@ -183,6 +189,8 @@ def main(argv: list[str] | None = None) -> int:
             exit_code = backup_command.execute(args)
         elif args.command == "tag":
             exit_code = TagCommand(config).execute(args)
+        elif args.command == "sync-names":
+            exit_code = SyncNamesCommand(config).execute(args)
         else:
             logger.error(f"Unknown command: {args.command}")
             exit_code = 1

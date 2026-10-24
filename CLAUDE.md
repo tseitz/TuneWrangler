@@ -23,6 +23,7 @@ deno task rM --move                # legacy: parse + move all in one shot
 deno task rM --prune [--keep N]    # list backup runs beyond the newest N (5); --yes deletes
 deno task nightly [--force]        # one poll of the nightly job (see "Nightly job")
 deno task retag [--dir D] [--overwrite[-cosmetic]] [--yes]  # tags from `artist - album - title` names; dry run by default
+deno task retag --only NAME        # only this file (repeatable); a name not in the folder is an error
 deno task promote <manifest>       # copy manifest into tests/corpus/ as regression coverage
 deno task promote --refresh        # lock in improvement targets the parser now gets right
 deno task test                     # run all tests (unit + corpus regression)
@@ -85,6 +86,22 @@ deno task rb:tag report                               # tracks.csv + crosstab.md
 `master.db` alone and keeps the newest N copies instead of the pinned full-library zip;
 `rb:tag suggest --skip-applied` leaves out tracks an earlier apply tagged, so one stripped by
 hand isn't re-tagged.
+
+Name sync keeps Collection file names (`TUNEWRANGLER_DJMUSIC_PATH`) and Rekordbox artist/album/title
+in step. Neither side wins by default: a fix made in Rekordbox is as valid as the file name.
+
+```bash
+deno task rb sync-names                       # report drift; read-only, fine while Rekordbox runs
+deno task rb sync-names --take-file STEM...   # set Rekordbox from these file names (--take-file-all)
+deno task rb sync-names --take-db STEM...     # rename these files from Rekordbox
+deno task rb sync-names --hold STEM           # leave a track out (--unhold puts it back)
+```
+
+Writes need `--yes`, refuse more than 20 tracks without `--allow-bulk`, snapshot `master.db`
+(newest 5 kept) and journal every change under `logs/rekordbox/sync_names/`. A rename also
+rewrites the track's analysis files, and every write retags the touched files from their names.
+Colons are dropped and whitespace collapsed; two Unicode forms of the same text don't count as
+drift. Exits 75 when Rekordbox is running or the Collection folder is missing.
 
 ## Rename workflow (the important one)
 
@@ -202,8 +219,10 @@ with the playlist cache off; done only when `last_run.json` says the batch finis
 `apply --yes --db-keep 7`; waits while Rekordbox is open). A failing stage is retried on later
 polls, up to 3 attempts a day. Once download, rename and prune have settled, one macOS notification
 goes out and `logs/nightly/<date>.md` gets the report; output from every stage is in
-`logs/nightly/<date>.log` (kept 30 days). Rekordbox import stays manual, so a download is tagged on
-the first run after it's imported. Under launchd the real `deno` binary (in mise's install folder)
+`logs/nightly/<date>.log` (kept 30 days). Once a day the report also counts tracks whose file name
+and Rekordbox disagree (`rb sync-names`, read-only; never fails the night). Rekordbox import
+stays manual, so a download is tagged on the first run after it's imported. Under launchd the
+real `deno` binary (in mise's install folder)
 needs Full Disk Access for the external drive; a deno upgrade changes that path.
 
 ## Architecture
@@ -289,7 +308,7 @@ logs/
 ## Conventions
 
 - **Runtimes**: Deno 2.6.9, Python 3.12, FFmpeg 7.1.1 (managed via `.mise.toml`).
-- **Env vars**: Main tool uses `TUNEWRANGLER_*_PATH`; soundcloud_dl uses `TUNEWRANGLER_SC_*`; rekordbox uses `TUNEWRANGLER_RB_*` (via the repo-root `.env`). soundcloud_dl always loads repo-root `.env` via its own config loader; on the Deno side only `rM`, `cli`, and `./tunewrangler` load it (via `--env-file`, needed for `--judge`'s `TYPESAFE_API_KEY`) — the other Deno tasks read only real environment variables. Template lives at `.env.example` (root).
+- **Env vars**: Main tool uses `TUNEWRANGLER_*_PATH`; soundcloud_dl uses `TUNEWRANGLER_SC_*`; rekordbox uses `TUNEWRANGLER_RB_*` plus `TUNEWRANGLER_DJMUSIC_PATH` for `sync-names` (via the repo-root `.env`). soundcloud_dl always loads repo-root `.env` via its own config loader; on the Deno side only `rM`, `cli`, and `./tunewrangler` load it (via `--env-file`, needed for `--judge`'s `TYPESAFE_API_KEY`) — the other Deno tasks read only real environment variables. Template lives at `.env.example` (root).
 - **Python tooling**: uv, ruff (line-length 100, select ALL minus D/COM812/ISC001), ty. `rekordbox/` uses a lenient ruff select (E,F,I,UP,B) for now; tighten later.
 - **Markdown**: markdownlint enforced (`.markdownlint.json`). Lines under 100 chars; blank lines around code blocks and headers.
 - **Commits**: Conventional (`feat:`, `fix:`, `refactor:`, etc.). **Land directly on `main`** — solo project, no feature branches unless explicitly requested.

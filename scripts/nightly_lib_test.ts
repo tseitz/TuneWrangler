@@ -9,6 +9,7 @@ import {
   MAX_DEFERRALS,
   notificationTitle,
   onBattery,
+  parseDrift,
   renameOutcome,
   reportLines,
   runnable,
@@ -134,4 +135,21 @@ Deno.test("the report ignores run records from an earlier day", () => {
   });
   assertEquals(lines[0], "download: waiting — ");
   assertEquals(lines.some((l) => l.includes("removed 9")), false);
+});
+
+Deno.test("parseDrift reads the closing drift line and is null without one", () => {
+  assertEquals(parseDrift("scanned: 9 tracks\ndrift: 4 tracks (2 held)\n"), { drift: 4, held: 2 });
+  assertEquals(parseDrift("scanned: 9 tracks\n"), null);
+});
+
+Deno.test("the report adds a names line only when tracks drifted or the check failed", () => {
+  const base = { state: freshState("2026-10-09"), lastRun: null, lastPrune: null, holding: 0 };
+  const names = (namesDrift?: Parameters<typeof reportLines>[0]["namesDrift"]) =>
+    reportLines({ ...base, namesDrift }).filter((l) => l.startsWith("names:"));
+  assertEquals(names({ exit: 0, drift: 3, held: 1 }), [
+    "names: 3 tracks out of sync with Rekordbox (1 held) — deno task rb sync-names",
+  ]);
+  assertEquals(names({ exit: 0, drift: 0, held: 0 }), []);
+  assertEquals(names(), []);
+  assertEquals(names({ exit: 1, drift: null, held: 0 }), ["names: drift check failed (exit 1)"]);
 });

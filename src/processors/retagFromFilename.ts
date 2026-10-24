@@ -10,6 +10,9 @@ read tags (Rekordbox reads them on import) agree with the filename.
   deno task retag --overwrite-cosmetic
                                       also replace set tags that differ from the name only in
                                       case or accents (THE WIDDLER → The Widdler, Rosé → Rose)
+  deno task retag --only <name>       restrict the scan to this exact file name in the folder;
+                                      repeatable. A name not in the folder is an error and nothing
+                                      is written.
 */
 import { parseArgs } from "@std/cli/parse-args";
 import { extname, join } from "@std/path";
@@ -56,8 +59,17 @@ export function planRetag(file: string, current: TrackTags, overwrite: Overwrite
   return { file, next, changes, kept };
 }
 
+export function selectNames(present: string[], only: string[]): string[] {
+  if (only.length === 0) return present;
+  const have = new Set(present);
+  const missing = [...new Set(only)].filter((name) => !have.has(name));
+  if (missing.length > 0) throw new Error(`--only: not in folder: ${missing.map((n) => JSON.stringify(n)).join(", ")}`);
+  const wanted = new Set(only);
+  return present.filter((name) => wanted.has(name));
+}
+
 async function main(): Promise<void> {
-  const args = parseArgs(Deno.args, { string: ["dir"], boolean: ["yes", "overwrite", "overwrite-cosmetic"] });
+  const args = parseArgs(Deno.args, { string: ["dir", "only"], collect: ["only"], boolean: ["yes", "overwrite", "overwrite-cosmetic"] });
   const overwrite: OverwriteMode = args.overwrite ? "all" : args["overwrite-cosmetic"] ? "cosmetic" : "none";
   const dir = args.dir ? (args.dir.endsWith("/") ? args.dir : `${args.dir}/`) : getFolder("djMusic");
 
@@ -67,7 +79,16 @@ async function main(): Promise<void> {
   for await (const entry of Deno.readDir(dir)) entries.push(entry);
   entries.sort((a, b) => a.name.localeCompare(b.name));
 
+  let selected: Set<string>;
+  try {
+    selected = new Set(selectNames(entries.map((e) => e.name), args.only as string[]));
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    Deno.exit(1);
+  }
+
   for (const entry of entries) {
+    if (!selected.has(entry.name)) continue;
     if (!isProcessable(entry) || entry.name.includes(".retag-tmp")) continue;
     if (!TAGGABLE.has(extname(entry.name).toLowerCase())) {
       skipped.push(entry.name);

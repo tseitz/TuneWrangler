@@ -23,6 +23,14 @@ export interface NightlyState {
   renameManifest: string | null;
   tagManifest: string | null;
   tagApplyLog: string | null;
+  /** Absent in state files from before the check existed, and until a run settles. */
+  namesDrift?: NamesDrift;
+}
+
+export interface NamesDrift {
+  exit: 0 | 1;
+  drift: number | null;
+  held: number;
 }
 
 export function freshState(date: string, previous?: NightlyState): NightlyState {
@@ -123,6 +131,12 @@ export function lineWith(output: string, needle: string): string | null {
   return output.split("\n").find((l) => l.includes(needle))?.trim() ?? null;
 }
 
+/** The `drift: N tracks (H held)` line that `rb sync-names` ends its report with. */
+export function parseDrift(output: string): { drift: number; held: number } | null {
+  const m = lineAfter(output, "drift:")?.match(/^(\d+) tracks? \((\d+) held\)/);
+  return m ? { drift: Number(m[1]), held: Number(m[2]) } : null;
+}
+
 export interface LastPrune {
   run_started_at: string;
   error: string | null;
@@ -142,11 +156,12 @@ export interface ReportInput {
   lastRun: LastRun | null;
   lastPrune: LastPrune | null;
   holding: number;
+  namesDrift?: NamesDrift;
 }
 
 const LABEL: Record<StageState["status"], string> = { pending: "waiting", done: "ok", gave_up: "FAILED" };
 
-export function reportLines({ state, holding, ...records }: ReportInput): string[] {
+export function reportLines({ state, holding, namesDrift, ...records }: ReportInput): string[] {
   const { stages } = state;
   const lastRun = fromToday(records.lastRun, state.date);
   const lastPrune = fromToday(records.lastPrune, state.date);
@@ -170,6 +185,13 @@ export function reportLines({ state, holding, ...records }: ReportInput): string
     lines.push("prune: many pruned tracks came back — check recent additions are still on the playlist");
   }
   lines.push(`tag: ${LABEL[stages.tag.status]} — ${stages.tag.detail ?? ""}`);
+  if (namesDrift?.drift === null) {
+    lines.push(`names: drift check failed (exit ${namesDrift.exit})`);
+  } else if (namesDrift && namesDrift.drift > 0) {
+    lines.push(
+      `names: ${namesDrift.drift} tracks out of sync with Rekordbox (${namesDrift.held} held) — deno task rb sync-names`,
+    );
+  }
   if (holding > 0) lines.push(`${holding} downloads waiting in logs/soundcloud_dl/downloads/`);
   return lines;
 }

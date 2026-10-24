@@ -19,15 +19,19 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = PACKAGE_ROOT.parent
 DEFAULT_PLAYLIST_DATA_PATH = str(PACKAGE_ROOT / "playlist-data")
 DEFAULT_TAGGING_DIR = str(REPO_ROOT / "logs/rekordbox/tagging")
+DEFAULT_SYNC_NAMES_DIR = str(REPO_ROOT / "logs/rekordbox/sync_names")
 
 load_dotenv(REPO_ROOT / ".env")
 
 BACKUP_PATH_ENV = "TUNEWRANGLER_RB_BACKUP_PATH"
+# Shared with the Deno side, which moves renamed files into this folder.
+COLLECTION_PATH_ENV = "TUNEWRANGLER_DJMUSIC_PATH"
 
 _ENV_MAPPING = {
     "TUNEWRANGLER_RB_PLAYLIST_DATA_PATH": "playlist_data_path",
     BACKUP_PATH_ENV: "backup_base_path",
     "TUNEWRANGLER_RB_TAGGING_DIR": "tagging_dir",
+    COLLECTION_PATH_ENV: "collection_path",
     "TUNEWRANGLER_RB_PARENT_PLAYLIST": "default_parent_playlist",
     "TUNEWRANGLER_RB_DRY_RUN": "dry_run",
     "TUNEWRANGLER_RB_VERBOSE": "verbose",
@@ -51,6 +55,8 @@ class Config:
     playlist_data_path: str = DEFAULT_PLAYLIST_DATA_PATH
     backup_base_path: str | None = None
     tagging_dir: str = DEFAULT_TAGGING_DIR
+    collection_path: str | None = None
+    sync_names_dir: str = DEFAULT_SYNC_NAMES_DIR
 
     # Database paths (auto-detected based on OS)
     pioneer_app_support: str = field(
@@ -110,6 +116,13 @@ class Config:
                 f"{BACKUP_PATH_ENV} does not exist or is not a directory: {path}"
             )
         return path
+
+    def require_collection_dir(self) -> Path:
+        """The DJ Collection folder, refusing an unset one. A missing one is the caller's call:
+        an unplugged drive is a try-later, not a misconfiguration."""
+        if not self.collection_path:
+            raise ConfigurationError(f"{COLLECTION_PATH_ENV} is not set")
+        return Path(self.collection_path).expanduser()
 
     def validate(self) -> bool:
         """Validate configuration values."""

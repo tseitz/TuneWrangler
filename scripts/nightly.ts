@@ -24,6 +24,7 @@ import {
   notificationTitle,
   type Outcome,
   onBattery,
+  parseDrift,
   renameOutcome,
   reportLines,
   runnable,
@@ -207,12 +208,29 @@ async function holdingCount(): Promise<number> {
   return n;
 }
 
+/** Never throws: exit 75 and timeouts leave the result unset so a later poll retries. */
+async function checkNamesDrift(log: Deno.FsFile, state: NightlyState): Promise<void> {
+  if (state.namesDrift) return;
+  try {
+    const { code, output } = await task(log, ["rb", "sync-names"], HOUR / 12);
+    if (code === 0) {
+      const parsed = parseDrift(output);
+      state.namesDrift = parsed ? { exit: 0, ...parsed } : { exit: 0, drift: null, held: 0 };
+    } else if (code === 1) {
+      state.namesDrift = { exit: 1, drift: null, held: 0 };
+    }
+  } catch (e) {
+    console.error(`names drift check skipped: ${e instanceof Error ? e.message : e}`);
+  }
+}
+
 async function writeReport(state: NightlyState): Promise<string[]> {
   const lines = reportLines({
     state,
     lastRun: await readJson<LastRun>(join(SC_LOGS, "last_run.json")),
     lastPrune: await readJson<LastPrune>(join(SC_LOGS, "last_prune.json")),
     holding: await holdingCount(),
+    namesDrift: state.namesDrift,
   });
   const files = [
     state.renameManifest && `rename manifest: ${state.renameManifest}`,
@@ -296,6 +314,7 @@ async function main(): Promise<void> {
     }
 
     if (coreSettled(state)) {
+      await checkNamesDrift(log, state);
       const lines = await writeReport(state);
       const title = notificationTitle(state);
       if (state.notified !== title && await notify(title, lines.join("\n"))) state.notified = title;
