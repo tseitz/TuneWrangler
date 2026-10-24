@@ -2,6 +2,7 @@ import asyncio
 import time
 
 import pytest
+from playwright.async_api import Error as PlaywrightError
 
 from soundcloud_dl import laylo_drops
 from soundcloud_dl.gate_handlers import laylo as laylo_mod
@@ -517,6 +518,38 @@ async def test_lay_los_answer_decides_what_follows_the_click(responses, ack):
     for read in handler._ack_reads:
         await read
     assert handler._ack == ack
+
+
+class _GoneResp(_Resp):
+    async def text(self):
+        msg = "Network.getResponseBody: No resource with given identifier found"
+        raise PlaywrightError(msg)
+
+
+async def test_an_accepted_rsvp_whose_body_left_with_the_page_is_an_ack(caplog):
+    # Hairitage's drop, 2026-10-24: a Spotify pre-save redirect followed the RSVP, and the
+    # email came.
+    handler = _handler()
+    handler._armed = True
+    with caplog.at_level("INFO", logger="soundcloud_dl.gate_handlers.laylo"):
+        handler._on_response(_GoneResp("https://events.laylo.com/actions/rsvp/rsvp", ""))
+        for read in handler._ack_reads:
+            await read
+    assert handler._ack == "rsvp"
+    assert "unreadable" in caplog.text
+
+
+async def test_a_refused_rsvp_answer_is_logged(caplog):
+    handler = _handler()
+    handler._armed = True
+    with caplog.at_level("INFO", logger="soundcloud_dl.gate_handlers.laylo"):
+        handler._on_response(
+            _Resp("https://events.laylo.com/actions/rsvp/rsvp", '{"success":false}')
+        )
+        for read in handler._ack_reads:
+            await read
+    assert handler._ack is None
+    assert '"success":false' in caplog.text
 
 
 async def test_a_failed_rsvp_answer_is_not_an_ack():

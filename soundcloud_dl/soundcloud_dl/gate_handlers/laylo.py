@@ -147,8 +147,15 @@ class LayloHandler(JevHandler):
     async def _read_ack(self, response: Response) -> None:
         try:
             body = await response.text()
-        except (PlaywrightError, UnicodeDecodeError):
-            logger.debug("[%s] unreadable %s", self.gate_name, response.url, exc_info=True)
+        except (PlaywrightError, UnicodeDecodeError) as exc:
+            if "/rsvp" not in response.url or not response.ok:
+                logger.debug("[%s] unreadable %s", self.gate_name, response.url, exc_info=True)
+                return
+            # A Spotify pre-save redirect can take the body with it; the email still came.
+            # A wrong guess only costs a "no link within 24h" review.
+            logger.info("[%s] RSVP answer %s unreadable (%s)", self.gate_name, response.status, exc)
+            self._ack = self._ack or "rsvp"
+            self._acked.set()
             return
         flat = body.replace(" ", "")
         if "Code added to request" in body:
@@ -156,6 +163,7 @@ class LayloHandler(JevHandler):
             self._code_asked.set()
         elif "/rsvp" in response.url and response.ok:
             if '"success":false' in flat:
+                logger.info("[%s] RSVP refused: %s", self.gate_name, self._masked(body[:500]))
                 return
             # A drop with a Spotify pre-save answered without the success flag, and its email
             # still came. Logged so the next such answer shows what it was.

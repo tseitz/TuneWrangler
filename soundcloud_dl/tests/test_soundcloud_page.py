@@ -110,6 +110,10 @@ def test_gate_in_description_ignores_non_gates(text: str | None) -> None:
     assert gate_in_description(text) is None
 
 
+def test_gate_in_description_finds_a_link_without_a_scheme() -> None:
+    assert gate_in_description("FREE DL: hypeddit.com/a/b") == "https://hypeddit.com/a/b"
+
+
 def test_gate_in_description_passes_over_laylo_for_a_free_gate() -> None:
     text = "RSVP https://laylo.com/a/b or FREE DL https://hypeddit.com/a/b"
     assert gate_in_description(text) == "https://hypeddit.com/a/b"

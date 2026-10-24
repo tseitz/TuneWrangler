@@ -37,3 +37,14 @@ async def test_a_batch_with_a_laylo_gate_runs_headed(monkeypatch):
 async def test_a_batch_without_one_leaves_it_to_the_config(monkeypatch):
     tracks = [TrackItem(url="https://soundcloud.com/u/t0", purchase_url="https://hypeddit.com/a/b")]
     assert await _headed_asked(monkeypatch, tracks) is None
+
+
+@pytest.mark.asyncio
+async def test_a_laylo_link_only_in_the_description_runs_headed(monkeypatch):
+    tracks = [
+        TrackItem(
+            url="https://soundcloud.com/u/t0",
+            description="all my remixes (free download): laylo.com/x/aB1 \n socials: @x",
+        ),
+    ]
+    assert await _headed_asked(monkeypatch, tracks) is True

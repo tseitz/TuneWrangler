@@ -82,6 +82,7 @@ from soundcloud_dl.sc_actions_flow import (
 from soundcloud_dl.soundcloud_page import (
     SoundCloudPageError,
     gate_in_description,
+    gates_in_description,
     get_gate_url,
     try_native_sc_download,
 )
@@ -458,7 +459,12 @@ def _known_gate_url(track: TrackItem) -> str | None:
 
 def _laylo_ahead(tracks: list[TrackItem]) -> bool:
     """RSVPs from headless Chrome were taken and never delivered, so a Laylo gate gets a window."""
-    ahead = any((gate := _known_gate_url(t)) is not None and is_rsvp_gate(gate) for t in tracks)
+    ahead = any(
+        is_rsvp_gate(gate)
+        for t in tracks
+        for gate in [t.purchase_url or "", *gates_in_description(t.description)]
+        if gate
+    )
     if ahead and not HEADED:
         logger.info("A Laylo gate is in this batch; running Chrome headed")
     return ahead

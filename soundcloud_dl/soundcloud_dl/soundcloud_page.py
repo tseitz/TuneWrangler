@@ -80,16 +80,26 @@ def _host_is_gate(url: str) -> bool:
     return any(host == d or host.endswith(f".{d}") for d in _GATE_DOMAINS)
 
 
-_URL_IN_TEXT = re.compile(r"https?://[^\s<>\"')\]]+")
+# Descriptions often drop the scheme ("laylo.com/artist/x"); a bare host needs a path or query.
+_URL_IN_TEXT = re.compile(r"(?:https?://)?(?:[\w-]+\.)+[a-z]{2,}[/?][^\s<>\"')\]]*", re.IGNORECASE)
+
+
+def gates_in_description(description: str | None) -> list[str]:
+    """Every gate link in a track description, in order, skipped and last-resort ones included."""
+    gates = []
+    for found in _URL_IN_TEXT.findall(description or ""):
+        url = found.rstrip(".,;!")
+        url = _unwrap_gate_sc(url if "://" in url else f"https://{url}")
+        if _host_is_gate(url):
+            gates.append(url)
+    return gates
 
 
 def gate_in_description(description: str | None) -> str | None:
     """The first gate link in a track description that is neither skipped nor a last resort."""
-    for found in _URL_IN_TEXT.findall(description or ""):
-        url = _unwrap_gate_sc(found.rstrip(".,;!"))
-        if _host_is_gate(url) and avoid_reason(url) is None:
-            return url
-    return None
+    return next(
+        (url for url in gates_in_description(description) if avoid_reason(url) is None), None
+    )
 
 
 def _unwrap_gate_sc(href: str) -> str:
