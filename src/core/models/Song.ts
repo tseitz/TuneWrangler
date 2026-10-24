@@ -16,6 +16,8 @@ export class Song {
   dashCount = 0;
   rating = 0;
   remix = false;
+  /** What lastCheck cut off the title, e.g. "(Dub Mix)". */
+  strippedVersion = "";
   changed = false;
   duplicate = false;
   tags: Tags | undefined;
@@ -372,7 +374,9 @@ export class Song {
       !title.toUpperCase().includes("EXTENDED")
     ) {
       console.log(`Title: ${title}`);
-      this.title = title.slice(0, /(\(|\[)/g.exec(title)!.index).trim();
+      const cut = /(\(|\[)/g.exec(title)!.index;
+      this.title = title.slice(0, cut).trim();
+      this.strippedVersion = title.slice(cut).trim();
     }
 
     if (/(\(|\[)/g.test(artist)) {

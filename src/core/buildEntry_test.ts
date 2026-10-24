@@ -23,3 +23,33 @@ Deno.test("a duplicate of a file earlier in the same run points at that entry", 
   assertEquals(entry?.decision, "skip");
   assertEquals(entry?.duplicate_of, { entry: "downloaded/Artist - Title.wav" });
 });
+
+const itunes = (title: string) => ({
+  source: "itunes" as const,
+  src: `Ragie Ban/Shake It - Single/${title}.m4a`,
+  dir: "/tmp/",
+  tags: { artist: "Ragie Ban", album: "Shake It - Single", title },
+});
+
+Deno.test("a mix that would collide with its original keeps its version", () => {
+  const cache = new MusicCache();
+  buildEntry(itunes("Shake It"), cache);
+
+  const dub = buildEntry(itunes("Shake It (Dub Mix)"), cache)?.entry;
+  const evil = buildEntry(itunes("Shake It (Evil Mix)"), cache)?.entry;
+  assertEquals([dub?.proposed, dub?.decision], ["Ragie Ban - Shake It (Dub Mix).m4a", "apply"]);
+  assertEquals(evil?.proposed, "Ragie Ban - Shake It (Evil Mix).m4a");
+});
+
+Deno.test("an original mix is still a duplicate of the plain title", () => {
+  const cache = new MusicCache();
+  buildEntry(itunes("Shake It"), cache);
+
+  const entry = buildEntry(itunes("Shake It (Original Mix)"), cache)?.entry;
+  assertEquals([entry?.proposed, entry?.decision], ["Ragie Ban - Shake It.m4a", "skip"]);
+});
+
+Deno.test("a mix with nothing to collide with is named as before", () => {
+  const entry = buildEntry(itunes("Shake It (Dub Mix)"), new MusicCache())?.entry;
+  assertEquals(entry?.proposed, "Ragie Ban - Shake It.m4a");
+});

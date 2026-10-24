@@ -10,6 +10,18 @@ export interface BuildResult {
   song: Song;
 }
 
+/** An original mix is the same recording as the plain title, so it stays a duplicate. */
+const ORIGINAL = /^[([]\s*original( mix)?\s*[)\]]$/i;
+
+/** A "(Dub Mix)" whose stripped name collides with its original is a different version. */
+function keepVersion(song: Song): void {
+  const version = song.strippedVersion;
+  const tail = `${song.title}${song.extension}`;
+  if (!version || ORIGINAL.test(version) || !song.finalFilename.endsWith(tail)) return;
+  song.title = `${song.title} ${version}`;
+  song.finalFilename = `${song.finalFilename.slice(0, -tail.length)}${song.title}${song.extension}`;
+}
+
 /**
  * Parse one file and produce a manifest entry (plus the song it was parsed from, so a
  * --judge pass can grade the same parse without re-deriving it), or null if the file should
@@ -24,6 +36,7 @@ export function buildEntry(file: TaggedSourceFile, cache: MusicCache): BuildResu
   }
   try {
     const song = buildSong(file.source, file.src, file.dir, file.tags);
+    if (cache.has(song)) keepVersion(song);
     const score = scoreConfidence(song, basename(file.src), { source: file.source, tags: file.tags });
     const base = {
       src: file.src,
