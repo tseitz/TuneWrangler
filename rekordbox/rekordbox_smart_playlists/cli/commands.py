@@ -104,7 +104,8 @@ class PlaylistCommand(BaseCommand):
             choices=["overwrite", "skip", "prompt"],
             default=None,
             help=(
-                "How to handle existing playlists: overwrite, skip, or prompt for each "
+                "How to handle existing playlists: overwrite, skip (keep them, add only missing "
+                "ones), or prompt for each "
                 "(default: ask, only when a folder already exists)"
             ),
         )
@@ -174,7 +175,7 @@ class PlaylistCommand(BaseCommand):
         self._require_terminal()
         noun = "this folder" if len(existing_roots) == 1 else "these folders"
         print(f"  1. Overwrite {noun}")
-        print(f"  2. Skip {noun}")
+        print(f"  2. Keep {noun}, add only missing playlists")
         print("  3. Ask for each")
         choice = input("Choose (1/2/3) [default: 3]: ").strip()
         print()
@@ -255,8 +256,7 @@ class PlaylistCommand(BaseCommand):
                         print()
                     elif strategy == ExistingPlaylistStrategy.SKIP_ALL:
                         for root in existing_roots:
-                            playlist_manager._skip_parents.add(root["name"])
-                            print(f"  Skipping '{root['name']}'.")
+                            print(f"  Keeping '{root['name']}'; adding only missing playlists.")
                         print()
                     else:
                         for root in existing_roots:

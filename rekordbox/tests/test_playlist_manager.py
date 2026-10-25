@@ -14,6 +14,7 @@ from rekordbox_smart_playlists.core.database import (
     RekordboxDatabase,
 )
 from rekordbox_smart_playlists.core.playlist_manager import (
+    ExistingPlaylistStrategy,
     PlaylistCreationResult,
     PlaylistManager,
 )
@@ -381,4 +382,30 @@ def test_existing_folder_is_named_before_asking(monkeypatch, capsys):
 
     out = capsys.readouterr().out
     assert "Halloween 2026 (11 child playlist(s))" in out
-    assert "Skip this folder" in out
+    assert "Keep this folder, add only missing playlists" in out
+
+
+
+def test_skip_keeps_an_existing_folder_and_still_fills_it(monkeypatch):
+    root = {"name": "Halloween 2026", "playlist": None, "child_count": 11}
+    skipped_at_create = []
+
+    def create(directory):
+        skipped_at_create.extend(manager._skip_parents)
+        return [PlaylistCreationResult(True, "Beginning")]
+
+    manager = SimpleNamespace(
+        existing_strategy=None,
+        _skip_parents=set(),
+        preflight=lambda config_file: [],
+        find_existing_root_folders=lambda config_file: [root],
+        create_playlists_from_directory=create,
+    )
+    monkeypatch.setattr(commands, "RekordboxDatabase", lambda config: FakeSession())
+    monkeypatch.setattr(commands, "PlaylistManager", lambda db, config: manager)
+    command = commands.PlaylistCommand(Config(backup_before_changes=False))
+    args = argparse.Namespace(file=None, skip_backup=True, existing="skip")
+
+    assert command._create_playlists(args) == 0
+    assert manager.existing_strategy == ExistingPlaylistStrategy.SKIP_ALL
+    assert skipped_at_create == []
