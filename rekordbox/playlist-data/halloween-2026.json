@@ -13,6 +13,7 @@
         { "name": "Middle", "operator": 1, "contains": ["Middle"] },
         { "name": "End", "operator": 1, "contains": ["End"] },
         { "name": "Closers", "operator": 1, "contains": ["Closers"] },
+        { "name": "Doubles", "operator": 1, "contains": ["Doubles"] },
         { "name": "Palate Cleanser", "operator": 1, "playlistType": "folder", "link": "helpers/_palate-cleanser.json" }
       ]
     }
