@@ -5,9 +5,14 @@
       "mainConditions": ["Halloween"],
       "negativeConditions": ["Archive"],
       "dateAdded": { "after": "2025-10-31" },
-      "minTracks": 5,
+      "minTracks": 3,
       "base": "helpers/_lanes.json",
       "playlists": [
+        { "name": "Openers", "operator": 1, "contains": ["Openers"] },
+        { "name": "Beginning", "operator": 1, "contains": ["Beginning"] },
+        { "name": "Middle", "operator": 1, "contains": ["Middle"] },
+        { "name": "End", "operator": 1, "contains": ["End"] },
+        { "name": "Closers", "operator": 1, "contains": ["Closers"] },
         { "name": "Palate Cleanser", "operator": 1, "playlistType": "folder", "link": "helpers/_palate-cleanser.json" }
       ]
     }
