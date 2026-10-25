@@ -299,6 +299,17 @@ def _is_sign_in(el: dict[str, Any]) -> bool:
     return bool(_SIGN_IN_TEXT_RE.search(text) or _SIGN_IN_PATH_RE.search(parsed.path))
 
 
+_PAGE_SCHEMES = frozenset({"", "http", "https", "javascript"})
+
+
+def _opens_another_app(el: dict[str, Any]) -> bool:
+    """A mailto:/tel: link: Chrome hands it to the OS, which opens Mail on every click."""
+    try:
+        return urllib.parse.urlparse(el.get("href") or "").scheme.lower() not in _PAGE_SCHEMES
+    except ValueError:
+        return False
+
+
 def _repeating_cycle(history: list[str]) -> list[str] | None:
     """The cycle of chosen keys the run is going round, or None.
 
@@ -560,7 +571,9 @@ class JudgmentGateHandler(GateHandler):
         offered = {
             k: self._redact(el)
             for k, el in _on_screen(snapshot).items()
-            if not _is_sign_in(el) and not (el["tag"] == "form" and not el["step"])
+            if not _is_sign_in(el)
+            and not _opens_another_app(el)
+            and not (el["tag"] == "form" and not el["step"])
         }
         # Collapsing an open section never advances a gate, and on backstaged re-picking the
         # open step's header collapsed the step that held the real button, round and round.

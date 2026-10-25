@@ -269,6 +269,20 @@ async def test_a_page_with_only_a_sign_in_link_asks_nothing() -> None:
     assert await handler._ask_choice(page, snapshot) == ""
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("href", ["mailto:waproductioncz@gmail.com", "tel:+15555550100"])
+async def test_a_link_that_opens_another_app_is_never_offered(href) -> None:
+    handler = _handler()
+
+    def no_client():
+        raise AssertionError
+
+    handler._get_client = no_client
+    snapshot = {"mail": _el("mail", tag="a", text="waproductioncz@gmail.com", href=href)}
+    page = types.SimpleNamespace(url="https://pumpyoursound.com/f/pys/noxious-remix/223594")
+    assert await handler._ask_choice(page, snapshot) == ""
+
+
 def test_an_empty_choice_is_an_idle_turn_not_an_unknown_key(caplog) -> None:
     handler = _handler()
     results: dict = {}
