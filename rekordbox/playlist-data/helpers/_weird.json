@@ -1,0 +1,11 @@
+{
+  "data": [
+    {
+      "parent": "WEIRD",
+      "mainConditions": ["WEIRD"],
+      "negativeConditions": [],
+      "base": "helpers/_lanes.json",
+      "playlists": []
+    }
+  ]
+}

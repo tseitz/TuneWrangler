@@ -1,0 +1,11 @@
+{
+  "data": [
+    {
+      "parent": "VOCALS",
+      "mainConditions": ["VOCALS"],
+      "negativeConditions": [],
+      "base": "helpers/_lanes.json",
+      "playlists": []
+    }
+  ]
+}

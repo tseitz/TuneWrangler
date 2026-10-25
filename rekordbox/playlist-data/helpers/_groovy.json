@@ -1,0 +1,11 @@
+{
+  "data": [
+    {
+      "parent": "GROOVY",
+      "mainConditions": ["GROOVY"],
+      "negativeConditions": [],
+      "base": "helpers/_lanes.json",
+      "playlists": []
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "data": [
+    {
+      "parent": "HEAVY",
+      "mainConditions": ["HEAVY"],
+      "negativeConditions": [],
+      "base": "helpers/_lanes.json",
+      "playlists": []
+    }
+  ]
+}

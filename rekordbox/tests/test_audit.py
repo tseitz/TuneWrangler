@@ -515,7 +515,8 @@ def test_library_total_is_within_expected_range():
     total = sum(
         len(resolve_context(f, PLAYLIST_DATA).leaves) for f in _context_files(PLAYLIST_DATA)
     )
-    # 17 lane roots * 33 + 3 Palate Cleanser folders * 33 + Gigs 7 + Recent Additions 4
-    # + Go Through 3 + Halloween 2026 set phases and Doubles 6 = 680. Upper bound: the audit
-    # can't see minTracks, which skips the redundant lane at runtime.
-    assert total == 680, f"unexpected library total: {total}"
+    # 17 lane roots * 33 + 3 Palate Cleanser folders * 33 + 4 Halloween 2026 tag folders * 33
+    # + Gigs 7 + Recent Additions 4 + Go Through 3 + Halloween 2026 set phases and Doubles 6
+    # = 812. Upper bound: the audit can't see minTracks, which skips the redundant lane at
+    # runtime.
+    assert total == 812, f"unexpected library total: {total}"
