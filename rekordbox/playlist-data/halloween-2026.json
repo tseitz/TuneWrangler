@@ -18,6 +18,8 @@
         { "name": "GROOVY", "operator": 1, "playlistType": "folder", "link": "helpers/_groovy.json" },
         { "name": "WEIRD", "operator": 1, "playlistType": "folder", "link": "helpers/_weird.json" },
         { "name": "VOCALS", "operator": 1, "playlistType": "folder", "link": "helpers/_vocals.json" },
+        { "name": "DEEP", "operator": 1, "playlistType": "folder", "link": "helpers/_deep.json" },
+        { "name": "My Set", "operator": 1, "playlistType": "folder", "link": "my-set.json" },
         { "name": "Palate Cleanser", "operator": 1, "playlistType": "folder", "link": "helpers/_palate-cleanser.json" }
       ]
     }
