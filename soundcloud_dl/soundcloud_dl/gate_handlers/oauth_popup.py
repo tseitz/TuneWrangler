@@ -207,8 +207,17 @@ async def handle_oauth_popup(
             _decline(popup, gate_name, on_keep_open)
             return
         await _approve(popup, gate_name)
-    except Exception:  # noqa: BLE001
-        logger.debug("[%s] OAuth popup handler error", gate_name, exc_info=True)
+    except Exception as exc:  # noqa: BLE001
+        # Host and path only: the query carries the OAuth state and code.
+        where = urllib.parse.urlparse(popup.url)
+        logger.warning(
+            "[%s] OAuth popup on %s%s failed: %s",
+            gate_name,
+            where.hostname,
+            where.path,
+            exc,
+            exc_info=logger.isEnabledFor(logging.DEBUG),
+        )
     finally:
         if not keep_open and not popup.is_closed():
             await popup.close()

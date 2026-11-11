@@ -2,6 +2,7 @@
 
 from unittest.mock import AsyncMock, MagicMock
 
+import logging
 import pytest
 
 from soundcloud_dl.gate_handlers.base import GateHandler
@@ -138,6 +139,30 @@ async def test_a_consent_popup_is_still_approved_by_default():
     await handle_oauth_popup(popup, "hypeddit", approve=True)
 
     allow.click.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_an_allow_click_that_fails_is_a_warning_naming_the_page(caplog):
+    """The nightly logs INFO and up; at DEBUG this failure left only "clicking Allow"."""
+    allow = MagicMock()
+    allow.click = AsyncMock(side_effect=RuntimeError("element is not attached to the DOM"))
+    popup = MagicMock()
+    popup.url = "https://secure.soundcloud.com/signin?state=s3cret"
+    popup.wait_for_load_state = AsyncMock()
+    popup.wait_for_selector = AsyncMock()
+    popup.wait_for_timeout = AsyncMock()
+    popup.is_closed = MagicMock(return_value=False)
+    popup.close = AsyncMock()
+    popup.query_selector = AsyncMock(return_value=allow)
+
+    with caplog.at_level(logging.INFO):
+        await handle_oauth_popup(popup, "droploud_jev", approve=True)
+
+    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert "not attached" in warnings[0]
+    assert "secure.soundcloud.com/signin" in warnings[0]
+    assert "s3cret" not in warnings[0]
 
 
 @pytest.mark.asyncio
