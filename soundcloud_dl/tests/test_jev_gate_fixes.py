@@ -13,7 +13,8 @@ from playwright.async_api import async_playwright
 
 from soundcloud_dl.gate_handlers import GateNotSupportedError, get_handler_for_url
 from soundcloud_dl.gate_handlers import judgment as judgment_module
-from soundcloud_dl.gate_handlers.base import StuckGate
+from soundcloud_dl.gate_handlers.base import StepResult, StuckGate
+from soundcloud_dl.downloads import MIN_TRACK_BYTES
 from soundcloud_dl.gate_handlers.dom_snapshot import snapshot_elements
 from soundcloud_dl.gate_handlers.jev import JevHandler, judgment_handler_for
 from soundcloud_dl.gate_handlers.judgment import (
@@ -281,6 +282,79 @@ async def test_a_link_that_opens_another_app_is_never_offered(href) -> None:
     snapshot = {"mail": _el("mail", tag="a", text="waproductioncz@gmail.com", href=href)}
     page = types.SimpleNamespace(url="https://pumpyoursound.com/f/pys/noxious-remix/223594")
     assert await handler._ask_choice(page, snapshot) == ""
+
+
+def _tab(url: str) -> MagicMock:
+    tab = MagicMock()
+    tab.url = url
+    return tab
+
+
+@pytest.mark.asyncio
+async def test_a_dropbox_file_opening_in_a_new_tab_is_the_download(tmp_path, monkeypatch) -> None:
+    link = "https://www.dropbox.com/scl/fi/ppze9/TALKIN-SHIT-FINAL.wav?rlkey=k&dl=0"
+    fetched = []
+
+    async def fetch_file(url, dest_dir):
+        fetched.append(url)
+        saved = dest_dir / "TALKIN SHIT FINAL.wav"
+        saved.write_bytes(b"RIFFxxxxWAVE" + bytes(MIN_TRACK_BYTES))
+        return saved
+
+    monkeypatch.setattr(judgment_module, "fetch_file", fetch_file)
+    handler = _handler()
+    handler.download_dir = tmp_path
+    handler.track_title = "strange language - Dean Turley - Actin Tough"
+
+    handler.on_new_page(_tab(link))
+
+    results = {}
+    assert await handler._collect_download(results, 9) is True
+    assert results == {"el_9_download": StepResult.EXECUTED}
+    assert fetched == [link]
+    assert handler.downloaded is True
+    assert [p.name for p in tmp_path.iterdir()] == [
+        "strange language - Dean Turley - Actin Tough.wav"
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "fetch_result",
+    [b"tiny", OSError(63, "File name too long")],
+    ids=["too-small-to-be-the-track", "save-failed"],
+)
+async def test_a_dropbox_file_that_is_no_track_leaves_the_gate_retryable(
+    tmp_path, monkeypatch, fetch_result
+) -> None:
+    async def fetch_file(url, dest_dir):
+        if isinstance(fetch_result, Exception):
+            raise fetch_result
+        saved = dest_dir / "x.mp3"
+        saved.write_bytes(fetch_result)
+        return saved
+
+    monkeypatch.setattr(judgment_module, "fetch_file", fetch_file)
+    handler = _handler()
+    handler.download_dir = tmp_path
+    handler.on_new_page(_tab("https://www.dropbox.com/scl/fi/abc/x.mp3?rlkey=k&dl=0"))
+
+    assert await handler._collect_download({}, 9) is False
+    assert handler.downloaded is False
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.asyncio
+async def test_a_dropbox_folder_in_a_new_tab_is_not_taken_as_one_track(monkeypatch) -> None:
+    async def fetch_file(url, dest_dir):
+        raise AssertionError
+
+    monkeypatch.setattr(judgment_module, "fetch_file", fetch_file)
+    handler = _handler()
+    handler.download_dir = Path("/nonexistent")
+    handler.on_new_page(_tab("https://www.dropbox.com/scl/fo/abc/k?rlkey=k&dl=0"))
+
+    assert await handler._collect_download({}, 9) is False
 
 
 def test_an_empty_choice_is_an_idle_turn_not_an_unknown_key(caplog) -> None:

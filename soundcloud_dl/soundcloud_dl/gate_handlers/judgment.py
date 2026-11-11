@@ -53,6 +53,7 @@ from soundcloud_dl.gate_handlers.unlock import (
     is_unlocked_href,
     unlock_reached,
 )
+from soundcloud_dl.laylo_drops import LayloFetchError, dropbox_direct, fetch_file
 from soundcloud_dl.playwright_browser import is_browser_gone
 
 if TYPE_CHECKING:
@@ -310,6 +311,11 @@ def _opens_another_app(el: dict[str, Any]) -> bool:
         return False
 
 
+def _is_dropbox_file(url: str) -> bool:
+    direct = dropbox_direct(url)
+    return direct is not None and urllib.parse.urlparse(direct).path.startswith("/scl/fi/")
+
+
 def _repeating_cycle(history: list[str]) -> list[str] | None:
     """The cycle of chosen keys the run is going round, or None.
 
@@ -426,6 +432,7 @@ class JudgmentGateHandler(GateHandler):
         self._header_prior: set[str] | None = None
         self._chosen: list[str] = []
         self._drive_folder: str | None = None
+        self._dropbox_file: str | None = None
         self._busy_spent_ms = 0
         # Constructed lazily so importing this module never requires TYPESAFE_API_KEY.
         self._client: AsyncTypeSafeClient | None = None
@@ -773,6 +780,10 @@ class JudgmentGateHandler(GateHandler):
             if self._drive_folder is not None:
                 pending.cancel()
                 logger.info("[%s] a Drive folder opened; not waiting for a file", self.gate_name)
+                return None
+            if self._dropbox_file is not None:
+                pending.cancel()
+                logger.info("[%s] a Dropbox file opened; fetching it", self.gate_name)
                 return None
             await asyncio.sleep(_POPUP_DOWNLOAD_POLL_SECONDS)
         return pending.result()
@@ -1299,6 +1310,8 @@ class JudgmentGateHandler(GateHandler):
         def note(url: str) -> None:
             if (folder := drive_folder_url(url)) is not None:
                 self._drive_folder = folder
+            elif _is_dropbox_file(url):
+                self._dropbox_file = url
 
         def on_navigated(frame: Any) -> None:  # noqa: ANN401
             if frame == page.main_frame:
@@ -1370,6 +1383,25 @@ class JudgmentGateHandler(GateHandler):
             return False
         dest = rename_to_track(saved, self.track_title)
         self._note_saved(dest, "(started by the page)")
+        return True
+
+    async def _take_dropbox_file(self) -> bool:
+        """Droploud's download opens a Dropbox file tab instead of firing a download."""
+        link, self._dropbox_file = self._dropbox_file, None
+        if link is None or self.download_dir is None:
+            return False
+        try:
+            saved = discard_if_fragment(await fetch_file(link, self.download_dir), link)
+        except LayloFetchError as exc:
+            logger.warning("[%s] the Dropbox file could not be fetched: %s", self.gate_name, exc)
+            return False
+        except Exception:
+            logger.exception("[%s] the Dropbox file could not be saved", self.gate_name)
+            return False
+        if saved is None:
+            return False
+        dest = rename_to_track(saved, self.track_title)
+        self._note_saved(dest, "(from Dropbox)")
         return True
 
     async def _anchor_run(self, page: Page) -> None:
@@ -1474,7 +1506,7 @@ class JudgmentGateHandler(GateHandler):
 
     async def _collect_download(self, results: dict[str, StepResult], i: int) -> bool:
         """Record a page-started download as this turn's download step. True if one landed."""
-        if not await self._take_caught_download():
+        if not await self._take_dropbox_file() and not await self._take_caught_download():
             return False
         results[f"el_{i}_download"] = StepResult.EXECUTED
         return True

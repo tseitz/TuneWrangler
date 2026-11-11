@@ -300,6 +300,55 @@ async def fetch(link: str, slug: str, *, client: httpx.AsyncClient | None = None
     return await _fetch(direct, name, root, dest, client)
 
 
+async def fetch_file(link: str, dest_dir: Path, *, client: httpx.AsyncClient | None = None) -> Path:
+    """Download one shared Dropbox file (/scl/fi/) into dest_dir. Returns the saved path.
+
+    A gate's own download, not a drop: a zip or a folder link is refused, since one track
+    is the only thing a gate run may record as done.
+    """
+    direct = dropbox_direct(link)
+    if direct is None or not urllib.parse.urlparse(direct).path.startswith("/scl/fi/"):
+        msg = "not a Dropbox shared file link"
+        raise LayloFetchError(msg)
+    if client is None:
+        async with httpx.AsyncClient(follow_redirects=False, timeout=_FETCH_TIMEOUT) as own:
+            return await _fetch_file(direct, dest_dir, own)
+    return await _fetch_file(direct, dest_dir, client)
+
+
+async def _fetch_file(direct: str, dest_dir: Path, client: httpx.AsyncClient) -> Path:
+    handle, part = _open_part("dropbox-file")
+    try:
+        with handle:
+            kind, head, disposition = await _download(client, direct, handle)
+        if kind != "audio":
+            msg = "the Dropbox file is a zip, not one track"
+            raise LayloFetchError(msg)
+        name = _filename_from_disposition(disposition) or ""
+        if not name or name.startswith("."):
+            name = f"dropbox{audio_extension_for(head)}"
+        dest = dest_dir / name
+        await asyncio.to_thread(_copy_exclusive, part, dest)
+    finally:
+        part.unlink(missing_ok=True)
+    return dest
+
+
+def _copy_exclusive(part: Path, dest: Path) -> None:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        out = dest.open("xb")
+    except FileExistsError as exc:
+        msg = f"{dest.name} is already in {dest.parent}"
+        raise LayloFetchError(msg) from exc
+    try:
+        with out, part.open("rb") as src:
+            shutil.copyfileobj(src, out)
+    except BaseException:
+        dest.unlink(missing_ok=True)
+        raise
+
+
 def _open_part(name: str) -> tuple[IO[bytes], Path]:
     tmp_dir = config.get_laylo_tmp_dir()
     tmp_dir.mkdir(parents=True, exist_ok=True)

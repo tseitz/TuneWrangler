@@ -276,6 +276,57 @@ async def test_a_single_audio_file_without_a_name_gets_an_extension_from_its_byt
     assert [p.name for p in folder.iterdir()] == [f"{SLUG}.wav"]
 
 
+FILE_LINK = "https://www.dropbox.com/scl/fi/ppze9/TALKIN-SHIT-FINAL.wav?rlkey=k3y&dl=0"
+
+
+async def test_fetch_file_saves_one_track_into_the_folder_given(save_root, tmp_path) -> None:
+    headers = {"content-disposition": 'attachment; filename="TALKIN SHIT FINAL.wav"'}
+    async with _client(_serve(b"RIFFxxxxWAVEdata", headers)) as client:
+        saved = await laylo_drops.fetch_file(FILE_LINK, tmp_path / "out", client=client)
+
+    assert saved == tmp_path / "out" / "TALKIN SHIT FINAL.wav"
+    assert saved.read_bytes() == b"RIFFxxxxWAVEdata"
+    assert _tmp_dir_is_empty()
+
+
+async def test_fetch_file_never_overwrites_a_file_already_there(save_root, tmp_path) -> None:
+    (tmp_path / "out").mkdir()
+    (tmp_path / "out" / "TALKIN SHIT FINAL.wav").write_bytes(b"mine")
+    headers = {"content-disposition": 'attachment; filename="TALKIN SHIT FINAL.wav"'}
+    async with _client(_serve(b"RIFFxxxxWAVEdata", headers)) as client:
+        with pytest.raises(LayloFetchError, match="already"):
+            await laylo_drops.fetch_file(FILE_LINK, tmp_path / "out", client=client)
+
+    assert (tmp_path / "out" / "TALKIN SHIT FINAL.wav").read_bytes() == b"mine"
+    assert _tmp_dir_is_empty()
+
+
+async def test_fetch_file_does_not_save_a_hidden_file(save_root, tmp_path) -> None:
+    headers = {"content-disposition": 'attachment; filename=".wav"'}
+    async with _client(_serve(b"RIFFxxxxWAVEdata", headers)) as client:
+        saved = await laylo_drops.fetch_file(FILE_LINK, tmp_path / "out", client=client)
+
+    assert not saved.name.startswith(".")
+
+
+async def test_fetch_file_refuses_a_zip(save_root, tmp_path) -> None:
+    async with _client(_serve(_zip({"a.wav": b"RIFFxxxxWAVE"}))) as client:
+        with pytest.raises(LayloFetchError, match="zip"):
+            await laylo_drops.fetch_file(FILE_LINK, tmp_path / "out", client=client)
+
+    assert not (tmp_path / "out").exists()
+    assert _tmp_dir_is_empty()
+
+
+async def test_fetch_file_refuses_a_folder_link_without_a_request(save_root, tmp_path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        pytest.fail("no request expected")
+
+    async with _client(handler) as client:
+        with pytest.raises(LayloFetchError):
+            await laylo_drops.fetch_file(SPAG_LINK, tmp_path / "out", client=client)
+
+
 async def test_an_existing_folder_is_reused_without_a_request(save_root) -> None:
     existing = save_root / "laylo" / SLUG
     existing.mkdir(parents=True)
